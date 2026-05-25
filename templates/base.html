@@ -9,7 +9,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo">
                 <div class="logo-icon">
@@ -22,7 +21,6 @@
             </div>
 
             {% if session.get('user_id') %}
-            <!-- Menu untuk user yang sudah login -->
             <nav class="nav-menu">
                 <a href="/" class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
                     <i class="fas fa-home"></i>
@@ -30,16 +28,16 @@
                 </a>
                 <a href="/jadwal" class="nav-item {% if request.endpoint == 'jadwal' %}active{% endif %}">
                     <i class="far fa-calendar"></i>
-                    <span>Jadwal Saya</span>
+                    <span>Jadwal Pelayanan Saya</span>
                 </a>
+                
+                {% if session.get('role') in ['admin', 'pengurus'] %}
                 <a href="/anggota" class="nav-item {% if request.endpoint == 'anggota' %}active{% endif %}">
                     <i class="fas fa-users"></i>
                     <span>Anggota</span>
                 </a>
-                <a href="/pendaftaran" class="nav-item {% if request.endpoint == 'pendaftaran' %}active{% endif %}">
-                    <i class="far fa-edit"></i>
-                    <span>Pendaftaran</span>
-                </a>
+                {% endif %}
+                
                 <a href="/pengumuman" class="nav-item {% if request.endpoint == 'pengumuman' %}active{% endif %}">
                     <i class="fas fa-bullhorn"></i>
                     <span>Pengumuman</span>
@@ -78,7 +76,6 @@
                 <span>Keluar</span>
             </a>
             {% else %}
-            <!-- Menu publik untuk non-user -->
             <nav class="nav-menu">
                 <a href="/" class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
                     <i class="fas fa-home"></i>
@@ -88,22 +85,41 @@
                     <i class="far fa-calendar"></i>
                     <span>Jadwal Pelayanan</span>
                 </a>
+                <a href="/pendaftaran" class="nav-item {% if request.endpoint == 'pendaftaran' %}active{% endif %}">
+                    <i class="far fa-edit"></i>
+                    <span>Pendaftaran</span>
+                </a>
+                <a href="/pengumuman" class="nav-item {% if request.endpoint == 'pengumuman' %}active{% endif %}">
+                    <i class="fas fa-bullhorn"></i>
+                    <span>Pengumuman</span>
+                </a>
+                <a href="/galeri" class="nav-item {% if request.endpoint == 'galeri' %}active{% endif %}">
+                    <i class="far fa-images"></i>
+                    <span>Galeri</span>
+                </a>
+                <a href="/dokumen" class="nav-item {% if request.endpoint == 'dokumen' %}active{% endif %}">
+                    <i class="far fa-file-alt"></i>
+                    <span>Dokumen</span>
+                </a>
+                <a href="/kontak" class="nav-item {% if request.endpoint == 'kontak' %}active{% endif %}">
+                    <i class="fas fa-phone"></i>
+                    <span>Kontak</span>
+                </a>
             </nav>
 
             <div class="user-profile-public">
                 <p style="text-align: center; color: var(--text-gray); font-size: 13px; margin-bottom: 16px;">
-                    Halaman Publik - Silakan login untuk akses penuh
+                    Halaman Publik - Login untuk akses privat
                 </p>
             </div>
 
-            <a href="{{ url_for('login') }}" class="logout-btn" style="background: var(--primary-green); color: var(--white); text-align: center;">
+            <a href="{{ url_for('login') }}" class="login-btn">
                 <i class="fas fa-sign-in-alt"></i>
                 <span>Login</span>
             </a>
             {% endif %}
         </aside>
 
-        <!-- Main Content -->
         <main class="main-content">
             <header class="top-header">
                 <div class="search-bar">

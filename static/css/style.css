@@ -176,6 +176,25 @@ body {
     margin-right: 12px;
 }
 
+.login-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 20px;
+    background-color: var(--primary-green);
+    color: var(--white);
+    text-decoration: none;
+    transition: background-color 0.3s;
+}
+
+.login-btn:hover {
+    background-color: var(--accent-green);
+}
+
+.login-btn i {
+    margin-right: 12px;
+}
+
 /* Main Content */
 .main-content {
     margin-left: 250px;

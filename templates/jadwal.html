@@ -8,13 +8,12 @@
     <h2>Jadwal Pelayanan Saya</h2>
     <p>Lihat dan kelola jadwal pelayanan Anda</p>
     {% else %}
-    <h2>Jadwal Pelayanan Misdinar</h2>
+    <h2>Jadwal Pelayanan</h2>
     <p>Lihat jadwal pelayanan semua anggota misdinar</p>
     {% endif %}
 </div>
 
 {% if is_logged_in %}
-<!-- Filter hanya untuk view yang login -->
 <div class="jadwal-filters">
     <button class="filter-btn active">Semua</button>
     <button class="filter-btn">Bertugas</button>
@@ -32,14 +31,15 @@
                     <span class="day">{{ item.tanggal }}</span>
                     <span class="month">{{ item.bulan }}</span>
                 </div>
+                {% if is_logged_in %}
                 <div class="jadwal-status-badge {% if item.status == 'Bertugas' %}status-active{% else %}status-inactive{% endif %}">
                     {{ item.status }}
                 </div>
+                {% endif %}
             </div>
             <div class="jadwal-body">
                 <h3>{{ item.acara }}</h3>
                 <div class="jadwal-details">
-                    <!-- Tampilkan nama pengguna jika view publik -->
                     {% if not is_logged_in %}
                     <div class="detail-item">
                         <i class="fas fa-user"></i>
@@ -49,10 +49,6 @@
                     <div class="detail-item">
                         <i class="far fa-clock"></i>
                         <span>{{ item.hari }}, {{ item.waktu }}</span>
-                    </div>
-                    <div class="detail-item">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <span>{{ item.lokasi }}</span>
                     </div>
                 </div>
             </div>
@@ -73,7 +69,6 @@
     {% endif %}
 </div>
 
-<!-- Informasi untuk view publik -->
 {% if not is_logged_in %}
 <div class="public-info-box">
     <i class="fas fa-info-circle"></i>
