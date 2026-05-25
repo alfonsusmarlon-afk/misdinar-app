@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}${page^} - MISDINAR{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>${page^}</h2>
+    <p>Halaman ${page}</p>
+</div>
+
+<div class="coming-soon">
+    <i class="fas fa-tools"></i>
+    <h3>Halaman Dalam Pengembangan</h3>
+    <p>Fitur ini akan segera hadir</p>
+</div>
+
+<style>
+.coming-soon {
+    text-align: center;
+    padding: 80px 20px;
+    background: var(--white);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+}
+
+.coming-soon i {
+    font-size: 64px;
+    color: var(--primary-green);
+    margin-bottom: 24px;
+}
+
+.coming-soon h3 {
+    font-size: 24px;
+    margin-bottom: 12px;
+}
+
+.coming-soon p {
+    color: var(--text-gray);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Beranda - MISDINAR{% endblock %}
+
+{% block content %}
+<!-- Hero Banner -->
+<section class="hero-banner">
+    <div class="hero-content">
+        <h2>Melayani dengan Hati,<br>Beriman dalam Aksi.</h2>
+        <p>Aplikasi informasi untuk seluruh misdinar<br>Gereja kita tercinta.</p>
+        <button class="btn-primary">
+            Lihat Jadwal Saya
+            <i class="fas fa-arrow-right"></i>
+        </button>
+    </div>
+    <div class="hero-illustration">
+        <svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+            <!-- Church illustration -->
+            <rect x="350" y="150" width="200" height="150" fill="#c4d5cc" rx="5"/>
+            <polygon points="450,100 350,150 550,150" fill="#a8b8af"/>
+            <rect x="430" y="230" width="40" height="70" fill="#7a8a81"/>
+            <rect x="380" y="180" width="30" height="35" fill="#5a6a61"/>
+            <rect x="490" y="180" width="30" height="35" fill="#5a6a61"/>
+            <circle cx="450" cy="197" r="8" fill="#7a8a81"/>
+            <line x1="450" y1="100" x2="450" y2="70" stroke="#a67c52" stroke-width="6"/>
+            <line x1="435" y1="80" x2="465" y2="80" stroke="#a67c52" stroke-width="6"/>
+            
+            <!-- Altar servers -->
+            <g transform="translate(100, 180)">
+                <!-- Server 1 -->
+                <ellipse cx="40" cy="100" rx="12" ry="14" fill="#f5d5b8"/>
+                <path d="M 30 115 Q 40 110 50 115 L 50 160 L 30 160 Z" fill="#fff"/>
+                <rect x="30" y="120" width="20" height="15" fill="#2d5f3f"/>
+                <ellipse cx="40" cy="175" rx="18" ry="8" fill="#4a4a4a"/>
+                <path d="M 32 140 L 20 165 L 25 168 L 35 145 Z" fill="#f5d5b8"/>
+                <rect x="18" y="165" width="8" height="30" fill="#a67c52" rx="4"/>
+                
+                <!-- Server 2 -->
+                <g transform="translate(70, 0)">
+                    <ellipse cx="40" cy="100" rx="12" ry="14" fill="#f5d5b8"/>
+                    <path d="M 30 115 Q 40 110 50 115 L 50 160 L 30 160 Z" fill="#fff"/>
+                    <rect x="30" y="120" width="20" height="15" fill="#2d5f3f"/>
+                    <ellipse cx="40" cy="175" rx="18" ry="8" fill="#4a4a4a"/>
+                    <rect x="35" y="140" width="4" height="30" fill="#f5d5b8"/>
+                    <path d="M 35 145 L 35 165 L 42 168 Z" fill="#a67c52"/>
+                </g>
+                
+                <!-- Server 3 -->
+                <g transform="translate(140, 0)">
+                    <ellipse cx="40" cy="100" rx="12" ry="14" fill="#f5d5b8"/>
+                    <path d="M 40 114 L 35 114 Q 32 120 32 125 L 32 160 L 48 160 L 48 125 Q 48 120 45 114 Z" fill="#fff"/>
+                    <rect x="32" y="120" width="16" height="15" fill="#2d5f3f"/>
+                    <ellipse cx="40" cy="175" rx="18" ry="8" fill="#4a4a4a"/>
+                    <rect x="35" y="140" width="4" height="25" fill="#f5d5b8"/>
+                    <rect x="32" y="162" width="10" height="4" fill="#2d5f3f"/>
+                    <path d="M 34 115 L 34 105 Q 34 100 38 100 L 42 100 Q 46 100 46 105 L 46 115" fill="#2d5f3f"/>
+                </g>
+            </g>
+            
+            <!-- Trees and background -->
+            <ellipse cx="320" cy="280" rx="45" ry="35" fill="#c4d5cc" opacity="0.6"/>
+            <ellipse cx="280" cy="270" rx="35" ry="28" fill="#c4d5cc" opacity="0.5"/>
+            <ellipse cx="560" cy="285" rx="40" ry="32" fill="#c4d5cc" opacity="0.6"/>
+        </svg>
+    </div>
+</section>
+
+<!-- Quick Access -->
+<section class="quick-access">
+    <h3>Akses Cepat</h3>
+    <div class="access-grid">
+        <a href="/jadwal" class="access-card">
+            <div class="access-icon green">
+                <i class="far fa-calendar"></i>
+            </div>
+            <h4>Jadwal Saya</h4>
+            <p>Lihat jadwal bertugas</p>
+        </a>
+        <a href="/anggota" class="access-card">
+            <div class="access-icon blue">
+                <i class="fas fa-users"></i>
+            </div>
+            <h4>Cari Anggota</h4>
+            <p>Cari jadwal anggota lain</p>
+        </a>
+        <a href="/pendaftaran" class="access-card">
+            <div class="access-icon yellow">
+                <i class="far fa-edit"></i>
+            </div>
+            <h4>Pendaftaran</h4>
+            <p>Daftar kegiatan atau pelayanan</p>
+        </a>
+        <a href="/pengumuman" class="access-card">
+            <div class="access-icon purple">
+                <i class="fas fa-bullhorn"></i>
+            </div>
+            <h4>Pengumuman</h4>
+            <p>Informasi terbaru dari tim</p>
+        </a>
+    </div>
+</section>
+
+<!-- Two Column Layout -->
+<div class="two-column-layout">
+    <!-- Jadwal Terdekat -->
+    <section class="jadwal-section">
+        <div class="section-header">
+            <h3>Jadwal Terdekat</h3>
+            <a href="/jadwal" class="link-primary">Lihat semua</a>
+        </div>
+        <div class="jadwal-list">
+            {% for item in jadwal %}
+            <div class="jadwal-item">
+                <div class="jadwal-date">
+                    <span class="date-number">{{ item.tanggal }}</span>
+                    <span class="date-month">{{ item.bulan }}</span>
+                </div>
+                <div class="jadwal-info">
+                    <div class="jadwal-time">{{ item.hari }}, {{ item.waktu }}</div>
+                    <div class="jadwal-title">{{ item.acara }}</div>
+                    <div class="jadwal-location">
+                        <i class="fas fa-map-marker-alt"></i>
+                        {{ item.lokasi }}
+                    </div>
+                </div>
+                <div class="jadwal-status">
+                    <span class="badge-status {% if item.status == 'Bertugas' %}badge-success{% else %}badge-secondary{% endif %}">
+                        {{ item.status }}
+                    </span>
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Sidebar Content -->
+    <aside class="sidebar-content">
+        <!-- Pengumuman Terbaru -->
+        <section class="pengumuman-section">
+            <div class="section-header">
+                <h3>Pengumuman Terbaru</h3>
+                <a href="/pengumuman" class="link-primary">Lihat semua</a>
+            </div>
+            <div class="pengumuman-list">
+                {% for item in pengumuman %}
+                <div class="pengumuman-item">
+                    <div class="pengumuman-indicator"></div>
+                    <div class="pengumuman-content">
+                        <h4>{{ item.judul }}</h4>
+                        <span class="pengumuman-date">{{ item.tanggal }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- Kalender Liturgi -->
+        <section class="liturgi-section">
+            <h3>Kalender Liturgi</h3>
+            <div class="liturgi-card">
+                <div class="liturgi-icon">
+                    <i class="fas fa-cross"></i>
+                </div>
+                <div class="liturgi-info">
+                    <h4>{{ liturgi.minggu }}</h4>
+                    <p>{{ liturgi.tahun }}</p>
+                    <span class="liturgi-date">{{ liturgi.tanggal }}</span>
+                    <a href="#" class="link-primary">
+                        Lihat Bacaan
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Doa Hari Ini -->
+        <section class="doa-section">
+            <h3>Doa Hari Ini</h3>
+            <div class="doa-card">
+                <i class="fas fa-quote-left quote-icon"></i>
+                <p>Tuhan, ajarlah kami melayani dengan rendah hati dan penuh kasih. Amin.</p>
+            </div>
+        </section>
+    </aside>
+</div>
+{% endblock %}

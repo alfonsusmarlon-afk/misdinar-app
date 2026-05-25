@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - MISDINAR</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, var(--primary-green), var(--accent-green));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo-login {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, var(--primary-green), var(--accent-green));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 36px;
+            margin: 0 auto 20px;
+        }
+
+        .login-header h1 {
+            font-size: 28px;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+
+        .login-header p {
+            color: var(--text-gray);
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-dark);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 3px rgba(45, 95, 63, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: var(--text-gray);
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            border-left: 4px solid #f5c6cb;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--primary-green), var(--accent-green));
+            color: var(--white);
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 16px;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(45, 95, 63, 0.3);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .login-info {
+            background: var(--light-green);
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: var(--text-dark);
+            margin-top: 20px;
+        }
+
+        .login-info h4 {
+            margin: 0 0 12px 0;
+            color: var(--primary-green);
+            font-weight: 600;
+        }
+
+        .login-info p {
+            margin: 8px 0;
+        }
+
+        .login-info code {
+            background: var(--white);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .demo-credentials {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0;
+        }
+
+        .demo-credentials li {
+            padding: 4px 0;
+            font-size: 12px;
+        }
+
+        .demo-credentials code {
+            background: var(--white);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 24px;
+            }
+
+            .login-header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo-login">
+                    <i class="fas fa-church"></i>
+                </div>
+                <h1>MISDINAR</h1>
+                <p>Sistem Informasi Misdinar</p>
+            </div>
+
+            {% if error %}
+            <div class="error-message">
+                <i class="fas fa-exclamation-circle"></i> {{ error }}
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('login') }}">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="Masukkan username" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Masukkan password" required>
+                </div>
+
+                <button type="submit" class="btn-login">
+                    <i class="fas fa-sign-in-alt"></i> Masuk
+                </button>
+            </form>
+
+            <div class="login-info">
+                <h4><i class="fas fa-info-circle"></i> Data Demo</h4>
+                <p>Gunakan akun berikut untuk login:</p>
+                <ul class="demo-credentials">
+                    <li><code>anton</code> / <code>123456</code></li>
+                    <li><code>budi</code> / <code>password</code></li>
+                    <li><code>citra</code> / <code>citra123</code></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

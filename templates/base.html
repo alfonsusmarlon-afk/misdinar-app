@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MISDINAR{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-church"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>MISDINAR</h1>
+                    <p>Informasi & Pelayanan<br>Bagi Misdinar</p>
+                </div>
+            </div>
+
+            {% if session.get('user_id') %}
+            <!-- Menu untuk user yang sudah login -->
+            <nav class="nav-menu">
+                <a href="/" class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
+                    <i class="fas fa-home"></i>
+                    <span>Beranda</span>
+                </a>
+                <a href="/jadwal" class="nav-item {% if request.endpoint == 'jadwal' %}active{% endif %}">
+                    <i class="far fa-calendar"></i>
+                    <span>Jadwal Saya</span>
+                </a>
+                <a href="/anggota" class="nav-item {% if request.endpoint == 'anggota' %}active{% endif %}">
+                    <i class="fas fa-users"></i>
+                    <span>Anggota</span>
+                </a>
+                <a href="/pendaftaran" class="nav-item {% if request.endpoint == 'pendaftaran' %}active{% endif %}">
+                    <i class="far fa-edit"></i>
+                    <span>Pendaftaran</span>
+                </a>
+                <a href="/pengumuman" class="nav-item {% if request.endpoint == 'pengumuman' %}active{% endif %}">
+                    <i class="fas fa-bullhorn"></i>
+                    <span>Pengumuman</span>
+                </a>
+                <a href="/galeri" class="nav-item {% if request.endpoint == 'galeri' %}active{% endif %}">
+                    <i class="far fa-images"></i>
+                    <span>Galeri</span>
+                </a>
+                <a href="/dokumen" class="nav-item {% if request.endpoint == 'dokumen' %}active{% endif %}">
+                    <i class="far fa-file-alt"></i>
+                    <span>Dokumen</span>
+                </a>
+                <a href="/kontak" class="nav-item {% if request.endpoint == 'kontak' %}active{% endif %}">
+                    <i class="fas fa-phone"></i>
+                    <span>Kontak</span>
+                </a>
+                <a href="/pengaturan" class="nav-item {% if request.endpoint == 'pengaturan' %}active{% endif %}">
+                    <i class="fas fa-cog"></i>
+                    <span>Pengaturan</span>
+                </a>
+            </nav>
+
+            <div class="user-profile">
+                <div class="user-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="user-info">
+                    <span class="user-name">{{ session.get('nama_user', 'User') }}</span>
+                    <span class="user-role">Misdinar</span>
+                </div>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+
+            <a href="{{ url_for('logout') }}" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Keluar</span>
+            </a>
+            {% else %}
+            <!-- Menu publik untuk non-user -->
+            <nav class="nav-menu">
+                <a href="/" class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
+                    <i class="fas fa-home"></i>
+                    <span>Beranda</span>
+                </a>
+                <a href="/jadwal" class="nav-item {% if request.endpoint == 'jadwal' %}active{% endif %}">
+                    <i class="far fa-calendar"></i>
+                    <span>Jadwal Pelayanan</span>
+                </a>
+            </nav>
+
+            <div class="user-profile-public">
+                <p style="text-align: center; color: var(--text-gray); font-size: 13px; margin-bottom: 16px;">
+                    Halaman Publik - Silakan login untuk akses penuh
+                </p>
+            </div>
+
+            <a href="{{ url_for('login') }}" class="logout-btn" style="background: var(--primary-green); color: var(--white); text-align: center;">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>Login</span>
+            </a>
+            {% endif %}
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    {% if session.get('user_id') %}
+                    <input type="text" placeholder="Cari jadwal, anggota, pengumuman, dll...">
+                    {% else %}
+                    <input type="text" placeholder="Cari jadwal...">
+                    {% endif %}
+                </div>
+                <div class="header-actions">
+                    {% if session.get('user_id') %}
+                    <button class="notification-btn">
+                        <i class="far fa-bell"></i>
+                        <span class="badge">2</span>
+                    </button>
+                    <button class="calendar-btn">
+                        <i class="far fa-calendar-alt"></i>
+                    </button>
+                    {% else %}
+                    <a href="{{ url_for('login') }}" class="calendar-btn" title="Login untuk akses penuh" style="text-decoration: none; cursor: pointer;">
+                        <i class="fas fa-sign-in-alt"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </header>
+
+            <div class="content-area">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
