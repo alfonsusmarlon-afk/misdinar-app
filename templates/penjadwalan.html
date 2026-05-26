@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Penjadwalan - MISDINAR{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Manajemen Penjadwalan Misa</h2>
+    <p>Sistem otomatisasi pembuatan draft jadwal dan import data Excel</p>
+</div>
+
+<div class="schedule-dashboard">
+    <div class="panel-card template-panel">
+        <div class="panel-header">
+            <div class="icon-circle bg-blue"><i class="fas fa-file-excel"></i></div>
+            <h3>1. Buat Template Jadwal Kosong</h3>
+        </div>
+        <p class="panel-desc">Tentukan rentang tanggal untuk membuat form Excel. Anda dapat mengubah detail acara dan waktu langsung di dalam Excel nanti.</p>
+        
+        <form action="{{ url_for('penjadwalan') }}" method="POST" class="generate-form">
+            <input type="hidden" name="action" value="generate">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Tanggal Mulai Jadwal</label>
+                    <input type="date" name="start_date" required>
+                </div>
+                <div class="form-group">
+                    <label>Tanggal Akhir Jadwal</label>
+                    <input type="date" name="end_date" required>
+                </div>
+            </div>
+            <button type="submit" class="btn-primary w-100">
+                <i class="fas fa-download"></i> Unduh Template Excel
+            </button>
+        </form>
+    </div>
+
+    <div class="panel-card upload-panel">
+        <div class="panel-header">
+            <div class="icon-circle bg-green"><i class="fas fa-upload"></i></div>
+            <h3>2. Unggah Jadwal (Import)</h3>
+        </div>
+        <p class="panel-desc">Unggah kembali file Excel yang telah Anda isi dengan nama-nama petugas di kolom <b>Username Petugas</b>.</p>
+        
+        <form action="{{ url_for('penjadwalan') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+            <input type="hidden" name="action" value="upload">
+            <div class="upload-area">
+                <i class="fas fa-file-import"></i>
+                <input type="file" name="file_excel" accept=".xlsx, .xls" required>
+                <span>Klik disini untuk memilih file .xlsx</span>
+            </div>
+            <button type="submit" class="btn-success w-100">
+                <i class="fas fa-check-circle"></i> Proses & Simpan ke Database
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="guide-section">
+    <h3><i class="fas fa-info-circle"></i> Panduan Pengisian Excel</h3>
+    <p>Sistem membaca identitas petugas berdasarkan <b>Username</b>, bukan nama lengkap. Berikut adalah daftar username anggota yang tersedia untuk disalin ke file Excel. Jika bertugas lebih dari satu orang, pisahkan dengan koma (contoh: <code>anton, budi, galant</code>).</p>
+    
+    <div class="username-list">
+        {% for u in users %}
+        <div class="user-chip">
+            <span class="u-name">{{ u.nama }}</span>
+            <span class="u-kode">{{ u.username }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.schedule-dashboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.panel-card {
+    background: var(--white);
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    border-top: 4px solid var(--border-color);
+}
+
+.template-panel { border-top-color: #0d6efd; }
+.upload-panel { border-top-color: var(--primary-green); }
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.icon-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+}
+.bg-blue { background: #0d6efd; }
+.bg-green { background: var(--primary-green); }
+
+.panel-header h3 { font-size: 18px; color: var(--text-dark); margin: 0; }
+.panel-desc { font-size: 13px; color: var(--text-gray); margin-bottom: 20px; line-height: 1.5; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.form-group label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--text-dark); }
+.form-group input[type="date"] { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; }
+
+.w-100 { width: 100%; justify-content: center; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px; color: white;}
+.btn-primary { background: #0d6efd; } .btn-primary:hover { background: #0b5ed7; }
+.btn-success { background: var(--primary-green); } .btn-success:hover { background: var(--accent-green); }
+
+.upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 30px 20px;
+    text-align: center;
+    position: relative;
+    margin-bottom: 20px;
+    background: #fcfcfc;
+    transition: 0.3s;
+}
+.upload-area:hover { border-color: var(--primary-green); background: #f0f7f3; }
+.upload-area i { font-size: 32px; color: var(--text-gray); margin-bottom: 10px; display: block; }
+.upload-area span { font-size: 13px; color: var(--text-dark); font-weight: 500; }
+.upload-area input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+
+.guide-section { background: var(--white); padding: 24px; border-radius: 12px; box-shadow: var(--shadow); }
+.guide-section h3 { font-size: 16px; color: var(--text-dark); margin-bottom: 12px; }
+.guide-section p { font-size: 14px; color: var(--text-gray); margin-bottom: 20px; }
+
+.username-list { display: flex; flex-wrap: wrap; gap: 10px; }
+.user-chip { border: 1px solid var(--border-color); border-radius: 6px; display: flex; overflow: hidden; font-size: 12px; }
+.u-name { background: var(--bg-gray); padding: 6px 10px; font-weight: 600; color: var(--text-dark); }
+.u-kode { background: #fff; padding: 6px 10px; color: #dc3545; font-family: monospace; font-weight: bold; }
+
+@media(max-width: 992px) { .schedule-dashboard { grid-template-columns: 1fr; } }
+@media(max-width: 576px) { .form-row { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}

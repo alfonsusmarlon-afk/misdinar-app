@@ -31,10 +31,33 @@
                     <span>Jadwal Pelayanan Saya</span>
                 </a>
                 
-                {% if session.get('role') in ['admin', 'pengurus'] %}
+                {% set role = session.get('role') %}
+                
+                {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
                 <a href="/anggota" class="nav-item {% if request.endpoint == 'anggota' %}active{% endif %}">
                     <i class="fas fa-users"></i>
                     <span>Anggota</span>
+                </a>
+                {% endif %}
+                
+                {% if role in ['super admin', 'bph'] %}
+                <a href="/bph" class="nav-item {% if request.endpoint == 'bph' %}active{% endif %}">
+                    <i class="fas fa-user-shield"></i>
+                    <span>BPH</span>
+                </a>
+                {% endif %}
+                
+                {% if role in ['super admin', 'penjadwalan'] %}
+                <a href="/penjadwalan" class="nav-item {% if request.endpoint == 'penjadwalan' %}active{% endif %}">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>Penjadwalan</span>
+                </a>
+                {% endif %}
+                
+                {% if role in ['super admin', 'pelatihan'] %}
+                <a href="/pelatihan" class="nav-item {% if request.endpoint == 'pelatihan' %}active{% endif %}">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>Pelatihan</span>
                 </a>
                 {% endif %}
                 
@@ -66,7 +89,7 @@
                 </div>
                 <div class="user-info">
                     <span class="user-name">{{ session.get('nama_user', 'User') }}</span>
-                    <span class="user-role">Misdinar</span>
+                    <span class="user-role" style="text-transform: capitalize;">{{ session.get('role', 'Misdinar') }}</span>
                 </div>
                 <i class="fas fa-chevron-down"></i>
             </div>
@@ -131,15 +154,7 @@
                     {% endif %}
                 </div>
                 <div class="header-actions">
-                    {% if session.get('user_id') %}
-                    <button class="notification-btn">
-                        <i class="far fa-bell"></i>
-                        <span class="badge">2</span>
-                    </button>
-                    <button class="calendar-btn">
-                        <i class="far fa-calendar-alt"></i>
-                    </button>
-                    {% else %}
+                    {% if not session.get('user_id') %}
                     <a href="{{ url_for('login') }}" class="calendar-btn" title="Login untuk akses penuh" style="text-decoration: none; cursor: pointer;">
                         <i class="fas fa-sign-in-alt"></i>
                     </a>

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Pelatihan - MISDINAR{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Pelatihan Misdinar</h2>
+    <p>Halaman manajemen materi, absensi, dan agenda pelatihan calon maupun anggota</p>
+</div>
+
+<div class="coming-soon">
+    <i class="fas fa-graduation-cap"></i>
+    <h3>Halaman Dalam Pengembangan</h3>
+    <p>Fitur modul materi serta data absensi pelatihan akan segera hadir</p>
+</div>
+
+<style>
+.coming-soon {
+    text-align: center;
+    padding: 80px 20px;
+    background: var(--white);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+}
+
+.coming-soon i {
+    font-size: 64px;
+    color: var(--primary-green);
+    margin-bottom: 24px;
+}
+
+.coming-soon h3 {
+    font-size: 24px;
+    margin-bottom: 12px;
+}
+
+.coming-soon p {
+    color: var(--text-gray);
+}
+</style>
+{% endblock %}

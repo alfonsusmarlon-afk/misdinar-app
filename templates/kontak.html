@@ -1,40 +1,198 @@
 {% extends "base.html" %}
 
-{% block title %}${page^} - MISDINAR{% endblock %}
+{% block title %}Kontak - MISDINAR{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h2>${page^}</h2>
-    <p>Halaman ${page}</p>
+    <h2>Kontak Pengurus</h2>
+    <p>Hubungi divisi atau pengurus terkait untuk pertanyaan atau keperluan pelayanan</p>
 </div>
 
-<div class="coming-soon">
-    <i class="fas fa-tools"></i>
-    <h3>Halaman Dalam Pengembangan</h3>
-    <p>Fitur ini akan segera hadir</p>
+<div class="kontak-container">
+    {% if pengurus_by_role %}
+        {% for role, members in pengurus_by_role.items() %}
+        <div class="divisi-section">
+            <h3 class="divisi-header">
+                <i class="fas fa-users-cog"></i> DIVISI: {{ role | upper }}
+            </h3>
+            
+            <div class="kontak-grid">
+                {% for member in members %}
+                <div class="kontak-card">
+                    <div class="avatar-circle">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div class="kontak-details">
+                        <h4>{{ member.nama }}</h4>
+                        <span class="badge-role">{{ member.role | upper }}</span>
+                        
+                        {% if member.no_hp %}
+                        <a href="https://wa.me/{{ member.no_hp }}" target="_blank" class="contact-btn wa-btn">
+                            <i class="fab fa-whatsapp"></i> {{ member.no_hp }}
+                        </a>
+                        {% else %}
+                        <span class="no-contact">
+                            <i class="fas fa-phone-slash"></i> Kontak Belum Tersedia
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="no-data-box">
+            <i class="fas fa-address-book"></i>
+            <h3>Daftar Kontak Kosong</h3>
+            <p>Sistem belum mendeteksi adanya data pengurus di dalam database.</p>
+        </div>
+    {% endif %}
 </div>
 
 <style>
-.coming-soon {
+.kontak-container {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.divisi-section {
+    background: var(--white);
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    border-top: 4px solid var(--primary-green);
+}
+
+.divisi-header {
+    margin-bottom: 24px;
+    color: var(--primary-green);
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.kontak-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.kontak-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: var(--bg-gray);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    transition: all 0.3s;
+}
+
+.kontak-card:hover {
+    border-color: var(--primary-green);
+    box-shadow: var(--shadow);
+    transform: translateY(-2px);
+}
+
+.avatar-circle {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--primary-green), var(--accent-green));
+    color: var(--white);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.kontak-details {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+}
+
+.kontak-details h4 {
+    font-size: 16px;
+    color: var(--text-dark);
+    margin: 0;
+}
+
+.badge-role {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-gray);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.contact-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s;
+    margin-top: 4px;
+    width: max-content;
+}
+
+.wa-btn {
+    background: #25D366;
+    color: white;
+}
+
+.wa-btn:hover {
+    background: #128C7E;
+    box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);
+}
+
+.no-contact {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #dc3545;
+    background: #f8d7da;
+    padding: 6px 10px;
+    border-radius: 6px;
+    margin-top: 4px;
+    width: max-content;
+    font-weight: 500;
+}
+
+.no-data-box {
     text-align: center;
-    padding: 80px 20px;
+    padding: 60px 20px;
     background: var(--white);
     border-radius: 12px;
     box-shadow: var(--shadow);
 }
 
-.coming-soon i {
-    font-size: 64px;
-    color: var(--primary-green);
-    margin-bottom: 24px;
+.no-data-box i {
+    font-size: 50px;
+    color: var(--border-color);
+    margin-bottom: 16px;
 }
 
-.coming-soon h3 {
-    font-size: 24px;
-    margin-bottom: 12px;
+.no-data-box h3 {
+    font-size: 20px;
+    color: var(--text-dark);
+    margin-bottom: 8px;
 }
 
-.coming-soon p {
+.no-data-box p {
     color: var(--text-gray);
 }
 </style>

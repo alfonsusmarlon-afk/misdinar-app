@@ -1,41 +1,533 @@
 {% extends "base.html" %}
 
-{% block title %}${page^} - MISDINAR{% endblock %}
+{% block title %}Pengumuman - MISDINAR{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h2>${page^}</h2>
-    <p>Halaman ${page}</p>
+    <h2>Pengumuman</h2>
+    <p>Informasi dan pemberitahuan terbaru untuk anggota misdinar</p>
 </div>
 
-<div class="coming-soon">
-    <i class="fas fa-tools"></i>
-    <h3>Halaman Dalam Pengembangan</h3>
-    <p>Fitur ini akan segera hadir</p>
+{% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+<div class="admin-action-box" id="form-container">
+    <h3 id="form-title"><i class="fas fa-plus-circle"></i> Tambah Pengumuman Baru</h3>
+    
+    <form action="{{ url_for('pengumuman') }}" method="POST" id="pengumuman-form" class="pengumuman-form">
+        <input type="hidden" name="action" id="form-action" value="tambah">
+        <input type="hidden" name="id" id="form-id" value="">
+        
+        <div class="form-group">
+            <label>Judul Pengumuman</label>
+            <input type="text" name="judul" id="input-judul" required placeholder="Contoh: Rapat Evaluasi Bulanan">
+        </div>
+        
+        <div class="form-group">
+            <label>Pelaksanaan Acara</label>
+            <input type="datetime-local" name="waktu_pelaksanaan" id="input-waktu" required>
+        </div>
+        
+        <div class="form-group">
+            <label>Pilih Target (Multi-Select)</label>
+            
+            <div class="custom-multiselect" id="multi-select">
+                <div class="select-box" onclick="toggleDropdown()" id="select-box">
+                    <span id="select-box-text">Pilih Target Anggota...</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                
+                <div class="dropdown-content" id="targetDropdown">
+                    <div class="group-header select-all-header">
+                        <label>
+                            <input type="checkbox" id="checkAll" value="semua" name="target" onchange="toggleAll(this)"> <strong>Semua / Publik (Broadcast)</strong>
+                        </label>
+                    </div>
+                    
+                    {% for div_role, members in users_by_role.items() %}
+                    {% set outer_loop_index = loop.index %}
+                    <div class="group-header">
+                        <label>
+                            <input type="checkbox" class="group-cb" onchange="toggleGroup(this, 'role-{{ outer_loop_index }}')"> <strong>Divisi: {{ div_role | upper }}</strong>
+                        </label>
+                    </div>
+                    <div class="group-items">
+                        {% for member in members %}
+                        <label>
+                            <input type="checkbox" name="target" value="{{ member.username }}" data-name="{{ member.nama }}" class="item-cb role-{{ outer_loop_index }}" onchange="checkItem()"> {{ member.nama }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+        </div>
+        
+        <div class="form-action">
+            <button type="submit" id="btn-submit" class="btn-primary">
+                <i class="fas fa-paper-plane"></i> Bagikan
+            </button>
+            <button type="button" id="btn-cancel" class="btn-outline" style="display: none;" onclick="cancelEdit()">
+                Batal Edit
+            </button>
+        </div>
+    </form>
 </div>
+{% endif %}
+
+<div class="pengumuman-container">
+    {% if pengumuman %}
+        {% for item in pengumuman %}
+        <div class="pengumuman-card">
+            <div class="pengumuman-icon">
+                <i class="fas fa-bullhorn"></i>
+            </div>
+            
+            <div class="pengumuman-info">
+                <h3>{{ item.judul }}</h3>
+                <div class="pengumuman-meta">
+                    <span class="tanggal" title="Dibuat pada: {{ item.tanggal_dibuat }}">
+                        <i class="far fa-calendar-alt"></i> Dibuat: {{ item.tanggal_dibuat }}
+                    </span>
+                    <span class="tanggal highlight-time">
+                        <i class="far fa-clock"></i> Pelaksanaan: {{ item.waktu_pelaksanaan.replace('T', ' Jam ') }}
+                    </span>
+                    
+                    {% if item.target == 'semua' %}
+                        <span class="badge-internal" style="background: #e2f0e6; color: #1e5a32;"><i class="fas fa-globe"></i> Semua Orang</span>
+                    {% else %}
+                        <span class="badge-internal" style="background: #d4e8f4; color: #1f4a66;" title="{{ item.target }}"><i class="fas fa-users"></i> Spesifik/Internal ({{ item.target.split(',')|length }} Akun)</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+            <div class="pengumuman-actions">
+                <button onclick="editPengumuman('{{ item.id }}', '{{ item.judul }}', '{{ item.waktu_pelaksanaan }}', '{{ item.target }}')" class="action-btn btn-edit" title="Edit">
+                    <i class="fas fa-edit"></i>
+                </button>
+                
+                <form action="{{ url_for('pengumuman') }}" method="POST" style="display:inline;">
+                    <input type="hidden" name="action" value="hapus">
+                    <input type="hidden" name="id" value="{{ item.id }}">
+                    <button type="submit" class="action-btn btn-delete" title="Hapus" onclick="return confirm('Apakah Anda yakin ingin menghapus pengumuman ini secara permanen?');">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+            
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="no-data">
+            <i class="fas fa-inbox"></i>
+            <h3>Tidak Ada Pengumuman</h3>
+            <p>Belum ada informasi terbaru saat ini.</p>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    // Tutup dropdown jika diklik di luar area
+    document.addEventListener('click', function(event) {
+        var isClickInside = document.getElementById('multi-select').contains(event.target);
+        if (!isClickInside) {
+            document.getElementById('targetDropdown').classList.remove('show');
+        }
+    });
+
+    function toggleDropdown() {
+        document.getElementById('targetDropdown').classList.toggle('show');
+    }
+
+    function updateSelectBoxText() {
+        const checked = document.querySelectorAll('.item-cb:checked');
+        const boxText = document.getElementById('select-box-text');
+        
+        if (document.getElementById('checkAll').checked) {
+            boxText.innerHTML = "<b>Semua Terpilih</b>";
+        } else if (checked.length === 0) {
+            boxText.innerText = "Pilih Target Anggota...";
+        } else if (checked.length <= 3) {
+            let names = Array.from(checked).map(cb => cb.dataset.name);
+            boxText.innerHTML = "<b>" + names.join(', ') + "</b>";
+        } else {
+            boxText.innerHTML = "<b>" + checked.length + " Orang Terpilih</b>";
+        }
+    }
+
+    function toggleAll(source) {
+        // Centang semua checkbox di dalam dropdown
+        document.querySelectorAll('#targetDropdown input[type="checkbox"]').forEach(cb => {
+            cb.checked = source.checked;
+        });
+        updateSelectBoxText();
+    }
+
+    function toggleGroup(source, groupClass) {
+        // Centang semua checkbox yang memiliki class group tersebut
+        document.querySelectorAll('.' + groupClass).forEach(cb => {
+            cb.checked = source.checked;
+        });
+        
+        // Hapus check "Semua" karena bisa jadi tidak semua tercetang
+        document.getElementById('checkAll').checked = false;
+        updateSelectBoxText();
+    }
+
+    function checkItem() {
+        // Hapus status centang pada Parent/Group dan All jika ada item dicentang/uncheck manual
+        document.getElementById('checkAll').checked = false;
+        updateSelectBoxText();
+    }
+
+    // LOGIKA UBAH MODE (TAMBAH / EDIT)
+    function editPengumuman(id, judul, waktu, target_string) {
+        document.getElementById('form-action').value = 'edit';
+        document.getElementById('form-id').value = id;
+        
+        document.getElementById('input-judul').value = judul;
+        document.getElementById('input-waktu').value = waktu;
+        
+        // Reset seluruh checkbox
+        document.querySelectorAll('#targetDropdown input[type="checkbox"]').forEach(cb => cb.checked = false);
+        
+        // Membaca array target dari DB lalu mencentang checkboxnya
+        if(target_string === 'semua') {
+            document.getElementById('checkAll').checked = true;
+            toggleAll(document.getElementById('checkAll'));
+        } else {
+            const targets = target_string.split(',');
+            targets.forEach(t => {
+                const cb = document.querySelector(`input.item-cb[value="${t}"]`);
+                if(cb) cb.checked = true;
+            });
+            updateSelectBoxText();
+        }
+        
+        document.getElementById('form-title').innerHTML = '<i class="fas fa-edit"></i> Edit Pengumuman';
+        document.getElementById('btn-submit').innerHTML = '<i class="fas fa-save"></i> Simpan Perubahan';
+        document.getElementById('btn-cancel').style.display = 'inline-block';
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        document.getElementById('form-container').style.borderLeftColor = '#0d6efd';
+    }
+
+    function cancelEdit() {
+        document.getElementById('form-action').value = 'tambah';
+        document.getElementById('form-id').value = '';
+        document.getElementById('pengumuman-form').reset();
+        
+        // Reset checkbox UI Text
+        document.querySelectorAll('#targetDropdown input[type="checkbox"]').forEach(cb => cb.checked = false);
+        updateSelectBoxText();
+        
+        document.getElementById('form-title').innerHTML = '<i class="fas fa-plus-circle"></i> Tambah Pengumuman Baru';
+        document.getElementById('btn-submit').innerHTML = '<i class="fas fa-paper-plane"></i> Bagikan';
+        document.getElementById('btn-cancel').style.display = 'none';
+        document.getElementById('form-container').style.borderLeftColor = 'var(--primary-green)';
+    }
+</script>
 
 <style>
-.coming-soon {
+/* Box Admin */
+.admin-action-box {
+    background: var(--white);
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    margin-bottom: 32px;
+    border-left: 4px solid var(--primary-green);
+    transition: all 0.3s;
+}
+
+.admin-action-box h3 {
+    margin-bottom: 20px;
+    color: var(--text-dark);
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pengumuman-form {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr;
+    gap: 16px;
+    align-items: end;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.form-group input[type="text"], .form-group input[type="datetime-local"] {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.3s;
+}
+
+.form-group input[type="text"]:focus, .form-group input[type="datetime-local"]:focus {
+    border-color: var(--primary-green);
+    box-shadow: 0 0 0 3px rgba(45, 95, 63, 0.1);
+}
+
+/* CUSTOM MULTI-SELECT DROPDOWN CSS */
+.custom-multiselect {
+    position: relative;
+    width: 100%;
+    user-select: none;
+}
+
+.select-box {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 14px;
+    background-color: var(--white);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s;
+}
+
+.select-box:hover {
+    border-color: var(--primary-green);
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--white);
+    border: 1px solid var(--primary-green);
+    border-radius: 8px;
+    margin-top: 4px;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: var(--shadow-hover);
+    padding: 10px;
+}
+
+.dropdown-content.show {
+    display: block;
+}
+
+.select-all-header {
+    background: #d4edda !important;
+    border-radius: 6px;
+    margin-top: 0 !important;
+    border: 1px solid #c3e6cb;
+}
+
+.select-all-header label {
+    color: #155724 !important;
+}
+
+.group-header {
+    padding: 8px 10px;
+    background: var(--bg-gray);
+    margin-top: 10px;
+    border-radius: 4px;
+}
+
+.group-header label {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 !important;
+    color: var(--text-dark);
+}
+
+.group-items {
+    padding-left: 28px;
+    display: flex;
+    flex-direction: column;
+    margin-top: 6px;
+}
+
+.group-items label {
+    padding: 6px 0;
+    font-weight: 400 !important;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 !important;
+    color: var(--text-gray);
+}
+
+.group-items label:hover {
+    color: var(--primary-green);
+}
+
+/* Action Form */
+.form-action {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 12px;
+}
+
+.form-action .btn-primary {
+    height: 45px;
+    flex: 1;
+    max-width: 250px;
+    justify-content: center;
+}
+
+.form-action .btn-outline {
+    height: 45px;
+    padding: 0 24px;
+    border: 1px solid #dc3545;
+    color: #dc3545;
+    background: transparent;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.form-action .btn-outline:hover {
+    background: #dc3545;
+    color: var(--white);
+}
+
+/* Style Kartu Pengumuman */
+.pengumuman-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.pengumuman-card {
+    background: var(--white);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.pengumuman-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+.pengumuman-icon {
+    width: 50px;
+    height: 50px;
+    background: var(--light-green);
+    color: var(--primary-green);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.pengumuman-info {
+    flex: 1;
+}
+
+.pengumuman-info h3 {
+    margin-bottom: 8px;
+    font-size: 16px;
+    color: var(--text-dark);
+}
+
+.pengumuman-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.pengumuman-meta .tanggal {
+    font-size: 13px;
+    color: var(--text-gray);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.highlight-time {
+    color: var(--primary-green) !important;
+    font-weight: 600;
+}
+
+.badge-internal {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Style Tombol Aksi (Edit & Hapus) */
+.pengumuman-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.action-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.3s;
+}
+
+.btn-edit { background: #e2f0e6; color: var(--primary-green); }
+.btn-edit:hover { background: var(--primary-green); color: var(--white); }
+
+.btn-delete { background: #f8d7da; color: #dc3545; }
+.btn-delete:hover { background: #dc3545; color: var(--white); }
+
+.no-data {
     text-align: center;
-    padding: 80px 20px;
+    padding: 60px 20px;
     background: var(--white);
     border-radius: 12px;
     box-shadow: var(--shadow);
 }
+.no-data i { font-size: 50px; color: var(--border-color); margin-bottom: 16px; }
+.no-data h3 { font-size: 20px; color: var(--text-dark); margin-bottom: 8px; }
+.no-data p { color: var(--text-gray); }
 
-.coming-soon i {
-    font-size: 64px;
-    color: var(--primary-green);
-    margin-bottom: 24px;
+/* Responsivitas Grid */
+@media (max-width: 992px) {
+    .pengumuman-form { grid-template-columns: 1fr 1fr; }
 }
-
-.coming-soon h3 {
-    font-size: 24px;
-    margin-bottom: 12px;
-}
-
-.coming-soon p {
-    color: var(--text-gray);
+@media (max-width: 576px) {
+    .pengumuman-form { grid-template-columns: 1fr; }
+    .pengumuman-actions { flex-direction: column; }
 }
 </style>
 {% endblock %}

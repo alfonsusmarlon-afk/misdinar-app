@@ -13,15 +13,6 @@
     {% endif %}
 </div>
 
-{% if is_logged_in %}
-<div class="jadwal-filters">
-    <button class="filter-btn active">Semua</button>
-    <button class="filter-btn">Bertugas</button>
-    <button class="filter-btn">Tidak Bertugas</button>
-    <button class="filter-btn">Bulan Ini</button>
-</div>
-{% endif %}
-
 <div class="jadwal-container">
     {% if jadwal %}
         {% for item in jadwal %}
@@ -54,8 +45,8 @@
             </div>
             {% if is_logged_in %}
             <div class="jadwal-footer">
-                <button class="btn-outline">Detail</button>
-                <button class="btn-outline">Ubah Status</button>
+                <button class="btn-outline" onclick="alert('Daftar Petugas untuk {{ item.acara }}:\n\n- {{ item.nama_pengguna }} (Misdinar)\n- [Nama Petugas Lainnya]')">Detail</button>
+                <button class="btn-outline" onclick="if(confirm('Apakah Anda ingin mengajukan izin tidak bertugas untuk jadwal {{ item.acara }} kepada Pengurus?')) alert('Permohonan izin Anda telah terkirim kepada Pengurus.')">Ubah Status</button>
             </div>
             {% endif %}
         </div>
@@ -64,7 +55,7 @@
     <div class="no-data">
         <i class="fas fa-calendar-times"></i>
         <h3>Tidak ada jadwal</h3>
-        <p>Belum ada jadwal pelayanan untuk Anda</p>
+        <p>Belum ada jadwal pelayanan untuk Anda saat ini</p>
     </div>
     {% endif %}
 </div>
@@ -88,35 +79,6 @@
 
 .page-header p {
     color: var(--text-gray);
-}
-
-.jadwal-filters {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-}
-
-.filter-btn {
-    padding: 10px 20px;
-    border: 1px solid var(--border-color);
-    background: var(--white);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s;
-    font-size: 14px;
-    font-weight: 500;
-}
-
-.filter-btn:hover {
-    border-color: var(--primary-green);
-    background: var(--light-green);
-}
-
-.filter-btn.active {
-    background: var(--primary-green);
-    color: var(--white);
-    border-color: var(--primary-green);
 }
 
 .jadwal-container {

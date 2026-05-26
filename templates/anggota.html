@@ -4,38 +4,197 @@
 
 {% block content %}
 <div class="page-header">
-    <h2>Daftar Anggota</h2>
-    <p>Cari dan lihat informasi anggota misdinar</p>
+    <h2>Daftar Anggota & Manajemen Role</h2>
+    <p>Lihat profil anggota dan kelola tingkatan hak akses akun</p>
 </div>
 
-<div class="coming-soon">
-    <i class="fas fa-users"></i>
-    <h3>Halaman Dalam Pengembangan</h3>
-    <p>Fitur daftar anggota akan segera hadir</p>
+<div class="anggota-container">
+    <div class="table-card">
+        <table class="anggota-table">
+            <thead>
+                <tr>
+                    <th><i class="fas fa-id-card"></i> Nama Lengkap</th>
+                    <th><i class="fas fa-envelope"></i> Username / Email</th>
+                    <th><i class="fas fa-user-tag"></i> Role Saat Ini</th>
+                    
+                    {% if current_role in ['super admin', 'bph'] %}
+                    <th><i class="fas fa-tools"></i> Aksi Pengaturan</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td class="user-nama-cell">
+                        <div class="table-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <strong>{{ user.nama }}</strong>
+                    </td>
+                    <td class="username-text"><code>{{ user.username }}</code></td>
+                    <td>
+                        <span class="role-badge role-{{ user.role.replace(' ', '-') }}">
+                            {{ user.role | upper }}
+                        </span>
+                    </td>
+                    
+                    {% if current_role in ['super admin', 'bph'] %}
+                    <td>
+                        <form action="{{ url_for('ubah_role') }}" method="POST" class="row-role-form">
+                            <input type="hidden" name="username" value="{{ user.username }}">
+                            <select name="role" class="table-select-role" required>
+                                <option value="user" {% if user.role == 'user' %}selected{% endif %}>User Biasa</option>
+                                <option value="bph" {% if user.role == 'bph' %}selected{% endif %}>BPH</option>
+                                <option value="penjadwalan" {% if user.role == 'penjadwalan' %}selected{% endif %}>Penjadwalan</option>
+                                <option value="pelatihan" {% if user.role == 'pelatihan' %}selected{% endif %}>Pelatihan</option>
+                                
+                                {% if current_role == 'super admin' %}
+                                <option value="super admin" {% if user.role == 'super admin' %}selected{% endif %}>Super Admin</option>
+                                {% endif %}
+                            </select>
+                            <button type="submit" class="btn-table-save" onclick="return confirm('Apakah Anda yakin ingin mengubah hak akses akun {{ user.nama }}?');">
+                                <i class="fas fa-save"></i> Simpan
+                            </button>
+                        </form>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <style>
-.coming-soon {
-    text-align: center;
-    padding: 80px 20px;
+/* Tampilan Wadah Konten */
+.anggota-container {
+    margin-top: 24px;
+}
+
+.table-card {
     background: var(--white);
     border-radius: 12px;
     box-shadow: var(--shadow);
+    overflow: hidden;
 }
 
-.coming-soon i {
-    font-size: 64px;
+/* Desain Tabel Komponen */
+.anggota-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.anggota-table th {
+    background-color: var(--bg-gray);
+    color: var(--text-dark);
+    padding: 16px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.anggota-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+.anggota-table tr:hover {
+    background-color: rgba(45, 95, 63, 0.02);
+}
+
+.user-nama-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.table-avatar {
+    width: 32px;
+    height: 32px;
+    background: var(--light-green);
     color: var(--primary-green);
-    margin-bottom: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
 }
 
-.coming-soon h3 {
-    font-size: 24px;
-    margin-bottom: 12px;
+.username-text code {
+    background: var(--bg-gray);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    color: #cc2424;
 }
 
-.coming-soon p {
-    color: var(--text-gray);
+/* badge Pewarnaan Macam Peran Akun */
+.role-badge {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-block;
+}
+
+.role-user { background: #e9ecef; color: var(--text-gray); }
+.role-bph { background: #fff3cd; color: #856404; }
+.role-penjadwalan { background: #d4e8f4; color: #1f4a66; }
+.role-pelatihan { background: #e2f0e6; color: #1e5a32; }
+.role-super-admin { background: #f8d7da; color: #721c24; }
+
+/* Desain Form Aksi */
+.row-role-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.table-select-role {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+    background-color: var(--white);
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.table-select-role:focus {
+    border-color: var(--primary-green);
+}
+
+.btn-table-save {
+    padding: 8px 14px;
+    background-color: var(--primary-green);
+    color: var(--white);
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+}
+
+.btn-table-save:hover {
+    background-color: var(--accent-green);
+}
+
+@media (max-width: 768px) {
+    .table-card {
+        overflow-x: auto;
+    }
+    .row-role-form {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }
 </style>
 {% endblock %}
