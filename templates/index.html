@@ -153,7 +153,7 @@
                     <div class="pengumuman-indicator"></div>
                     <div class="pengumuman-content">
                         <h4>{{ item.judul }}</h4>
-                        <span class="pengumuman-date">{{ item.tanggal }}</span>
+                        <span class="pengumuman-date">{{ item.tanggal_dibuat }}</span>
                     </div>
                 </div>
                 {% endfor %}
@@ -161,30 +161,61 @@
         </section>
 
         <section class="liturgi-section">
-            <h3>Kalender Liturgi</h3>
-            <div class="liturgi-card">
+            <h3>Kalender Liturgi Nasional</h3>
+            
+            <div class="liturgi-card warna-{{ liturgi.warna | lower }}">
                 <div class="liturgi-icon">
-                    <i class="fas fa-cross"></i>
+                    <i class="fas fa-book-bible"></i>
                 </div>
                 <div class="liturgi-info">
-                    <h4>{{ liturgi.minggu }}</h4>
-                    <p>{{ liturgi.tahun }}</p>
+                    <h4>{{ liturgi.keterangan_warna }}</h4>
                     <span class="liturgi-date">{{ liturgi.tanggal }}</span>
-                    <a href="#" class="link-primary">
-                        Lihat Bacaan
-                        <i class="fas fa-chevron-right"></i>
-                    </a>
+                    
+                    <div class="bacaan-list">
+                        <p><span>B1:</span> {{ liturgi.bacaan_1 }}</p>
+                        <p><span>Mzm:</span> {{ liturgi.mazmur }}</p>
+                        {% if liturgi.bacaan_2 != '-' %}
+                        <p><span>B2:</span> {{ liturgi.bacaan_2 }}</p>
+                        {% endif %}
+                        <p><span>Injil:</span> {{ liturgi.injil }}</p>
+                    </div>
+                    
+                    <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+                        <span class="color-dot bg-{{ liturgi.warna | lower }}"></span>
+                        <span style="font-size: 11px; font-weight: 600;">Liturgi {{ liturgi.warna }}</span>
+                    </div>
                 </div>
             </div>
         </section>
 
         <section class="doa-section">
-            <h3>Doa Hari Ini</h3>
+            <h3>Quotes Hari Ini</h3>
             <div class="doa-card">
                 <i class="fas fa-quote-left quote-icon"></i>
-                <p>Tuhan, ajarlah kami melayani dengan rendah hati dan penuh kasih. Amin.</p>
+                <p>{{ quote }}</p>
             </div>
         </section>
     </aside>
 </div>
+
+<style>
+/* CSS Dinamis untuk Kartu Liturgi */
+.liturgi-card { border-radius: 10px; padding: 20px; color: var(--white); box-shadow: var(--shadow); transition: 0.3s; }
+.warna-hijau { background: linear-gradient(135deg, #2d5f3f, #3d7f5a); }
+.warna-merah { background: linear-gradient(135deg, #a72828, #c93b3b); }
+.warna-ungu { background: linear-gradient(135deg, #5b3256, #7a4674); }
+.warna-putih { background: linear-gradient(135deg, #f8f9fa, #e9ecef); color: #2c3e50 !important; border: 1px solid var(--border-color); }
+.warna-putih .liturgi-icon { background: rgba(0, 0, 0, 0.05); color: #2c3e50; }
+
+.bacaan-list { margin-top: 14px; background: rgba(0, 0, 0, 0.1); padding: 12px; border-radius: 8px; font-size: 13px; line-height: 1.8; }
+.warna-putih .bacaan-list { background: rgba(0, 0, 0, 0.03); }
+.bacaan-list span { font-weight: bold; width: 40px; display: inline-block; opacity: 0.8; }
+.bacaan-list p { margin: 0; }
+
+.color-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; border: 2px solid rgba(255,255,255,0.5); }
+.bg-hijau { background-color: #28a745; }
+.bg-merah { background-color: #dc3545; }
+.bg-ungu { background-color: #6f42c1; }
+.bg-putih { background-color: #ffffff; border-color: #ccc; }
+</style>
 {% endblock %}
