@@ -2,30 +2,14 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Cetak Jadwal Visual</title>
-    <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap" rel="stylesheet">
+    <title>Cetak Jadwal Misdinar</title>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
             font-family: 'Times New Roman', Times, serif;
-            margin: 0;
+            background: #f0f0f0;
             padding: 20px;
-            background-color: #f5f5f5;
-        }
-
-        .print-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            padding: 40px 30px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-
-        .title {
-            text-align: center;
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 30px;
-            text-transform: uppercase;
         }
 
         .print-controls {
@@ -34,130 +18,203 @@
         }
 
         .btn-print {
-            background-color: #2d5f3f;
+            background: #2d5f3f;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 10px 24px;
             font-size: 14px;
             cursor: pointer;
             border-radius: 5px;
             font-weight: bold;
+            font-family: inherit;
         }
+        .btn-print:hover { background: #3d7f5a; }
 
-        /* GRID LAYOUT MENYERUPAI GAMBAR */
-        .calendar-grid {
-            display: grid;
-            /* Membagi hari menjadi 4 kolom ke samping (Senin, Sel, Rab, Kam) lalu turun */
-            grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        /* Khusus blok hari minggu & jumat yang formasi kolomnya berbeda */
-        .day-block {
-            border-collapse: collapse;
-            width: 100%;
+        .back-link {
+            display: inline-block;
+            margin-top: 10px;
+            color: #555;
+            text-decoration: none;
+            font-family: sans-serif;
             font-size: 13px;
         }
 
-        /* Lebar hari sabtu/minggu otomatis memakan lebih banyak space */
-        .span-wide {
-            grid-column: span 2;
+        .print-container {
+            max-width: 1120px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px 28px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.15);
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            border: 1px solid black;
-        }
-
-        th, td {
-            border: 1px solid black;
-            padding: 4px 6px;
-            text-align: left;
-        }
-
-        th {
+        .doc-title {
             text-align: center;
-            font-weight: normal;
+            font-size: 15px;
+            font-weight: bold;
+            margin-bottom: 22px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .header-day {
-            background-color: transparent;
-            font-weight: normal;
-        }
+        /* ── Blok per minggu ── */
+        .week-block { margin-bottom: 20px; }
 
-        .no-col {
-            width: 20px;
+        /* ── Baris hari (4 kolom untuk Senin-Kamis, flex untuk Jumat-Minggu) ── */
+        .day-row {
+            display: flex;
+            border: 1px solid black;
+            margin-bottom: -1px;
+        }
+        .day-row.row2 { border-top: none; }
+
+        /* ── Cell satu hari ── */
+        .day-cell {
+            flex: 1;
+            border-right: 1px solid black;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .day-cell.wide { flex: 2; }
+        .day-cell:last-child { border-right: none; }
+
+        /* ── Header nama hari ── */
+        .day-header {
             text-align: center;
+            font-size: 11px;
+            padding: 3px 4px;
+            border-bottom: 1px solid black;
         }
 
-        /* Pengaturan agar saat diprint (Ctrl+P), tombol dan latar belakang disembunyikan */
+        /* ── Baris sub-header waktu ── */
+        .time-row {
+            display: flex;
+            border-bottom: 1px solid black;
+        }
+
+        /* ── Satu kolom waktu = no + nama ── */
+        .time-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid black;
+            min-width: 0;
+        }
+        .time-col:last-child { border-right: none; }
+
+        .time-label {
+            text-align: center;
+            font-size: 10px;
+            padding: 2px 2px;
+            border-bottom: 1px solid black;
+        }
+
+        /* ── Baris petugas di dalam satu kolom waktu ── */
+        .petugas-entry {
+            display: flex;
+            border-bottom: 1px solid black;
+        }
+        .petugas-entry:last-child { border-bottom: none; }
+
+        .cell-no {
+            width: 16px;
+            min-width: 16px;
+            text-align: center;
+            font-size: 10px;
+            padding: 2px 1px;
+            border-right: 1px solid black;
+            flex-shrink: 0;
+        }
+
+        .cell-nama {
+            flex: 1;
+            font-size: 10px;
+            padding: 2px 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .cell-nama.bertugas { font-weight: bold; }
+
         @media print {
             body { background: white; padding: 0; }
-            .print-container { box-shadow: none; max-width: 100%; padding: 0; }
+            .print-container { box-shadow: none; max-width: 100%; padding: 15px; }
             .print-controls { display: none; }
-            
-            /* Memaksa layout grid tetap jalan di kertas PDF */
-            .calendar-grid { 
-                display: flex; 
-                flex-wrap: wrap; 
-            }
-            .day-block { 
-                flex: 1 1 23%; 
-                margin-bottom: 15px;
-            }
-            .span-wide {
-                flex: 1 1 48%;
-            }
+            @page { margin: 10mm; size: A4 landscape; }
         }
     </style>
 </head>
 <body>
 
 <div class="print-controls">
-    <button class="btn-print" onclick="window.print()">Cetak / Simpan PDF</button>
-    <br><br>
-    <a href="{{ url_for('penjadwalan') }}" style="color: #666; text-decoration: none; font-family: sans-serif;">&larr; Kembali ke Sistem</a>
+    <button class="btn-print" onclick="window.print()">Cetak / Simpan PDF</button><br>
+    <a href="{{ url_for('penjadwalan') }}" class="back-link">← Kembali ke Sistem</a>
 </div>
 
 <div class="print-container">
-    <div class="title">JADWAL MISDINAR PERIODE {{ periode }}</div>
-    
-    <div class="calendar-grid">
-        {% for hari_data in jadwal_data %}
-            <div class="day-block {% if hari_data.misa|length > 2 %}span-wide{% endif %}">
-                <table>
-                    <tr>
-                        <th colspan="{{ hari_data.misa|length * 2 }}" class="header-day">
-                            {{ hari_data.tanggal }}
-                        </th>
-                    </tr>
-                    
-                    <tr>
-                        {% for waktu in hari_data.misa.keys() %}
-                        <th colspan="2">Pkl. {{ waktu }}</th>
+    <div class="doc-title">JADWAL MISDINAR PERIODE {{ periode }}</div>
+
+    {% for week in weeks %}
+    <div class="week-block">
+
+        {# ── Baris 1: Senin s.d. Kamis ── #}
+        {% if week.row1 %}
+        <div class="day-row row1">
+            {% for day in week.row1 %}
+            <div class="day-cell">
+                <div class="day-header">{{ day.label }}</div>
+                <div class="time-row">
+                    {% for wkt in day.waktu_list %}
+                    <div class="time-col">
+                        <div class="time-label">Pkl. {{ wkt }}</div>
+                        {% for i in range(day.max_rows) %}
+                        <div class="petugas-entry">
+                            <div class="cell-no">{{ i + 1 }}</div>
+                            <div class="cell-nama {% if day.misa[wkt][i] %}bertugas{% endif %}">{{ day.misa[wkt][i] }}</div>
+                        </div>
                         {% endfor %}
-                    </tr>
-                    
-                    {% for i in range(hari_data.max_rows) %}
-                    <tr>
-                        {% for petugas_list in hari_data.misa.values() %}
-                            <td class="no-col">{{ i + 1 }}</td>
-                            <td>
-                                {% if petugas_list[i] %}
-                                    <b>{{ petugas_list[i] }}</b>
-                                {% else %}
-                                    &nbsp;
-                                {% endif %}
-                            </td>
-                        {% endfor %}
-                    </tr>
+                    </div>
                     {% endfor %}
-                </table>
+                </div>
             </div>
-        {% endfor %}
+            {% endfor %}
+            {# Isi kolom kosong supaya tetap 4 kolom #}
+            {% for _ in range(4 - week.row1|length) %}
+            <div class="day-cell"></div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {# ── Baris 2: Jumat, Sabtu, Minggu ── #}
+        {% if week.row2 %}
+        <div class="day-row row2">
+            {% for day in week.row2 %}
+            <div class="day-cell {% if day.waktu_list|length > 2 %}wide{% endif %}">
+                <div class="day-header">{{ day.label }}</div>
+                <div class="time-row">
+                    {% for wkt in day.waktu_list %}
+                    <div class="time-col">
+                        <div class="time-label">Pkl. {{ wkt }}</div>
+                        {% for i in range(day.max_rows) %}
+                        <div class="petugas-entry">
+                            <div class="cell-no">{{ i + 1 }}</div>
+                            <div class="cell-nama {% if day.misa[wkt][i] %}bertugas{% endif %}">{{ day.misa[wkt][i] }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
     </div>
+    {% endfor %}
+
+    {% if not weeks %}
+    <p style="text-align:center; color:#888; padding: 40px 0;">Belum ada data jadwal yang tersimpan untuk periode ini.</p>
+    {% endif %}
+
 </div>
 
 </body>

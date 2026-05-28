@@ -342,34 +342,88 @@ def penjadwalan():
 @app.route('/cetak-jadwal')
 @login_required
 def cetak_jadwal():
-    if session.get('role') not in ['super admin', 'penjadwalan', 'bph']: return redirect(url_for('index'))
+    if session.get('role') not in ['super admin', 'penjadwalan', 'bph']:
+        return redirect(url_for('index'))
+
     conn = get_db_connection()
     threshold_start = datetime.now().strftime('%Y-%m-%d 00:00:00')
-    threshold_end = (datetime.now() + timedelta(days=31)).strftime('%Y-%m-%d 23:59:59')
-    rows = conn.execute('SELECT * FROM jadwal WHERE jadwal_datetime BETWEEN ? AND ? ORDER BY jadwal_datetime ASC', (threshold_start, threshold_end)).fetchall()
+    threshold_end   = (datetime.now() + timedelta(days=31)).strftime('%Y-%m-%d 23:59:59')
+    rows = conn.execute(
+        'SELECT * FROM jadwal WHERE jadwal_datetime BETWEEN ? AND ? ORDER BY jadwal_datetime ASC',
+        (threshold_start, threshold_end)
+    ).fetchall()
     conn.close()
-    jadwal_visual = {}
+
+    # ── Label periode ────────────────────────────────────────
     periode_teks = "..."
     if rows:
-        dt_start = datetime.strptime(rows[0]['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
-        dt_end = datetime.strptime(rows[-1]['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
+        dt_start = datetime.strptime(rows[0]['jadwal_datetime'],  '%Y-%m-%d %H:%M:%S')
+        dt_end   = datetime.strptime(rows[-1]['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
         periode_teks = f"{dt_start.strftime('%d %B')} - {dt_end.strftime('%d %B %Y')}"
-        for r in rows:
-            dt = datetime.strptime(r['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
-            tgl_kunci = f"{r['hari']}, {r['tanggal']} {r['bulan'].capitalize()} {dt.year}"
-            if tgl_kunci not in jadwal_visual: jadwal_visual[tgl_kunci] = {}
-            if r['waktu'] not in jadwal_visual[tgl_kunci]: jadwal_visual[tgl_kunci][r['waktu']] = []
-            jadwal_visual[tgl_kunci][r['waktu']].append(r['nama_pengguna'])
-    formatted_jadwal = []
-    for tanggal, misa in jadwal_visual.items():
-        max_rows = max([len(petugas) for petugas in misa.values()]) if misa else 1
-        misa_padded = {}
-        for wkt, ptgs in misa.items():
-            padded = ptgs.copy()
-            while len(padded) < max_rows: padded.append("")
-            misa_padded[wkt] = padded
-        formatted_jadwal.append({'tanggal': tanggal, 'misa': misa_padded, 'max_rows': max_rows})
-    return render_template('cetak_jadwal.html', jadwal_data=formatted_jadwal, periode=periode_teks)
+
+    # ── Kelompokkan per tanggal ──────────────────────────────
+    date_map  = {}   # {date_obj: {waktu: [nama, ...]}}
+    label_map = {}   # {date_obj: "Senin, 25 Mei 2026"}
+
+    for r in rows:
+        dt    = datetime.strptime(r['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
+        d     = dt.date()
+        waktu = r['waktu']
+
+        if d not in date_map:
+            date_map[d]  = {}
+            label_map[d] = f"{r['hari']}, {dt.strftime('%d')} {r['bulan'].capitalize()} {dt.year}"
+
+        date_map[d].setdefault(waktu, []).append(r['nama_pengguna'])
+
+    # ── Susun per minggu ISO (Senin = hari ke-0) ─────────────
+    def monday_of(d):
+        return d - timedelta(days=d.weekday())
+
+    if not date_map:
+        weeks = []
+    else:
+        all_dates    = sorted(date_map.keys())
+        first_monday = monday_of(all_dates[0])
+        last_monday  = monday_of(all_dates[-1])
+
+        weeks = []
+        cur = first_monday
+        while cur <= last_monday:
+            week_days = []
+            for offset in range(7):
+                d = cur + timedelta(days=offset)
+                if d not in date_map:
+                    cur += timedelta(weeks=1) if offset == 6 else timedelta(0)
+                    continue
+
+                misa_raw     = date_map[d]
+                sorted_times = sorted(misa_raw.keys(), key=lambda t: t.replace('.', ':'))
+                max_rows     = max(len(v) for v in misa_raw.values())
+
+                misa_padded = {}
+                for wkt in sorted_times:
+                    padded = misa_raw[wkt][:]
+                    while len(padded) < max_rows:
+                        padded.append("")
+                    misa_padded[wkt] = padded
+
+                week_days.append({
+                    'date':       d,
+                    'label':      label_map[d],
+                    'misa':       misa_padded,
+                    'waktu_list': sorted_times,
+                    'max_rows':   max_rows,
+                })
+
+            if week_days:
+                row1 = [d for d in week_days if d['date'].weekday() < 4]   # Senin–Kamis
+                row2 = [d for d in week_days if d['date'].weekday() >= 4]  # Jumat–Minggu
+                weeks.append({'days': week_days, 'row1': row1, 'row2': row2})
+
+            cur += timedelta(weeks=1)
+
+    return render_template('cetak_jadwal.html', weeks=weeks, periode=periode_teks)
 
 @app.route('/pelatihan')
 @login_required
