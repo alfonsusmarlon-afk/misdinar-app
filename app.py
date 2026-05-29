@@ -9,6 +9,8 @@ import io
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.worksheet.datavalidation import DataValidation
+import requests
+from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-misdinar-2024'
@@ -29,7 +31,6 @@ def init_db():
     conn = get_db_connection()
     conn.execute('''CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT NOT NULL, nama TEXT NOT NULL, role TEXT NOT NULL)''')
     
-    # AUTO-MIGRATION: Menambahkan kolom baru secara otomatis jika belum ada
     db_columns = [col[1] for col in conn.execute('PRAGMA table_info(users)').fetchall()]
     if 'no_hp' not in db_columns:
         conn.execute('ALTER TABLE users ADD COLUMN no_hp TEXT')
@@ -58,7 +59,6 @@ def init_db():
         ('budi', 'password', 'Budi Santoso', 'user', '081414141414'),
         ('citra', 'citra123', 'Citra Dewi', 'user', '081515151515')
     ]
-    # Hanya insert data awal jika tabel kosong agar tidak menimpa data yang sudah diedit pengguna
     user_count = conn.execute('SELECT COUNT(*) FROM users').fetchone()[0]
     if user_count == 0:
         for u in users:
@@ -81,35 +81,89 @@ def get_quote_hari_ini():
         "Bersukacitalah senantiasa, tetaplah berdoa.",
         "Jadilah terang di tempat yang gelap."
     ]
-    # Merotasi quote berdasarkan hari di tahun ini agar selalu konsisten berubah tiap hari
     day_of_year = datetime.now().timetuple().tm_yday
     return quotes[day_of_year % len(quotes)]
 
+
+# SCRAPING AKURAT DARI IMANKATOLIK.OR.ID MENGGUNAKAN PARAMETER TANGGAL
 def get_liturgi_hari_ini():
     now = datetime.now()
-    hari_idx = now.weekday()
-    day_num = now.day
-    
-    # Rotasi data liturgi dinamis berdasarkan tanggal untuk mensimulasikan kalender asli
-    warnas = [('Hijau', 'Waktu Biasa'), ('Merah', 'Peringatan Martir'), ('Putih', 'Pesta/Hari Raya'), ('Ungu', 'Masa Prapaskah/Adven')]
-    warna_data = warnas[day_num % len(warnas)]
-    
-    bacaan_1_list = ['Keb. 3:1-9', 'Kej. 1:1-19', 'Kel. 12:1-8', 'Yes. 20:1-6', '1Raj. 2:1-10']
-    mazmur_list = ['Mzm. 23:1-6', 'Mzm. 104:1-24', 'Mzm. 51:1-12', 'Mzm. 91:1-16', 'Mzm. 27:1-6']
-    injil_list = ['Yoh. 6:37-40', 'Mat. 5:1-12', 'Mrk. 2:13-17', 'Luk. 1:26-38', 'Yoh. 3:16-21']
-    
-    # Hari minggu biasanya ada Bacaan Kedua
-    bacaan_2 = 'Rm. 5:5-11' if hari_idx == 6 else '-'
-    
-    return {
+    hasil = {
         'tanggal': now.strftime('%d %B %Y'),
-        'warna': warna_data[0],
-        'keterangan_warna': warna_data[1],
-        'bacaan_1': bacaan_1_list[(day_num) % len(bacaan_1_list)],
-        'mazmur': mazmur_list[(day_num + 1) % len(mazmur_list)],
-        'bacaan_2': bacaan_2,
-        'injil': injil_list[(day_num + 2) % len(injil_list)]
+        'warna': 'Hijau', 
+        'keterangan_warna': 'Masa Liturgi Biasa',
+        'bacaan_1': '-',
+        'mazmur': '-',
+        'bacaan_2': '-',
+        'injil': '-'
     }
+    
+    try:
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        
+        # URL ini akan merender HTML sederhana khusus untuk bacaan hari yang direquest
+        url = f"https://www.imankatolik.or.id/tampil_bacaan.php?d={now.day}&m={now.month}&y={now.year}"
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        res = requests.get(url, headers=headers, timeout=10, verify=False)
+        
+        if res.status_code == 200:
+            soup = BeautifulSoup(res.content, 'html.parser')
+            
+            # Ubah tag-tag pemisah HTML menjadi baris baru (newline) agar terbaca jelas
+            for br in soup.find_all(['br', 'tr', 'p', 'div', 'hr']):
+                br.insert_after('\n')
+                
+            text = soup.get_text(separator='\n', strip=True)
+            lines = [line.strip() for line in text.split('\n') if line.strip()]
+            
+            for i, line in enumerate(lines):
+                l_low = line.lower()
+                
+                # 1. Menangkap Keterangan Hari Liturgi
+                if any(x in l_low for x in ['hari biasa', 'pekan', 'minggu', 'pesta', 'peringatan', 'masa']):
+                    if 'warna liturgi' not in l_low and 'imankatolik' not in l_low:
+                        hasil['keterangan_warna'] = line
+                        
+                # 2. Menangkap Warna Liturgi
+                if 'warna liturgi' in l_low:
+                    warna_raw = line.split(':')[-1] if ':' in line else line.replace('Warna Liturgi', '').replace('warna liturgi', '')
+                    hasil['warna'] = warna_raw.strip().capitalize()
+                    
+                # 3. Menangkap Bacaan 1
+                if l_low.startswith('bc i:') or l_low.startswith('bc. i:') or l_low.startswith('bacaan i:') or l_low.startswith('bacaan pertama:'):
+                    if ':' in line: hasil['bacaan_1'] = line.split(':', 1)[1].strip()
+                    
+                # 4. Menangkap Mazmur Tanggapan
+                if l_low.startswith('mzm:') or l_low.startswith('mzm.:') or l_low.startswith('mazmur'):
+                    if ':' in line: hasil['mazmur'] = line.split(':', 1)[1].strip()
+                    
+                # 5. Menangkap Bacaan 2
+                if l_low.startswith('bc ii:') or l_low.startswith('bc. ii:') or l_low.startswith('bacaan ii:') or l_low.startswith('bacaan kedua:'):
+                    if ':' in line: hasil['bacaan_2'] = line.split(':', 1)[1].strip()
+                    
+                # 6. Menangkap Bacaan Injil
+                if l_low.startswith('injil:') or l_low.startswith('bacaan injil:'):
+                    if 'pengantar' not in l_low: # Menghindari teks "Bait Pengantar Injil"
+                        if ':' in line: hasil['injil'] = line.split(':', 1)[1].strip()
+                        
+            # Membersihkan variabel warna agar cocok dengan class CSS kita
+            w_cek = hasil['warna'].lower()
+            if 'hijau' in w_cek: hasil['warna'] = 'Hijau'
+            elif 'merah muda' in w_cek or 'pink' in w_cek: hasil['warna'] = 'Pink'
+            elif 'merah' in w_cek: hasil['warna'] = 'Merah'
+            elif 'putih' in w_cek: hasil['warna'] = 'Putih'
+            elif 'ungu' in w_cek: hasil['warna'] = 'Ungu'
+            elif 'hitam' in w_cek: hasil['warna'] = 'Hitam'
+            else: hasil['warna'] = 'Hijau'
+            
+    except Exception as e:
+        print("Gagal Scraping Liturgi:", e)
+        
+    return hasil
 # ------------------------------------
 
 def get_filtered_items(table_name, user_id=None):
@@ -169,7 +223,6 @@ def index():
     filtered_pengumuman = get_filtered_items('pengumuman', user_id)
     valid_jadwal = get_jadwal_from_db()
     
-    # Ambil widget dinamis
     quote_hari_ini = get_quote_hari_ini()
     liturgi_hari_ini = get_liturgi_hari_ini()
     
@@ -195,7 +248,7 @@ def jadwal():
 def anggota():
     if session.get('role') not in ['super admin', 'bph', 'penjadwalan', 'pelatihan']: return redirect(url_for('index'))
     conn = get_db_connection()
-    all_users = conn.execute("SELECT username, nama, role FROM users WHERE role != 'super admin' ORDER BY nama ASC").fetchall()
+    all_users = conn.execute("SELECT * FROM users WHERE role != 'super admin' ORDER BY nama ASC").fetchall()
     conn.close()
     return render_template('anggota.html', users=all_users, current_role=session.get('role'))
 
@@ -204,17 +257,27 @@ def anggota():
 def ubah_role():
     current_role = session.get('role')
     if current_role not in ['super admin', 'bph']: return redirect(url_for('index'))
+    
     username = request.form.get('username')
     new_role = request.form.get('role')
+    new_password = request.form.get('password')
+    
     valid_roles = ['user', 'bph', 'penjadwalan', 'pelatihan']
     if current_role == 'super admin': valid_roles.append('super admin')
+    
     if username and new_role in valid_roles:
         conn = get_db_connection()
         target_user = conn.execute("SELECT role FROM users WHERE username = ?", (username,)).fetchone()
+        
         if target_user and target_user['role'] == 'super admin' and current_role != 'super admin':
             conn.close()
             return redirect(url_for('anggota'))
-        conn.execute('UPDATE users SET role = ? WHERE username = ?', (new_role, username))
+            
+        if current_role == 'super admin' and new_password:
+            conn.execute('UPDATE users SET role = ?, password = ? WHERE username = ?', (new_role, new_password, username))
+        else:
+            conn.execute('UPDATE users SET role = ? WHERE username = ?', (new_role, username))
+            
         conn.commit()
         conn.close()
     return redirect(url_for('anggota'))
@@ -342,88 +405,34 @@ def penjadwalan():
 @app.route('/cetak-jadwal')
 @login_required
 def cetak_jadwal():
-    if session.get('role') not in ['super admin', 'penjadwalan', 'bph']:
-        return redirect(url_for('index'))
-
+    if session.get('role') not in ['super admin', 'penjadwalan', 'bph']: return redirect(url_for('index'))
     conn = get_db_connection()
     threshold_start = datetime.now().strftime('%Y-%m-%d 00:00:00')
-    threshold_end   = (datetime.now() + timedelta(days=31)).strftime('%Y-%m-%d 23:59:59')
-    rows = conn.execute(
-        'SELECT * FROM jadwal WHERE jadwal_datetime BETWEEN ? AND ? ORDER BY jadwal_datetime ASC',
-        (threshold_start, threshold_end)
-    ).fetchall()
+    threshold_end = (datetime.now() + timedelta(days=31)).strftime('%Y-%m-%d 23:59:59')
+    rows = conn.execute('SELECT * FROM jadwal WHERE jadwal_datetime BETWEEN ? AND ? ORDER BY jadwal_datetime ASC', (threshold_start, threshold_end)).fetchall()
     conn.close()
-
-    # ── Label periode ────────────────────────────────────────
+    jadwal_visual = {}
     periode_teks = "..."
     if rows:
-        dt_start = datetime.strptime(rows[0]['jadwal_datetime'],  '%Y-%m-%d %H:%M:%S')
-        dt_end   = datetime.strptime(rows[-1]['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
+        dt_start = datetime.strptime(rows[0]['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
+        dt_end = datetime.strptime(rows[-1]['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
         periode_teks = f"{dt_start.strftime('%d %B')} - {dt_end.strftime('%d %B %Y')}"
-
-    # ── Kelompokkan per tanggal ──────────────────────────────
-    date_map  = {}   # {date_obj: {waktu: [nama, ...]}}
-    label_map = {}   # {date_obj: "Senin, 25 Mei 2026"}
-
-    for r in rows:
-        dt    = datetime.strptime(r['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
-        d     = dt.date()
-        waktu = r['waktu']
-
-        if d not in date_map:
-            date_map[d]  = {}
-            label_map[d] = f"{r['hari']}, {dt.strftime('%d')} {r['bulan'].capitalize()} {dt.year}"
-
-        date_map[d].setdefault(waktu, []).append(r['nama_pengguna'])
-
-    # ── Susun per minggu ISO (Senin = hari ke-0) ─────────────
-    def monday_of(d):
-        return d - timedelta(days=d.weekday())
-
-    if not date_map:
-        weeks = []
-    else:
-        all_dates    = sorted(date_map.keys())
-        first_monday = monday_of(all_dates[0])
-        last_monday  = monday_of(all_dates[-1])
-
-        weeks = []
-        cur = first_monday
-        while cur <= last_monday:
-            week_days = []
-            for offset in range(7):
-                d = cur + timedelta(days=offset)
-                if d not in date_map:
-                    cur += timedelta(weeks=1) if offset == 6 else timedelta(0)
-                    continue
-
-                misa_raw     = date_map[d]
-                sorted_times = sorted(misa_raw.keys(), key=lambda t: t.replace('.', ':'))
-                max_rows     = max(len(v) for v in misa_raw.values())
-
-                misa_padded = {}
-                for wkt in sorted_times:
-                    padded = misa_raw[wkt][:]
-                    while len(padded) < max_rows:
-                        padded.append("")
-                    misa_padded[wkt] = padded
-
-                week_days.append({
-                    'date':       d,
-                    'label':      label_map[d],
-                    'misa':       misa_padded,
-                    'waktu_list': sorted_times,
-                    'max_rows':   max_rows,
-                })
-
-            if week_days:
-                row1 = [d for d in week_days if d['date'].weekday() < 4]   # Senin–Kamis
-                row2 = [d for d in week_days if d['date'].weekday() >= 4]  # Jumat–Minggu
-                weeks.append({'days': week_days, 'row1': row1, 'row2': row2})
-
-            cur += timedelta(weeks=1)
-
-    return render_template('cetak_jadwal.html', weeks=weeks, periode=periode_teks)
+        for r in rows:
+            dt = datetime.strptime(r['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
+            tgl_kunci = f"{r['hari']}, {r['tanggal']} {r['bulan'].capitalize()} {dt.year}"
+            if tgl_kunci not in jadwal_visual: jadwal_visual[tgl_kunci] = {}
+            if r['waktu'] not in jadwal_visual[tgl_kunci]: jadwal_visual[tgl_kunci][r['waktu']] = []
+            jadwal_visual[tgl_kunci][r['waktu']].append(r['nama_pengguna'])
+    formatted_jadwal = []
+    for tanggal, misa in jadwal_visual.items():
+        max_rows = max([len(petugas) for petugas in misa.values()]) if misa else 1
+        misa_padded = {}
+        for wkt, ptgs in misa.items():
+            padded = ptgs.copy()
+            while len(padded) < max_rows: padded.append("")
+            misa_padded[wkt] = padded
+        formatted_jadwal.append({'tanggal': tanggal, 'misa': misa_padded, 'max_rows': max_rows})
+    return render_template('cetak_jadwal.html', jadwal_data=formatted_jadwal, periode=periode_teks)
 
 @app.route('/pelatihan')
 @login_required
@@ -431,41 +440,28 @@ def pelatihan():
     if session.get('role') not in ['super admin', 'pelatihan']: return redirect(url_for('index'))
     return render_template('pelatihan.html')
 
-
-# --- FITUR PENGATURAN PROFIL DITAMBAHKAN ---
 @app.route('/pengaturan', methods=['GET', 'POST'])
 @login_required
 def pengaturan():
     user_id = session.get('user_id')
     conn = get_db_connection()
-    
     if request.method == 'POST':
         nama_lengkap = request.form.get('nama_lengkap')
         nama_panggilan = request.form.get('nama_panggilan')
         no_hp = request.form.get('no_hp')
         password_baru = request.form.get('password_baru')
-        
-        # Jika password baru diisi, update password juga
         if password_baru and password_baru.strip() != '':
-            conn.execute('UPDATE users SET nama=?, nama_panggilan=?, no_hp=?, password=? WHERE username=?', 
-                         (nama_lengkap, nama_panggilan, no_hp, password_baru, user_id))
+            conn.execute('UPDATE users SET nama=?, nama_panggilan=?, no_hp=?, password=? WHERE username=?', (nama_lengkap, nama_panggilan, no_hp, password_baru, user_id))
         else:
-            conn.execute('UPDATE users SET nama=?, nama_panggilan=?, no_hp=? WHERE username=?', 
-                         (nama_lengkap, nama_panggilan, no_hp, user_id))
-            
+            conn.execute('UPDATE users SET nama=?, nama_panggilan=?, no_hp=? WHERE username=?', (nama_lengkap, nama_panggilan, no_hp, user_id))
         conn.commit()
-        # Update nama di session agar UI header otomatis berubah
         session['nama_user'] = nama_lengkap
-        
-        # Kirim notifikasi berhasil ke template
         user_data = conn.execute('SELECT * FROM users WHERE username = ?', (user_id,)).fetchone()
         conn.close()
         return render_template('pengaturan.html', user=user_data, success="Profil berhasil diperbarui!")
-
     user_data = conn.execute('SELECT * FROM users WHERE username = ?', (user_id,)).fetchone()
     conn.close()
     return render_template('pengaturan.html', user=user_data)
-# ------------------------------------------
 
 @app.route('/pendaftaran')
 def pendaftaran(): return render_template('pendaftaran.html')
