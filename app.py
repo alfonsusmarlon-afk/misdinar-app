@@ -38,6 +38,11 @@ def init_db():
         conn.execute('ALTER TABLE users ADD COLUMN nama_panggilan TEXT')
     
     conn.execute('''CREATE TABLE IF NOT EXISTS pengumuman (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, waktu_pelaksanaan TEXT NOT NULL, tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL)''')
+    
+    db_columns_peng = [col[1] for col in conn.execute('PRAGMA table_info(pengumuman)').fetchall()]
+    if 'deskripsi' not in db_columns_peng:
+        conn.execute('ALTER TABLE pengumuman ADD COLUMN deskripsi TEXT DEFAULT ""')
+
     conn.execute('''CREATE TABLE IF NOT EXISTS jadwal (id INTEGER PRIMARY KEY AUTOINCREMENT, jadwal_datetime TIMESTAMP NOT NULL, tanggal TEXT NOT NULL, bulan TEXT NOT NULL, hari TEXT NOT NULL, waktu TEXT NOT NULL, acara TEXT NOT NULL, status TEXT NOT NULL, pengguna TEXT NOT NULL, nama_pengguna TEXT NOT NULL, FOREIGN KEY(pengguna) REFERENCES users(username))''')
     conn.execute('''CREATE TABLE IF NOT EXISTS dokumen (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, file_path TEXT NOT NULL, tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL)''')
     conn.execute('''CREATE TABLE IF NOT EXISTS galeri (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, foto_path TEXT NOT NULL, tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL)''')
@@ -69,7 +74,6 @@ def init_db():
 
 init_db()
 
-# --- FITUR WIDGET DINAMIS BERANDA ---
 def get_quote_hari_ini():
     quotes = [
         "Melayani dengan hati, bukan karena ingin dipuji.",
@@ -83,88 +87,6 @@ def get_quote_hari_ini():
     ]
     day_of_year = datetime.now().timetuple().tm_yday
     return quotes[day_of_year % len(quotes)]
-
-
-# SCRAPING AKURAT DARI IMANKATOLIK.OR.ID MENGGUNAKAN PARAMETER TANGGAL
-def get_liturgi_hari_ini():
-    now = datetime.now()
-    hasil = {
-        'tanggal': now.strftime('%d %B %Y'),
-        'warna': 'Hijau', 
-        'keterangan_warna': 'Masa Liturgi Biasa',
-        'bacaan_1': '-',
-        'mazmur': '-',
-        'bacaan_2': '-',
-        'injil': '-'
-    }
-    
-    try:
-        import urllib3
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        
-        # URL ini akan merender HTML sederhana khusus untuk bacaan hari yang direquest
-        url = f"https://www.imankatolik.or.id/tampil_bacaan.php?d={now.day}&m={now.month}&y={now.year}"
-        
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-        res = requests.get(url, headers=headers, timeout=10, verify=False)
-        
-        if res.status_code == 200:
-            soup = BeautifulSoup(res.content, 'html.parser')
-            
-            # Ubah tag-tag pemisah HTML menjadi baris baru (newline) agar terbaca jelas
-            for br in soup.find_all(['br', 'tr', 'p', 'div', 'hr']):
-                br.insert_after('\n')
-                
-            text = soup.get_text(separator='\n', strip=True)
-            lines = [line.strip() for line in text.split('\n') if line.strip()]
-            
-            for i, line in enumerate(lines):
-                l_low = line.lower()
-                
-                # 1. Menangkap Keterangan Hari Liturgi
-                if any(x in l_low for x in ['hari biasa', 'pekan', 'minggu', 'pesta', 'peringatan', 'masa']):
-                    if 'warna liturgi' not in l_low and 'imankatolik' not in l_low:
-                        hasil['keterangan_warna'] = line
-                        
-                # 2. Menangkap Warna Liturgi
-                if 'warna liturgi' in l_low:
-                    warna_raw = line.split(':')[-1] if ':' in line else line.replace('Warna Liturgi', '').replace('warna liturgi', '')
-                    hasil['warna'] = warna_raw.strip().capitalize()
-                    
-                # 3. Menangkap Bacaan 1
-                if l_low.startswith('bc i:') or l_low.startswith('bc. i:') or l_low.startswith('bacaan i:') or l_low.startswith('bacaan pertama:'):
-                    if ':' in line: hasil['bacaan_1'] = line.split(':', 1)[1].strip()
-                    
-                # 4. Menangkap Mazmur Tanggapan
-                if l_low.startswith('mzm:') or l_low.startswith('mzm.:') or l_low.startswith('mazmur'):
-                    if ':' in line: hasil['mazmur'] = line.split(':', 1)[1].strip()
-                    
-                # 5. Menangkap Bacaan 2
-                if l_low.startswith('bc ii:') or l_low.startswith('bc. ii:') or l_low.startswith('bacaan ii:') or l_low.startswith('bacaan kedua:'):
-                    if ':' in line: hasil['bacaan_2'] = line.split(':', 1)[1].strip()
-                    
-                # 6. Menangkap Bacaan Injil
-                if l_low.startswith('injil:') or l_low.startswith('bacaan injil:'):
-                    if 'pengantar' not in l_low: # Menghindari teks "Bait Pengantar Injil"
-                        if ':' in line: hasil['injil'] = line.split(':', 1)[1].strip()
-                        
-            # Membersihkan variabel warna agar cocok dengan class CSS kita
-            w_cek = hasil['warna'].lower()
-            if 'hijau' in w_cek: hasil['warna'] = 'Hijau'
-            elif 'merah muda' in w_cek or 'pink' in w_cek: hasil['warna'] = 'Pink'
-            elif 'merah' in w_cek: hasil['warna'] = 'Merah'
-            elif 'putih' in w_cek: hasil['warna'] = 'Putih'
-            elif 'ungu' in w_cek: hasil['warna'] = 'Ungu'
-            elif 'hitam' in w_cek: hasil['warna'] = 'Hitam'
-            else: hasil['warna'] = 'Hijau'
-            
-    except Exception as e:
-        print("Gagal Scraping Liturgi:", e)
-        
-    return hasil
-# ------------------------------------
 
 def get_filtered_items(table_name, user_id=None):
     conn = get_db_connection()
@@ -222,17 +144,15 @@ def index():
     user_id = session.get('user_id')
     filtered_pengumuman = get_filtered_items('pengumuman', user_id)
     valid_jadwal = get_jadwal_from_db()
-    
     quote_hari_ini = get_quote_hari_ini()
-    liturgi_hari_ini = get_liturgi_hari_ini()
     
     if user_id:
         user_jadwal = [j for j in valid_jadwal if j['pengguna'] == user_id and j['status'] == 'Bertugas']
         return render_template('index.html', pengumuman=filtered_pengumuman, jadwal=user_jadwal[:4], 
-                               quote=quote_hari_ini, liturgi=liturgi_hari_ini, user_id=user_id, is_logged_in=True)
+                               quote=quote_hari_ini, user_id=user_id, is_logged_in=True)
     else:
         return render_template('index.html', pengumuman=filtered_pengumuman, jadwal=valid_jadwal[:8], 
-                               quote=quote_hari_ini, liturgi=liturgi_hari_ini, is_logged_in=False)
+                               quote=quote_hari_ini, is_logged_in=False)
 
 @app.route('/jadwal')
 def jadwal():
@@ -260,7 +180,7 @@ def ubah_role():
     
     username = request.form.get('username')
     new_role = request.form.get('role')
-    new_password = request.form.get('password')
+    new_password = request.form.get('password') 
     
     valid_roles = ['user', 'bph', 'penjadwalan', 'pelatihan']
     if current_role == 'super admin': valid_roles.append('super admin')
@@ -298,7 +218,78 @@ def penjadwalan():
     
     if request.method == 'POST':
         action = request.form.get('action')
-        if action == 'generate':
+        
+        # 1. RUTE BARU: Menampilkan Web Spreadsheet (Live Editor)
+        if action == 'editor_web':
+            start_date_str = request.form.get('start_date')
+            end_date_str = request.form.get('end_date')
+            if not start_date_str or not end_date_str: return redirect(url_for('penjadwalan'))
+            
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+            days_id = {0: 'Senin', 1: 'Selasa', 2: 'Rabu', 3: 'Kamis', 4: 'Jumat', 5: 'Sabtu', 6: 'Minggu'}
+            
+            editor_data = []
+            current_date = start_date
+            while current_date <= end_date:
+                hari_idx = current_date.weekday()
+                hari = days_id[hari_idx]
+                tgl_str = current_date.strftime('%Y-%m-%d')
+                
+                masses = []
+                if hari_idx == 5: masses = [('05.30', 'Misa Pagi'), ('17.00', 'Misa Vigili')]
+                elif hari_idx == 6: masses = [('06.00', 'Misa Pagi'), ('08.00', 'Misa Pagi II'), ('10.00', 'Misa Siang'), ('17.00', 'Misa Sore')]
+                else: masses = [('05.30', 'Misa Pagi'), ('18.00', 'Misa Sore')]
+                
+                for waktu, acara in masses:
+                    editor_data.append({
+                        'tanggal': tgl_str,
+                        'hari': hari,
+                        'waktu': waktu,
+                        'acara': acara
+                    })
+                current_date += timedelta(days=1)
+            
+            return render_template('penjadwalan.html', users=users_db, editor_data=editor_data, start_date=start_date_str, end_date=end_date_str)
+            
+        # 2. RUTE BARU: Menyimpan Hasil Ketikan dari Web Spreadsheet
+        elif action == 'simpan_editor_web':
+            tanggals = request.form.getlist('tgl[]')
+            haris = request.form.getlist('hri[]')
+            waktus = request.form.getlist('wkt[]')
+            acaras = request.form.getlist('acr[]')
+            petugas_list = request.form.getlist('ptgs[]')
+            
+            conn = get_db_connection()
+            months_id = {1: 'JAN', 2: 'FEB', 3: 'MAR', 4: 'APR', 5: 'MEI', 6: 'JUNI', 7: 'JULI', 8: 'AGUST', 9: 'SEPT', 10: 'OKT', 11: 'NOV', 12: 'DES'}
+            
+            for i in range(len(tanggals)):
+                ptgs_raw = petugas_list[i]
+                if not ptgs_raw or not ptgs_raw.strip(): continue # Lewati baris yang tidak diisi petugas
+                
+                tgl_raw = tanggals[i]
+                waktu = waktus[i]
+                acara = acaras[i]
+                hari = haris[i]
+                
+                dt = datetime.strptime(tgl_raw, '%Y-%m-%d')
+                jadwal_dt = datetime.strptime(f"{tgl_raw} {waktu.replace('.', ':')}:00", '%Y-%m-%d %H:%M:%S')
+                
+                # Memproses jika diketik banyak nama pakai koma
+                list_petugas = [p.strip() for p in ptgs_raw.split(',')]
+                for p in list_petugas:
+                    if not p: continue
+                    user_db = conn.execute("SELECT nama FROM users WHERE username=?", (p,)).fetchone()
+                    nama_pengguna = user_db['nama'] if user_db else p
+                    conn.execute('INSERT INTO jadwal (jadwal_datetime, tanggal, bulan, hari, waktu, acara, status, pengguna, nama_pengguna) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+                                 (jadwal_dt.strftime('%Y-%m-%d %H:%M:%S'), dt.strftime('%d'), months_id[dt.month], hari, waktu, acara, 'Bertugas', p, nama_pengguna))
+            
+            conn.commit()
+            conn.close()
+            return redirect(url_for('cetak_jadwal'))
+
+        # 3. Rute Lama: Download Excel
+        elif action == 'generate':
             start_date_str = request.form.get('start_date')
             end_date_str = request.form.get('end_date')
             if not start_date_str or not end_date_str: return redirect(url_for('penjadwalan'))
@@ -370,6 +361,7 @@ def penjadwalan():
             output.seek(0)
             return send_file(output, download_name=f'Form_Jadwal_{start_date_str}.xlsx', as_attachment=True)
             
+        # 4. Rute Lama: Upload Excel    
         elif action == 'upload':
             file = request.files.get('file_excel')
             if file and file.filename.endswith('.xlsx'):
@@ -400,39 +392,64 @@ def penjadwalan():
                 except Exception as e:
                     print("Error parsing Excel:", e)
                     return redirect(url_for('penjadwalan'))
+                    
     return render_template('penjadwalan.html', users=users_db)
 
 @app.route('/cetak-jadwal')
 @login_required
 def cetak_jadwal():
     if session.get('role') not in ['super admin', 'penjadwalan', 'bph']: return redirect(url_for('index'))
+    
     conn = get_db_connection()
-    threshold_start = datetime.now().strftime('%Y-%m-%d 00:00:00')
-    threshold_end = (datetime.now() + timedelta(days=31)).strftime('%Y-%m-%d 23:59:59')
-    rows = conn.execute('SELECT * FROM jadwal WHERE jadwal_datetime BETWEEN ? AND ? ORDER BY jadwal_datetime ASC', (threshold_start, threshold_end)).fetchall()
+    threshold_time = datetime.now().strftime('%Y-%m-%d 00:00:00')
+    rows = conn.execute('SELECT * FROM jadwal WHERE jadwal_datetime >= ? ORDER BY jadwal_datetime ASC', (threshold_time,)).fetchall()
     conn.close()
-    jadwal_visual = {}
-    periode_teks = "..."
-    if rows:
-        dt_start = datetime.strptime(rows[0]['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
-        dt_end = datetime.strptime(rows[-1]['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
-        periode_teks = f"{dt_start.strftime('%d %B')} - {dt_end.strftime('%d %B %Y')}"
-        for r in rows:
-            dt = datetime.strptime(r['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
-            tgl_kunci = f"{r['hari']}, {r['tanggal']} {r['bulan'].capitalize()} {dt.year}"
-            if tgl_kunci not in jadwal_visual: jadwal_visual[tgl_kunci] = {}
-            if r['waktu'] not in jadwal_visual[tgl_kunci]: jadwal_visual[tgl_kunci][r['waktu']] = []
-            jadwal_visual[tgl_kunci][r['waktu']].append(r['nama_pengguna'])
-    formatted_jadwal = []
-    for tanggal, misa in jadwal_visual.items():
-        max_rows = max([len(petugas) for petugas in misa.values()]) if misa else 1
-        misa_padded = {}
-        for wkt, ptgs in misa.items():
+
+    jadwal_dict = {}
+    for r in rows:
+        dt = datetime.strptime(r['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
+        date_key = dt.strftime('%Y-%m-%d')
+        if date_key not in jadwal_dict:
+            jadwal_dict[date_key] = {
+                'hari': r['hari'], 
+                'tanggal_teks': f"{r['hari']}, {dt.day} {r['bulan'].capitalize()} {dt.year}", 
+                'misa': {}
+            }
+        
+        wkt = r['waktu']
+        if wkt not in jadwal_dict[date_key]['misa']: 
+            jadwal_dict[date_key]['misa'][wkt] = []
+        jadwal_dict[date_key]['misa'][wkt].append(r['nama_pengguna'])
+
+    weeks = []
+    current_week = {'senin_kamis': [], 'jumat_minggu': []}
+    
+    sorted_dates = sorted(jadwal_dict.keys())
+    for d in sorted_dates:
+        dt = datetime.strptime(d, '%Y-%m-%d')
+        day_idx = dt.weekday()
+        max_slots = 9 if day_idx >= 4 else 4
+        misa_data = jadwal_dict[d]['misa']
+        formatted_misa = {}
+        for wkt, ptgs in misa_data.items():
             padded = ptgs.copy()
-            while len(padded) < max_rows: padded.append("")
-            misa_padded[wkt] = padded
-        formatted_jadwal.append({'tanggal': tanggal, 'misa': misa_padded, 'max_rows': max_rows})
-    return render_template('cetak_jadwal.html', jadwal_data=formatted_jadwal, periode=periode_teks)
+            while len(padded) < max_slots: padded.append("")
+            formatted_misa[wkt] = padded
+            
+        day_obj = {'tanggal_teks': jadwal_dict[d]['tanggal_teks'], 'misa': formatted_misa, 'max_slots': max_slots}
+        
+        if day_idx <= 3: 
+            if day_idx == 0 and len(current_week['senin_kamis']) > 0: 
+                weeks.append(current_week)
+                current_week = {'senin_kamis': [], 'jumat_minggu': []}
+            current_week['senin_kamis'].append(day_obj)
+        else: 
+            current_week['jumat_minggu'].append(day_obj)
+            
+    if current_week['senin_kamis'] or current_week['jumat_minggu']: 
+        weeks.append(current_week)
+        
+    return render_template('cetak_jadwal.html', weeks=weeks)
 
 @app.route('/pelatihan')
 @login_required
@@ -485,6 +502,7 @@ def pengumuman():
         action = request.form.get('action')
         if action in ['tambah', 'edit']:
             judul = request.form.get('judul')
+            deskripsi = request.form.get('deskripsi', '')
             waktu_pelaksanaan = request.form.get('waktu_pelaksanaan')
             target_list = request.form.getlist('target')
             target_str = 'semua' if 'semua' in target_list else ','.join(target_list)
@@ -493,10 +511,10 @@ def pengumuman():
             tanggal_dibuat = f"{now.day} {months[now.month - 1]} {now.year}"
             conn = get_db_connection()
             if action == 'tambah':
-                conn.execute('INSERT INTO pengumuman (judul, waktu_pelaksanaan, tanggal_dibuat, target, pembuat) VALUES (?, ?, ?, ?, ?)', (judul, waktu_pelaksanaan, tanggal_dibuat, target_str, user_id))
+                conn.execute('INSERT INTO pengumuman (judul, deskripsi, waktu_pelaksanaan, tanggal_dibuat, target, pembuat) VALUES (?, ?, ?, ?, ?, ?)', (judul, deskripsi, waktu_pelaksanaan, tanggal_dibuat, target_str, user_id))
             else:
                 p_id = request.form.get('id')
-                conn.execute('UPDATE pengumuman SET judul=?, waktu_pelaksanaan=?, target=? WHERE id=?', (judul, waktu_pelaksanaan, target_str, p_id))
+                conn.execute('UPDATE pengumuman SET judul=?, deskripsi=?, waktu_pelaksanaan=?, target=? WHERE id=?', (judul, deskripsi, waktu_pelaksanaan, target_str, p_id))
             conn.commit()
             conn.close()
         elif action == 'hapus':

@@ -4,216 +4,214 @@
     <meta charset="UTF-8">
     <title>Cetak Jadwal Misdinar</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
+        /* Desain Standar Kertas & Typography Excel */
         body {
-            font-family: 'Times New Roman', Times, serif;
-            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+            margin: 0;
             padding: 20px;
+            background-color: #f4f7f6;
+            font-size: 12px;
         }
 
+        .print-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+
+        .title {
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            font-family: 'Times New Roman', Times, serif;
+        }
+
+        /* Navigasi Print */
         .print-controls {
             text-align: center;
             margin-bottom: 20px;
         }
 
         .btn-print {
-            background: #2d5f3f;
+            background-color: #2d5f3f;
             color: white;
             border: none;
             padding: 10px 24px;
             font-size: 14px;
             cursor: pointer;
-            border-radius: 5px;
+            border-radius: 6px;
             font-weight: bold;
-            font-family: inherit;
+            box-shadow: 0 4px 6px rgba(45,95,63,0.2);
         }
-        .btn-print:hover { background: #3d7f5a; }
 
-        .back-link {
-            display: inline-block;
-            margin-top: 10px;
-            color: #555;
+        .btn-back {
+            color: #6c757d;
             text-decoration: none;
-            font-family: sans-serif;
-            font-size: 13px;
-        }
-
-        .print-container {
-            max-width: 1120px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px 28px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.15);
-        }
-
-        .doc-title {
-            text-align: center;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: bold;
-            margin-bottom: 22px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            display: inline-block;
+            margin-top: 12px;
         }
 
-        /* ── Blok per minggu ── */
-        .week-block { margin-bottom: 20px; }
-
-        /* ── Baris hari (4 kolom untuk Senin-Kamis, flex untuk Jumat-Minggu) ── */
-        .day-row {
-            display: flex;
-            border: 1px solid black;
-            margin-bottom: -1px;
+        /* TABEL GAYA EXCEL */
+        .excel-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            table-layout: fixed; /* Memaksa lebar kolom simetris */
         }
-        .day-row.row2 { border-top: none; }
 
-        /* ── Cell satu hari ── */
-        .day-cell {
-            flex: 1;
-            border-right: 1px solid black;
-            min-width: 0;
-            overflow: hidden;
+        .excel-table th, .excel-table td {
+            border: 1px solid #000;
+            padding: 6px 4px;
+            vertical-align: middle;
+            text-align: left;
         }
-        .day-cell.wide { flex: 2; }
-        .day-cell:last-child { border-right: none; }
 
-        /* ── Header nama hari ── */
-        .day-header {
+        .excel-table th {
             text-align: center;
+            font-weight: bold;
+            color: #000;
+        }
+
+        /* Pewarnaan Header Tabel */
+        .tgl-header { background-color: #d9e1f2; font-size: 12px; }
+        .waktu-header { background-color: #ededed; font-size: 11px; }
+        
+        .no-col { 
+            width: 25px; 
+            text-align: center !important; 
+            font-weight: bold; 
+            background-color: #f8f9fa;
+        }
+        .name-col {
             font-size: 11px;
-            padding: 3px 4px;
-            border-bottom: 1px solid black;
+            word-wrap: break-word;
         }
 
-        /* ── Baris sub-header waktu ── */
-        .time-row {
-            display: flex;
-            border-bottom: 1px solid black;
-        }
-
-        /* ── Satu kolom waktu = no + nama ── */
-        .time-col {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid black;
-            min-width: 0;
-        }
-        .time-col:last-child { border-right: none; }
-
-        .time-label {
-            text-align: center;
-            font-size: 10px;
-            padding: 2px 2px;
-            border-bottom: 1px solid black;
-        }
-
-        /* ── Baris petugas di dalam satu kolom waktu ── */
-        .petugas-entry {
-            display: flex;
-            border-bottom: 1px solid black;
-        }
-        .petugas-entry:last-child { border-bottom: none; }
-
-        .cell-no {
-            width: 16px;
-            min-width: 16px;
-            text-align: center;
-            font-size: 10px;
-            padding: 2px 1px;
-            border-right: 1px solid black;
-            flex-shrink: 0;
-        }
-
-        .cell-nama {
-            flex: 1;
-            font-size: 10px;
-            padding: 2px 3px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .cell-nama.bertugas { font-weight: bold; }
-
+        /* Konfigurasi Khusus Saat Kertas di Print (Ctrl+P) */
         @media print {
             body { background: white; padding: 0; }
-            .print-container { box-shadow: none; max-width: 100%; padding: 15px; }
+            .print-container { box-shadow: none; max-width: 100%; padding: 0; }
             .print-controls { display: none; }
-            @page { margin: 10mm; size: A4 landscape; }
+            @page { size: landscape; margin: 15mm; } /* Memaksa Print Menyamping (Landscape) */
         }
     </style>
 </head>
 <body>
 
 <div class="print-controls">
-    <button class="btn-print" onclick="window.print()">Cetak / Simpan PDF</button><br>
-    <a href="{{ url_for('penjadwalan') }}" class="back-link">← Kembali ke Sistem</a>
+    <button class="btn-print" onclick="window.print()">🖨️ Cetak / Simpan PDF (Landscape)</button>
+    <br>
+    <a href="{{ url_for('penjadwalan') }}" class="btn-back">&larr; Kembali ke Sistem</a>
 </div>
 
 <div class="print-container">
-    <div class="doc-title">JADWAL MISDINAR PERIODE {{ periode }}</div>
-
+    <div class="title">JADWAL MISDINAR</div>
+    
     {% for week in weeks %}
     <div class="week-block">
-
-        {# ── Baris 1: Senin s.d. Kamis ── #}
-        {% if week.row1 %}
-        <div class="day-row row1">
-            {% for day in week.row1 %}
-            <div class="day-cell">
-                <div class="day-header">{{ day.label }}</div>
-                <div class="time-row">
-                    {% for wkt in day.waktu_list %}
-                    <div class="time-col">
-                        <div class="time-label">Pkl. {{ wkt }}</div>
-                        {% for i in range(day.max_rows) %}
-                        <div class="petugas-entry">
-                            <div class="cell-no">{{ i + 1 }}</div>
-                            <div class="cell-nama {% if day.misa[wkt][i] %}bertugas{% endif %}">{{ day.misa[wkt][i] }}</div>
-                        </div>
+        
+        {% if week.senin_kamis %}
+        <table class="excel-table">
+            <tr>
+                {% for hari in week.senin_kamis %}
+                    {% set colspan_val = (hari.misa|length) * 2 %}
+                    <th colspan="{{ colspan_val if colspan_val > 0 else 2 }}" class="tgl-header">
+                        {{ hari.tanggal_teks }}
+                    </th>
+                {% endfor %}
+            </tr>
+            
+            <tr>
+                {% for hari in week.senin_kamis %}
+                    {% if hari.misa %}
+                        {% for waktu in hari.misa.keys() %}
+                            <th colspan="2" class="waktu-header">Pkl. {{ waktu }}</th>
                         {% endfor %}
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
+                    {% else %}
+                        <th colspan="2" class="waktu-header">-</th>
+                    {% endif %}
+                {% endfor %}
+            </tr>
+            
+            {% set max_r_senin_kamis = 4 %} {% for i in range(max_r_senin_kamis) %}
+            <tr>
+                {% for hari in week.senin_kamis %}
+                    {% if hari.misa %}
+                        {% for ptgs_list in hari.misa.values() %}
+                            <td class="no-col">{{ i + 1 }}</td>
+                            <td class="name-col">
+                                {% if i < ptgs_list|length and ptgs_list[i] != "" %}
+                                    <b>{{ ptgs_list[i] }}</b>
+                                {% else %}
+                                    &nbsp;
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    {% else %}
+                        <td class="no-col">{{ i + 1 }}</td>
+                        <td class="name-col">&nbsp;</td>
+                    {% endif %}
+                {% endfor %}
+            </tr>
             {% endfor %}
-            {# Isi kolom kosong supaya tetap 4 kolom #}
-            {% for _ in range(4 - week.row1|length) %}
-            <div class="day-cell"></div>
-            {% endfor %}
-        </div>
+        </table>
         {% endif %}
 
-        {# ── Baris 2: Jumat, Sabtu, Minggu ── #}
-        {% if week.row2 %}
-        <div class="day-row row2">
-            {% for day in week.row2 %}
-            <div class="day-cell {% if day.waktu_list|length > 2 %}wide{% endif %}">
-                <div class="day-header">{{ day.label }}</div>
-                <div class="time-row">
-                    {% for wkt in day.waktu_list %}
-                    <div class="time-col">
-                        <div class="time-label">Pkl. {{ wkt }}</div>
-                        {% for i in range(day.max_rows) %}
-                        <div class="petugas-entry">
-                            <div class="cell-no">{{ i + 1 }}</div>
-                            <div class="cell-nama {% if day.misa[wkt][i] %}bertugas{% endif %}">{{ day.misa[wkt][i] }}</div>
-                        </div>
+        {% if week.jumat_minggu %}
+        <table class="excel-table">
+            <tr>
+                {% for hari in week.jumat_minggu %}
+                    {% set colspan_val = (hari.misa|length) * 2 %}
+                    <th colspan="{{ colspan_val if colspan_val > 0 else 2 }}" class="tgl-header">
+                        {{ hari.tanggal_teks }}
+                    </th>
+                {% endfor %}
+            </tr>
+            
+            <tr>
+                {% for hari in week.jumat_minggu %}
+                    {% if hari.misa %}
+                        {% for waktu in hari.misa.keys() %}
+                            <th colspan="2" class="waktu-header">Pkl. {{ waktu }}</th>
                         {% endfor %}
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
+                    {% else %}
+                        <th colspan="2" class="waktu-header">-</th>
+                    {% endif %}
+                {% endfor %}
+            </tr>
+            
+            {% set max_r_weekend = 9 %} {% for i in range(max_r_weekend) %}
+            <tr>
+                {% for hari in week.jumat_minggu %}
+                    {% if hari.misa %}
+                        {% for ptgs_list in hari.misa.values() %}
+                            <td class="no-col">{{ i + 1 }}</td>
+                            <td class="name-col">
+                                {% if i < ptgs_list|length and ptgs_list[i] != "" %}
+                                    <b>{{ ptgs_list[i] }}</b>
+                                {% else %}
+                                    &nbsp; /* Ruang kosong bagi form draft belum terisi */
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    {% else %}
+                        <td class="no-col">{{ i + 1 }}</td>
+                        <td class="name-col">&nbsp;</td>
+                    {% endif %}
+                {% endfor %}
+            </tr>
             {% endfor %}
-        </div>
+        </table>
         {% endif %}
-
+        
     </div>
     {% endfor %}
-
-    {% if not weeks %}
-    <p style="text-align:center; color:#888; padding: 40px 0;">Belum ada data jadwal yang tersimpan untuk periode ini.</p>
-    {% endif %}
 
 </div>
 

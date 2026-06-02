@@ -6,23 +6,69 @@
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
     <div>
         <h2>Manajemen Penjadwalan Misa</h2>
-        <p>Sistem otomatisasi pembuatan draft jadwal dan import data Excel</p>
+        <p>Sistem otomatisasi pembuatan jadwal (Web & Excel) untuk sinkronisasi Database</p>
     </div>
     <a href="{{ url_for('cetak_jadwal') }}" class="btn-primary" style="text-decoration: none; display: flex; align-items: center; gap: 8px;">
-        <i class="fas fa-print"></i> Lihat & Cetak Jadwal (Visual)
+        <i class="fas fa-print"></i> Cetak Jadwal (Matriks Visual)
     </a>
 </div>
 
-<div class="schedule-dashboard">
-    <div class="panel-card template-panel">
-        <div class="panel-header">
-            <div class="icon-circle bg-blue"><i class="fas fa-file-excel"></i></div>
-            <h3>1. Buat Template Jadwal (Tabular)</h3>
+{% if editor_data %}
+<div class="spreadsheet-container">
+    <h3><i class="fas fa-table"></i> Live Editor Jadwal: {{ start_date }} s/d {{ end_date }}</h3>
+    <p style="color: var(--text-gray); font-size: 13px; margin-bottom: 16px;">Ketikkan <b>Username</b> petugas di dalam kotak putih. Jika petugas lebih dari satu, pisahkan menggunakan tanda koma (Contoh: <code>anton, budi, galant</code>).</p>
+    
+    <form action="{{ url_for('penjadwalan') }}" method="POST">
+        <input type="hidden" name="action" value="simpan_editor_web">
+        <table class="spreadsheet-table">
+            <thead>
+                <tr>
+                    <th width="15%">Tanggal</th>
+                    <th width="12%">Hari</th>
+                    <th width="10%">Pukul</th>
+                    <th width="15%">Acara</th>
+                    <th width="48%">Input Username Petugas (Autocomplete)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in editor_data %}
+                <tr>
+                    <td class="readonly">{{ row.tanggal }}<input type="hidden" name="tgl[]" value="{{ row.tanggal }}"></td>
+                    <td class="readonly">{{ row.hari }}<input type="hidden" name="hri[]" value="{{ row.hari }}"></td>
+                    <td class="readonly">{{ row.waktu }}<input type="hidden" name="wkt[]" value="{{ row.waktu }}"></td>
+                    <td class="readonly">{{ row.acara }}<input type="hidden" name="acr[]" value="{{ row.acara }}"></td>
+                    <td class="editable">
+                        <input type="text" name="ptgs[]" placeholder="Ketik disini..." list="user_datalist" autocomplete="off">
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <datalist id="user_datalist">
+            {% for u in users %}
+            <option value="{{ u.username }}">{{ u.nama }}</option>
+            {% endfor %}
+        </datalist>
+        
+        <div style="margin-top: 24px; text-align: right; display: flex; gap: 12px; justify-content: flex-end;">
+            <a href="{{ url_for('penjadwalan') }}" class="btn-outline" style="text-decoration: none; display: flex; align-items: center; justify-content: center; height: 45px;">Batalkan</a>
+            <button type="submit" class="btn-primary" style="height: 45px;"><i class="fas fa-save"></i> Simpan ke Database</button>
         </div>
-        <p class="panel-desc">Sistem akan membuatkan Excel siap isi. Anda cukup <b>klik sel nama</b> dan memilih petugas dari Dropdown yang sudah disediakan!</p>
+    </form>
+</div>
+
+{% else %}
+<div class="schedule-dashboard" style="grid-template-columns: 1fr;">
+    <div class="panel-card" style="border-top-color: #ffc107;">
+        <div class="panel-header">
+            <div class="icon-circle bg-yellow" style="background: #ffc107; color: #000;"><i class="fas fa-laptop-code"></i></div>
+            <h3>Opsi 1: Buat Jadwal Langsung di Web (Sangat Direkomendasikan)</h3>
+        </div>
+        <p class="panel-desc">Sistem akan menampilkan tabel interaktif (Live Spreadsheet) di layar Anda. Cukup ketik nama, dan tekan Simpan! Tidak perlu repot men-download/upload file.</p>
         
         <form action="{{ url_for('penjadwalan') }}" method="POST" class="generate-form">
-            <input type="hidden" name="action" value="generate">
+            <input type="hidden" name="action" value="editor_web">
             <div class="form-row">
                 <div class="form-group">
                     <label>Tanggal Mulai Jadwal</label>
@@ -33,8 +79,35 @@
                     <input type="date" name="end_date" required>
                 </div>
             </div>
+            <button type="submit" class="btn-primary w-100" style="background: #ffc107; color: #000;">
+                <i class="fas fa-external-link-alt"></i> Buka Tabel Editor Sekarang
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="schedule-dashboard">
+    <div class="panel-card template-panel">
+        <div class="panel-header">
+            <div class="icon-circle bg-blue"><i class="fas fa-file-excel"></i></div>
+            <h3>Opsi 2A: Buat Template (Excel)</h3>
+        </div>
+        <p class="panel-desc">Gunakan ini jika Anda lebih nyaman bekerja di aplikasi Microsoft Excel secara offline. Sistem akan membuatkan form kosong dengan Dropdown otomatis.</p>
+        
+        <form action="{{ url_for('penjadwalan') }}" method="POST" class="generate-form">
+            <input type="hidden" name="action" value="generate">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Tanggal Mulai</label>
+                    <input type="date" name="start_date" required>
+                </div>
+                <div class="form-group">
+                    <label>Tanggal Akhir</label>
+                    <input type="date" name="end_date" required>
+                </div>
+            </div>
             <button type="submit" class="btn-primary w-100">
-                <i class="fas fa-download"></i> Unduh Template Excel
+                <i class="fas fa-download"></i> Unduh File .xlsx
             </button>
         </form>
     </div>
@@ -42,9 +115,9 @@
     <div class="panel-card upload-panel">
         <div class="panel-header">
             <div class="icon-circle bg-green"><i class="fas fa-upload"></i></div>
-            <h3>2. Unggah Jadwal (Import)</h3>
+            <h3>Opsi 2B: Unggah Hasil (Import)</h3>
         </div>
-        <p class="panel-desc">Unggah kembali file Excel yang telah Anda isi. Sistem akan membaca format tersebut dengan aman tanpa error.</p>
+        <p class="panel-desc">Setelah Anda selesai mengetik / memilih nama di file Excel tadi, unggah kembali filenya di sini agar tersinkronisasi ke dalam database Web.</p>
         
         <form action="{{ url_for('penjadwalan') }}" method="POST" enctype="multipart/form-data" class="upload-form">
             <input type="hidden" name="action" value="upload">
@@ -54,19 +127,70 @@
                 <span>Klik disini untuk memilih file .xlsx</span>
             </div>
             <button type="submit" class="btn-success w-100">
-                <i class="fas fa-check-circle"></i> Proses & Simpan ke Database
+                <i class="fas fa-check-circle"></i> Proses ke Database
             </button>
         </form>
     </div>
 </div>
-
-<div class="guide-section">
-    <h3><i class="fas fa-info-circle"></i> Panduan Pengisian Excel</h3>
-    <p>Excel yang dihasilkan telah dilengkapi dengan fitur <b>Data Validation Dropdown</b>. Anda tidak perlu mengetik manual nama anggota, cukup klik panah di samping sel untuk memilih. Jika bertugas lebih dari satu orang pada satu sel, pisahkan dengan koma (contoh manual: <code>anton, dyota</code>).</p>
-</div>
+{% endif %}
 
 <style>
-.schedule-dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+/* CSS UNTUK LIVE EDITOR SPREADSHEET */
+.spreadsheet-container {
+    background: var(--white);
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    margin-top: 16px;
+    overflow-x: auto;
+}
+.spreadsheet-container h3 { color: var(--primary-green); margin-bottom: 8px; }
+.spreadsheet-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+    min-width: 700px;
+}
+.spreadsheet-table th {
+    background: var(--bg-gray);
+    border: 1px solid var(--border-color);
+    padding: 14px 12px;
+    font-size: 13px;
+    text-align: left;
+    color: var(--text-dark);
+}
+.spreadsheet-table td {
+    border: 1px solid var(--border-color);
+    font-size: 14px;
+}
+.spreadsheet-table td.readonly {
+    background: #fcfcfc;
+    padding: 12px;
+    color: #495057;
+    font-weight: 500;
+}
+.spreadsheet-table td.editable {
+    padding: 0;
+    position: relative;
+}
+.spreadsheet-table input[type="text"] {
+    width: 100%;
+    height: 100%;
+    padding: 14px 12px;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: monospace;
+    color: #0d6efd;
+    font-weight: bold;
+}
+.spreadsheet-table input[type="text"]:focus {
+    background: #e0f3ff;
+    box-shadow: inset 0 0 0 2px #0d6efd;
+}
+
+/* KARTU MENU UTAMA */
+.schedule-dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
 .panel-card { background: var(--white); padding: 24px; border-radius: 12px; box-shadow: var(--shadow); border-top: 4px solid var(--border-color); }
 .template-panel { border-top-color: #0d6efd; }
 .upload-panel { border-top-color: var(--primary-green); }
@@ -75,20 +199,22 @@
 .bg-blue { background: #0d6efd; } .bg-green { background: var(--primary-green); }
 .panel-header h3 { font-size: 18px; color: var(--text-dark); margin: 0; }
 .panel-desc { font-size: 13px; color: var(--text-gray); margin-bottom: 20px; line-height: 1.5; }
+
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
 .form-group label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--text-dark); }
 .form-group input[type="date"] { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; }
+
 .w-100 { width: 100%; justify-content: center; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px; color: white;}
 .btn-primary { background: #0d6efd; } .btn-primary:hover { background: #0b5ed7; }
 .btn-success { background: var(--primary-green); } .btn-success:hover { background: var(--accent-green); }
+.btn-outline { padding: 0 24px; border: 1px solid #dc3545; color: #dc3545; background: transparent; border-radius: 8px; font-weight: 600;}
+
 .upload-area { border: 2px dashed var(--border-color); border-radius: 8px; padding: 30px 20px; text-align: center; position: relative; margin-bottom: 20px; background: #fcfcfc; transition: 0.3s; }
 .upload-area:hover { border-color: var(--primary-green); background: #f0f7f3; }
 .upload-area i { font-size: 32px; color: var(--text-gray); margin-bottom: 10px; display: block; }
 .upload-area span { font-size: 13px; color: var(--text-dark); font-weight: 500; }
 .upload-area input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-.guide-section { background: var(--white); padding: 24px; border-radius: 12px; box-shadow: var(--shadow); }
-.guide-section h3 { font-size: 16px; color: var(--text-dark); margin-bottom: 12px; }
-.guide-section p { font-size: 14px; color: var(--text-gray); margin-bottom: 0; }
+
 @media(max-width: 992px) { .schedule-dashboard { grid-template-columns: 1fr; } }
 @media(max-width: 576px) { .form-row { grid-template-columns: 1fr; } }
 </style>

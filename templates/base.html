@@ -2,169 +2,92 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{% block title %}MISDINAR{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <div class="container">
-        <aside class="sidebar">
-            <div class="logo">
-                <div class="logo-icon">
-                    <i class="fas fa-church"></i>
-                </div>
-                <div class="logo-text">
-                    <h1>MISDINAR</h1>
-                    <p>Informasi & Pelayanan<br>Bagi Misdinar</p>
-                </div>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-icon">
+                <i class="fas fa-church"></i>
             </div>
-
-            {% if session.get('user_id') %}
-            <nav class="nav-menu">
-                <a href="/" class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
-                    <i class="fas fa-home"></i>
-                    <span>Beranda</span>
-                </a>
-                <a href="/jadwal" class="nav-item {% if request.endpoint == 'jadwal' %}active{% endif %}">
-                    <i class="far fa-calendar"></i>
-                    <span>Jadwal Pelayanan Saya</span>
-                </a>
-                
-                {% set role = session.get('role') %}
-                
-                {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-                <a href="/anggota" class="nav-item {% if request.endpoint == 'anggota' %}active{% endif %}">
-                    <i class="fas fa-users"></i>
-                    <span>Anggota</span>
-                </a>
-                {% endif %}
-                
-                {% if role in ['super admin', 'bph'] %}
-                <a href="/bph" class="nav-item {% if request.endpoint == 'bph' %}active{% endif %}">
-                    <i class="fas fa-user-shield"></i>
-                    <span>BPH</span>
-                </a>
-                {% endif %}
-                
-                {% if role in ['super admin', 'penjadwalan'] %}
-                <a href="/penjadwalan" class="nav-item {% if request.endpoint == 'penjadwalan' %}active{% endif %}">
-                    <i class="fas fa-calendar-check"></i>
-                    <span>Penjadwalan</span>
-                </a>
-                {% endif %}
-                
-                {% if role in ['super admin', 'pelatihan'] %}
-                <a href="/pelatihan" class="nav-item {% if request.endpoint == 'pelatihan' %}active{% endif %}">
-                    <i class="fas fa-graduation-cap"></i>
-                    <span>Pelatihan</span>
-                </a>
-                {% endif %}
-                
-                <a href="/pengumuman" class="nav-item {% if request.endpoint == 'pengumuman' %}active{% endif %}">
-                    <i class="fas fa-bullhorn"></i>
-                    <span>Pengumuman</span>
-                </a>
-                <a href="/galeri" class="nav-item {% if request.endpoint == 'galeri' %}active{% endif %}">
-                    <i class="far fa-images"></i>
-                    <span>Galeri</span>
-                </a>
-                <a href="/dokumen" class="nav-item {% if request.endpoint == 'dokumen' %}active{% endif %}">
-                    <i class="far fa-file-alt"></i>
-                    <span>Dokumen</span>
-                </a>
-                <a href="/kontak" class="nav-item {% if request.endpoint == 'kontak' %}active{% endif %}">
-                    <i class="fas fa-phone"></i>
-                    <span>Kontak</span>
-                </a>
-                <a href="/pengaturan" class="nav-item {% if request.endpoint == 'pengaturan' %}active{% endif %}">
-                    <i class="fas fa-cog"></i>
-                    <span>Pengaturan</span>
-                </a>
-            </nav>
-
-            <div class="user-profile">
-                <div class="user-avatar">
-                    <i class="fas fa-user"></i>
-                </div>
-                <div class="user-info">
-                    <span class="user-name">{{ session.get('nama_user', 'User') }}</span>
-                    <span class="user-role" style="text-transform: capitalize;">{{ session.get('role', 'Misdinar') }}</span>
-                </div>
-                <i class="fas fa-chevron-down"></i>
+            <div class="logo-text">
+                <h2>MISDINAR</h2>
+                <p>Informasi & Pelayanan<br>Bagi Misdinar</p>
             </div>
+        </div>
 
-            <a href="{{ url_for('logout') }}" class="logout-btn">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Keluar</span>
-            </a>
-            {% else %}
-            <nav class="nav-menu">
-                <a href="/" class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
-                    <i class="fas fa-home"></i>
-                    <span>Beranda</span>
-                </a>
-                <a href="/jadwal" class="nav-item {% if request.endpoint == 'jadwal' %}active{% endif %}">
-                    <i class="far fa-calendar"></i>
-                    <span>Jadwal Pelayanan</span>
-                </a>
-                <a href="/pendaftaran" class="nav-item {% if request.endpoint == 'pendaftaran' %}active{% endif %}">
-                    <i class="far fa-edit"></i>
-                    <span>Pendaftaran</span>
-                </a>
-                <a href="/pengumuman" class="nav-item {% if request.endpoint == 'pengumuman' %}active{% endif %}">
-                    <i class="fas fa-bullhorn"></i>
-                    <span>Pengumuman</span>
-                </a>
-                <a href="/galeri" class="nav-item {% if request.endpoint == 'galeri' %}active{% endif %}">
-                    <i class="far fa-images"></i>
-                    <span>Galeri</span>
-                </a>
-                <a href="/dokumen" class="nav-item {% if request.endpoint == 'dokumen' %}active{% endif %}">
-                    <i class="far fa-file-alt"></i>
-                    <span>Dokumen</span>
-                </a>
-                <a href="/kontak" class="nav-item {% if request.endpoint == 'kontak' %}active{% endif %}">
-                    <i class="fas fa-phone"></i>
-                    <span>Kontak</span>
-                </a>
-            </nav>
-
-            <div class="user-profile-public">
-                <p style="text-align: center; color: var(--text-gray); font-size: 13px; margin-bottom: 16px;">
-                    Halaman Publik - Login untuk akses privat
-                </p>
-            </div>
-
-            <a href="{{ url_for('login') }}" class="login-btn">
-                <i class="fas fa-sign-in-alt"></i>
-                <span>Login</span>
-            </a>
+        <ul class="sidebar-menu">
+            <li><a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}"><i class="fas fa-home"></i> Beranda</a></li>
+            <li><a href="{{ url_for('jadwal') }}" class="{% if request.endpoint == 'jadwal' %}active{% endif %}"><i class="far fa-calendar-alt"></i> Jadwal Pelayanan {% if session.get('user_id') %}Saya{% endif %}</a></li>
+            
+            {% if session.get('role') in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+            <li><a href="{{ url_for('anggota') }}" class="{% if request.endpoint == 'anggota' %}active{% endif %}"><i class="fas fa-users"></i> Anggota</a></li>
             {% endif %}
-        </aside>
 
-        <main class="main-content">
-            <header class="top-header">
-                <div class="search-bar">
-                    <i class="fas fa-search"></i>
-                    {% if session.get('user_id') %}
-                    <input type="text" placeholder="Cari jadwal, anggota, pengumuman, dll...">
-                    {% else %}
-                    <input type="text" placeholder="Cari jadwal...">
-                    {% endif %}
-                </div>
-                <div class="header-actions">
-                    {% if not session.get('user_id') %}
-                    <a href="{{ url_for('login') }}" class="calendar-btn" title="Login untuk akses penuh" style="text-decoration: none; cursor: pointer;">
-                        <i class="fas fa-sign-in-alt"></i>
-                    </a>
-                    {% endif %}
-                </div>
-            </header>
+            {% if session.get('role') in ['super admin', 'bph'] %}
+            <li><a href="{{ url_for('bph') }}" class="{% if request.endpoint == 'bph' %}active{% endif %}"><i class="fas fa-user-shield"></i> BPH</a></li>
+            {% endif %}
+            
+            {% if session.get('role') in ['super admin', 'penjadwalan'] %}
+            <li><a href="{{ url_for('penjadwalan') }}" class="{% if request.endpoint == 'penjadwalan' %}active{% endif %}"><i class="fas fa-calendar-check"></i> Penjadwalan</a></li>
+            {% endif %}
+            
+            {% if session.get('role') in ['super admin', 'pelatihan'] %}
+            <li><a href="{{ url_for('pelatihan') }}" class="{% if request.endpoint == 'pelatihan' %}active{% endif %}"><i class="fas fa-graduation-cap"></i> Pelatihan</a></li>
+            {% endif %}
 
-            <div class="content-area">
-                {% block content %}{% endblock %}
+            <li><a href="{{ url_for('pengumuman') }}" class="{% if request.endpoint == 'pengumuman' %}active{% endif %}"><i class="fas fa-bullhorn"></i> Pengumuman</a></li>
+            <li><a href="{{ url_for('galeri') }}" class="{% if request.endpoint == 'galeri' %}active{% endif %}"><i class="fas fa-images"></i> Galeri</a></li>
+            <li><a href="{{ url_for('dokumen') }}" class="{% if request.endpoint == 'dokumen' %}active{% endif %}"><i class="fas fa-file-alt"></i> Dokumen</a></li>
+            <li><a href="{{ url_for('kontak') }}" class="{% if request.endpoint == 'kontak' %}active{% endif %}"><i class="fas fa-phone-alt"></i> Kontak</a></li>
+            
+            {% if session.get('user_id') %}
+            <li><a href="{{ url_for('pengaturan') }}" class="{% if request.endpoint == 'pengaturan' %}active{% endif %}"><i class="fas fa-cog"></i> Pengaturan</a></li>
+            {% endif %}
+        </ul>
+
+        <div class="sidebar-footer">
+            {% if session.get('user_id') %}
+            <div class="user-info">
+                <div class="user-avatar"><i class="fas fa-user"></i></div>
+                <div class="user-details">
+                    <h4>{{ session.get('nama_user').split()[0] if session.get('nama_user') else session.get('user_id') }}</h4>
+                    <span>{{ session.get('role') | capitalize }}</span>
+                </div>
+                <a href="{{ url_for('logout') }}" class="logout-btn" title="Keluar / Logout"><i class="fas fa-sign-out-alt"></i></a>
             </div>
+            {% else %}
+            <a href="{{ url_for('login') }}" class="login-btn"><i class="fas fa-sign-in-alt"></i> Login Akun</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <header class="topbar">
+            <button class="mobile-toggle" onclick="toggleSidebar()" aria-label="Buka Menu">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <div class="search-bar">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Cari jadwal, anggota, pengumuman...">
+            </div>
+            
+            <div class="topbar-right">
+                <div class="notification-bell">
+                    <i class="far fa-bell"></i>
+                </div>
+            </div>
+        </header>
+
+        <main class="content-wrapper">
+            {% block content %}{% endblock %}
         </main>
     </div>
 
