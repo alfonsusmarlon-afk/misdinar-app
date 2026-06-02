@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Sanksi & Teguran - MISDINAR{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Catatan Sanksi & Teguran</h2>
+    <p>Evaluasi disiplin anggota secara tertutup dan rahasia.</p>
+</div>
+
+{% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+<div class="admin-action-box" id="form-container" style="border-left-color: #dc3545;">
+    <h3 id="form-title" style="color: #dc3545;"><i class="fas fa-exclamation-triangle"></i> Tambah Catatan Pelanggaran</h3>
+    
+    <form action="{{ url_for('hukuman') }}" method="POST" id="hukuman-form" class="pengumuman-form">
+        <input type="hidden" name="action" id="form-action" value="tambah">
+        <input type="hidden" name="id" id="form-id" value="">
+        
+        <div class="form-group">
+            <label>Pilih Anggota</label>
+            <select name="username" id="input-username" class="table-select-role" required>
+                <option value="">-- Pilih Nama --</option>
+                {% for u in users %}
+                <option value="{{ u.username }}">{{ u.nama }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Tanggal Kejadian</label>
+            <input type="date" name="tanggal" id="input-tanggal" required>
+        </div>
+
+        <div class="form-group">
+            <label>Status Penyelesaian</label>
+            <select name="status" id="input-status" class="table-select-role" required>
+                <option value="Belum Selesai">⏳ Belum Selesai</option>
+                <option value="Selesai">✅ Selesai</option>
+            </select>
+        </div>
+
+        <div class="form-group full-width">
+            <label>Deskripsi Pelanggaran</label>
+            <input type="text" name="pelanggaran" id="input-pelanggaran" required placeholder="Cth: Tidak hadir tugas tanpa konfirmasi pengganti">
+        </div>
+        
+        <div class="form-group full-width">
+            <label>Sanksi / Tindakan Disiplin</label>
+            <input type="text" name="tindakan" id="input-tindakan" required placeholder="Cth: Membersihkan panti imam setelah misa / Diberi SP 1">
+        </div>
+        
+        <div class="form-action">
+            <button type="submit" id="btn-submit" class="btn-primary" style="background: #dc3545;">
+                <i class="fas fa-save"></i> Catat Pelanggaran
+            </button>
+            <button type="button" id="btn-cancel" class="btn-outline" style="display: none;" onclick="cancelEdit()">Batal</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<div class="dokumen-container">
+    {% if hukuman %}
+        {% for item in hukuman %}
+        <div class="dokumen-card">
+            
+            <div class="dokumen-icon-box" style="
+                {% if item.status == 'Selesai' %} background: #d4edda; color: #28a745; 
+                {% else %} background: #f8d7da; color: #dc3545; {% endif %}">
+                <i class="fas fa-gavel"></i>
+            </div>
+            
+            <div class="dokumen-info">
+                <h3 style="margin-bottom: 2px;">
+                    {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}{{ item.nama }}{% else %}Pelanggaran Anda{% endif %}
+                </h3>
+                
+                <div class="dokumen-meta" style="margin-bottom: 8px;">
+                    <span><i class="far fa-calendar-alt"></i> {{ item.tanggal }}</span>
+                </div>
+                
+                <p style="font-size: 13px; color: var(--text-dark); margin:0 0 4px 0;"><b>Pelanggaran:</b> {{ item.pelanggaran }}</p>
+                <p style="font-size: 13px; color: #dc3545; margin:0;"><b>Sanksi:</b> {{ item.tindakan }}</p>
+            </div>
+            
+            <div class="dokumen-actions-grid">
+                <span class="badge-scope" style="font-size: 12px; padding: 6px 12px;
+                    {% if item.status == 'Selesai' %} background: #28a745; color: white; 
+                    {% else %} background: #ffc107; color: black; {% endif %}">
+                    {{ item.status }}
+                </span>
+                
+                {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+                <div style="display:flex; gap:6px; margin-left: 12px;">
+                    <button onclick="editHukuman('{{ item.id }}', '{{ item.username }}', '{{ item.tanggal }}', '{{ item.pelanggaran }}', '{{ item.tindakan }}', '{{ item.status }}')" class="management-btn edit-color"><i class="fas fa-edit"></i></button>
+                    <form action="{{ url_for('hukuman') }}" method="POST" style="display:inline; margin:0;">
+                        <input type="hidden" name="action" value="hapus">
+                        <input type="hidden" name="id" value="{{ item.id }}">
+                        <button type="submit" class="management-btn delete-color" onclick="return confirm('Hapus catatan sanksi ini?');"><i class="fas fa-trash-alt"></i></button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="no-data-box">
+            <i class="fas fa-shield-alt" style="color: #28a745;"></i>
+            <h3>Catatan Bersih</h3>
+            <p>Tidak ada riwayat pelanggaran atau sanksi ditemukan.</p>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    function editHukuman(id, user, tgl, langgar, tindak, status) {
+        document.getElementById('form-action').value = 'edit';
+        document.getElementById('form-id').value = id;
+        document.getElementById('input-username').value = user;
+        document.getElementById('input-tanggal').value = tgl;
+        document.getElementById('input-pelanggaran').value = langgar;
+        document.getElementById('input-tindakan').value = tindak;
+        document.getElementById('input-status').value = status;
+        
+        document.getElementById('form-title').innerHTML = '<i class="fas fa-edit"></i> Edit Catatan Pelanggaran';
+        document.getElementById('btn-submit').innerHTML = '<i class="fas fa-save"></i> Update Catatan';
+        document.getElementById('btn-cancel').style.display = 'inline-flex';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function cancelEdit() {
+        document.getElementById('form-action').value = 'tambah';
+        document.getElementById('form-id').value = '';
+        document.getElementById('hukuman-form').reset();
+        
+        document.getElementById('form-title').innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tambah Catatan Pelanggaran';
+        document.getElementById('btn-submit').innerHTML = '<i class="fas fa-save"></i> Catat Pelanggaran';
+        document.getElementById('btn-cancel').style.display = 'none';
+    }
+</script>
+
+<style>
+/* Meminjam CSS dari halaman kehadiran agar konsisten dan ringan */
+.admin-action-box { background: var(--white); padding: 24px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 32px; border-left: 4px solid var(--primary-green); }
+.admin-action-box h3 { margin-bottom: 20px; color: var(--text-dark); font-size: 18px; display: flex; align-items: center; gap: 8px; }
+.pengumuman-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: end; }
+.full-width { grid-column: 1 / -1; }
+.form-group label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--text-dark); }
+.form-group input { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none;}
+.table-select-role { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; background: white; cursor: pointer;}
+.form-action { grid-column: 1 / -1; display: flex; gap: 12px; margin-top: 8px;}
+.btn-primary { flex: 1; max-width: 250px; background: var(--primary-green); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold;}
+.btn-outline { padding: 0 24px; border: 1px solid #dc3545; color: #dc3545; background: transparent; border-radius: 8px; cursor: pointer;}
+
+.dokumen-container { display: flex; flex-direction: column; gap: 14px; }
+.dokumen-card { background: var(--white); padding: 16px 20px; border-radius: 12px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 16px; }
+.dokumen-icon-box { width: 44px; height: 44px; font-size: 20px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+.dokumen-info { flex: 1; }
+.dokumen-meta { display: flex; gap: 16px; font-size: 12px; color: var(--text-gray); }
+.badge-scope { padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; }
+.dokumen-actions-grid { display: flex; align-items: center; justify-content: flex-end; }
+.management-btn { width: 34px; height: 34px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.edit-color { background: #e2f0e6; color: var(--primary-green); }
+.delete-color { background: #f8d7da; color: #dc3545; }
+.no-data-box { text-align: center; padding: 50px; background: var(--white); border-radius: 12px; }
+.no-data-box i { font-size: 48px; color: var(--border-color); margin-bottom: 12px; }
+
+@media(max-width:768px){
+    .pengumuman-form{grid-template-columns:1fr;}
+    .dokumen-card{flex-direction:column;align-items:flex-start;}
+    .dokumen-actions-grid{width:100%;justify-content:space-between; margin-top:10px;}
+}
+</style>
+{% endblock %}
