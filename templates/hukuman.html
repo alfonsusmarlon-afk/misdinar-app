@@ -88,7 +88,17 @@
                 
                 {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
                 <div style="display:flex; gap:6px; margin-left: 12px;">
-                    <button onclick='editHukuman({{ item.id }}, {{ item.username|tojson }}, {{ item.tanggal|tojson }}, {{ item.pelanggaran|tojson }}, {{ item.tindakan|tojson }}, {{ item.status|tojson }})' class="management-btn edit-color"><i class="fas fa-edit"></i></button>
+                    
+                    <button type="button" class="management-btn edit-color"
+                            onclick="editHukuman(this)"
+                            data-id="{{ item.id }}"
+                            data-user="{{ item.username }}"
+                            data-tgl="{{ item.tanggal }}"
+                            data-langgar="{{ item.pelanggaran }}"
+                            data-tindak="{{ item.tindakan }}"
+                            data-status="{{ item.status }}">
+                        <i class="fas fa-edit"></i>
+                    </button>
                     
                     <form action="{{ url_for('hukuman') }}" method="POST" style="display:inline; margin:0;">
                         <input type="hidden" name="action" value="hapus">
@@ -110,14 +120,14 @@
 </div>
 
 <script>
-    function editHukuman(id, user, tgl, langgar, tindak, status) {
+    function editHukuman(btn) {
         document.getElementById('form-action').value = 'edit';
-        document.getElementById('form-id').value = id;
-        document.getElementById('input-username').value = user;
-        document.getElementById('input-tanggal').value = tgl;
-        document.getElementById('input-pelanggaran').value = langgar;
-        document.getElementById('input-tindakan').value = tindak;
-        document.getElementById('input-status').value = status;
+        document.getElementById('form-id').value = btn.getAttribute('data-id');
+        document.getElementById('input-username').value = btn.getAttribute('data-user');
+        document.getElementById('input-tanggal').value = btn.getAttribute('data-tgl');
+        document.getElementById('input-pelanggaran').value = btn.getAttribute('data-langgar');
+        document.getElementById('input-tindakan').value = btn.getAttribute('data-tindak');
+        document.getElementById('input-status').value = btn.getAttribute('data-status');
         
         document.getElementById('form-title').innerHTML = '<i class="fas fa-edit"></i> Edit Catatan Pelanggaran';
         document.getElementById('btn-submit').innerHTML = '<i class="fas fa-save"></i> Update Catatan';
@@ -153,19 +163,17 @@
 .dokumen-icon-box { width: 44px; height: 44px; font-size: 20px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
 .dokumen-info { flex: 1; }
 .dokumen-meta { display: flex; gap: 16px; font-size: 12px; color: var(--text-gray); }
-.badge-scope { padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; }
+.badge-scope { padding: 4px 12px; border-radius: 6px; font-weight: bold; font-size: 11px; }
 .dokumen-actions-grid { display: flex; align-items: center; justify-content: flex-end; }
 .management-btn { width: 34px; height: 34px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; }
 .edit-color { background: #e2f0e6; color: var(--primary-green); }
 .delete-color { background: #f8d7da; color: #dc3545; }
 
-/* Status-based icon box styles */
 .icon-selesai { background: #d4edda !important; color: #28a745 !important; }
 .icon-belum-selesai { background: #f8d7da !important; color: #dc3545 !important; }
 
-/* Status-based badge styles */
-.badge-selesai { background: #28a745; color: white; font-size: 12px; padding: 6px 12px; }
-.badge-belum-selesai { background: #ffc107; color: black; font-size: 12px; padding: 6px 12px; }
+.badge-selesai { background: #28a745; color: white; }
+.badge-belum-selesai { background: #ffc107; color: black; }
 .no-data-box { text-align: center; padding: 50px; background: var(--white); border-radius: 12px; }
 .no-data-box i { font-size: 48px; color: var(--border-color); margin-bottom: 12px; }
 

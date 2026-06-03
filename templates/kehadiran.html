@@ -11,11 +11,11 @@
 {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
 <div class="admin-action-box" id="form-container">
     <h3 id="form-title"><i class="fas fa-user-check"></i> Tambah Data Kehadiran</h3>
-
+    
     <form action="{{ url_for('kehadiran') }}" method="POST" id="absen-form" class="pengumuman-form">
         <input type="hidden" name="action" id="form-action" value="tambah">
         <input type="hidden" name="id" id="form-id" value="">
-
+        
         <div class="form-group">
             <label>Pilih Anggota</label>
             <select name="username" id="input-username" class="table-select-role" required>
@@ -25,7 +25,7 @@
                 {% endfor %}
             </select>
         </div>
-
+        
         <div class="form-group">
             <label>Tanggal & Kegiatan</label>
             <div class="date-activity-row">
@@ -37,10 +37,10 @@
         <div class="form-group">
             <label>Status Kehadiran</label>
             <select name="status" id="input-status" class="table-select-role" required>
-                <option value="Hadir">Hadir</option>
-                <option value="Izin">Izin</option>
-                <option value="Sakit">Sakit</option>
-                <option value="Alpa">Tanpa Keterangan (Alpa)</option>
+                <option value="Hadir">✅ Hadir</option>
+                <option value="Izin">ℹ️ Izin</option>
+                <option value="Sakit">🏥 Sakit</option>
+                <option value="Alpa">❌ Tanpa Keterangan (Alpa)</option>
             </select>
         </div>
 
@@ -48,7 +48,7 @@
             <label>Keterangan Tambahan (Opsional)</label>
             <input type="text" name="keterangan" id="input-keterangan" placeholder="Cth: Terlambat 15 menit / Ada acara keluarga">
         </div>
-
+        
         <div class="form-action">
             <button type="submit" id="btn-submit" class="btn-primary">
                 <i class="fas fa-save"></i> Simpan Absen
@@ -64,9 +64,12 @@
         {% for item in kehadiran %}
         <div class="dokumen-card">
             <div class="dokumen-icon-box icon-{{ item.status|lower|replace(' ', '-') }}">
-                {% if item.status == 'Hadir' %}<i class="fas fa-check"></i>{% elif item.status == 'Izin' %}<i class="fas fa-info"></i>{% elif item.status == 'Sakit' %}<i class="fas fa-briefcase-medical"></i>{% else %}<i class="fas fa-times"></i>{% endif %}
+                {% if item.status == 'Hadir' %}<i class="fas fa-check"></i>
+                {% elif item.status == 'Izin' %}<i class="fas fa-info"></i>
+                {% elif item.status == 'Sakit' %}<i class="fas fa-briefcase-medical"></i>
+                {% else %}<i class="fas fa-times"></i>{% endif %}
             </div>
-
+            
             <div class="dokumen-info">
                 <h3 style="margin-bottom: 2px;">{{ item.nama }}</h3>
                 <div class="dokumen-meta" style="margin-bottom: 6px;">
@@ -77,16 +80,26 @@
                 <p style="font-size: 12px; color: var(--text-gray); margin:0;"><i>Catatan: {{ item.keterangan }}</i></p>
                 {% endif %}
             </div>
-
+            
             <div class="dokumen-actions-grid">
                 <span class="badge-scope badge-{{ item.status|lower|replace(' ', '-') }}">
                     {{ item.status }}
                 </span>
-
+                
                 {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
                 <div style="display:flex; gap:6px; margin-left: 12px;">
-                    <button onclick='editAbsen({{ item.id }}, {{ item.username|tojson }}, {{ item.tanggal|tojson }}, {{ item.kegiatan|tojson }}, {{ item.status|tojson }}, {{ item.keterangan|default('', true)|tojson }})' class="management-btn edit-color" type="button"><i class="fas fa-edit"></i></button>
-
+                    
+                    <button type="button" class="management-btn edit-color" 
+                            onclick="editAbsen(this)"
+                            data-id="{{ item.id }}"
+                            data-user="{{ item.username }}"
+                            data-tgl="{{ item.tanggal }}"
+                            data-keg="{{ item.kegiatan }}"
+                            data-status="{{ item.status }}"
+                            data-ket="{{ item.keterangan if item.keterangan else '' }}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    
                     <form action="{{ url_for('kehadiran') }}" method="POST" style="display:inline; margin:0;">
                         <input type="hidden" name="action" value="hapus">
                         <input type="hidden" name="id" value="{{ item.id }}">
@@ -107,17 +120,17 @@
 </div>
 
 <script>
-    function editAbsen(id, user, tgl, keg, status, ket) {
+    function editAbsen(btn) {
         document.getElementById('form-action').value = 'edit';
-        document.getElementById('form-id').value = id;
-        document.getElementById('input-username').value = user;
-        document.getElementById('input-tanggal').value = tgl;
-        document.getElementById('input-kegiatan').value = keg;
-        document.getElementById('input-status').value = status;
-        document.getElementById('input-keterangan').value = ket || '';
-
+        document.getElementById('form-id').value = btn.getAttribute('data-id');
+        document.getElementById('input-username').value = btn.getAttribute('data-user');
+        document.getElementById('input-tanggal').value = btn.getAttribute('data-tgl');
+        document.getElementById('input-kegiatan').value = btn.getAttribute('data-keg');
+        document.getElementById('input-status').value = btn.getAttribute('data-status');
+        document.getElementById('input-keterangan').value = btn.getAttribute('data-ket');
+        
         document.getElementById('form-title').innerHTML = '<i class="fas fa-edit"></i> Edit Kehadiran';
-        document.getElementById('btn-submit').innerHTML = '<i class="fas fa-save"></i> Update';
+        document.getElementById('btn-submit').innerHTML = '<i class="fas fa-save"></i> Update Data';
         document.getElementById('btn-cancel').style.display = 'inline-flex';
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -126,7 +139,7 @@
         document.getElementById('form-action').value = 'tambah';
         document.getElementById('form-id').value = '';
         document.getElementById('absen-form').reset();
-
+        
         document.getElementById('form-title').innerHTML = '<i class="fas fa-user-check"></i> Tambah Data Kehadiran';
         document.getElementById('btn-submit').innerHTML = '<i class="fas fa-save"></i> Simpan Absen';
         document.getElementById('btn-cancel').style.display = 'none';
@@ -151,7 +164,7 @@
 .dokumen-icon-box { width: 44px; height: 44px; font-size: 20px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
 .dokumen-info { flex: 1; }
 .dokumen-meta { display: flex; gap: 16px; font-size: 12px; color: var(--text-gray); }
-.badge-scope { padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; }
+.badge-scope { padding: 4px 12px; border-radius: 6px; font-weight: bold; font-size: 11px; }
 .dokumen-actions-grid { display: flex; align-items: center; justify-content: flex-end; }
 .management-btn { width: 34px; height: 34px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; }
 .edit-color { background: #e2f0e6; color: var(--primary-green); }
@@ -164,10 +177,10 @@
 .icon-sakit { background: #fff3cd !important; color: #856404 !important; }
 .icon-alpa { background: #f8d7da !important; color: #721c24 !important; }
 
-.badge-hadir { background: #28a745; color: white; font-size: 12px; padding: 6px 12px; }
-.badge-izin { background: #17a2b8; color: white; font-size: 12px; padding: 6px 12px; }
-.badge-sakit { background: #ffc107; color: black; font-size: 12px; padding: 6px 12px; }
-.badge-alpa { background: #dc3545; color: white; font-size: 12px; padding: 6px 12px; }
+.badge-hadir { background: #28a745; color: white; }
+.badge-izin { background: #17a2b8; color: white; }
+.badge-sakit { background: #ffc107; color: black; }
+.badge-alpa { background: #dc3545; color: white; }
 
 @media(max-width:768px){
     .pengumuman-form{grid-template-columns:1fr;}

@@ -34,7 +34,15 @@
             {% endif %}
 
             {% if session.get('role') in ['super admin', 'bph'] %}
-            <li><a href="{{ url_for('bph') }}" class="{% if request.endpoint == 'bph' %}active{% endif %}"><i class="fas fa-user-shield"></i> BPH</a></li>
+            <li><a href="{{ url_for('kelola_pendaftaran') }}" class="{% if request.endpoint == 'kelola_pendaftaran' %}active{% endif %}"><i class="fas fa-user-plus"></i> Kelola Pendaftaran</a></li>
+            {% endif %}
+
+            {% if session.get('role') in ['super admin', 'penjadwalan'] %}
+            <li><a href="{{ url_for('penjadwalan') }}" class="{% if request.endpoint == 'penjadwalan' %}active{% endif %}"><i class="fas fa-calendar-check"></i> Penjadwalan</a></li>
+            {% endif %}
+
+            {% if not session.get('user_id') %}
+            <li><a href="{{ url_for('pendaftaran') }}" class="{% if request.endpoint == 'pendaftaran' %}active{% endif %}"><i class="fas fa-edit"></i> Form Pendaftaran</a></li>
             {% endif %}
 
             <li><a href="{{ url_for('pengumuman') }}" class="{% if request.endpoint == 'pengumuman' %}active{% endif %}"><i class="fas fa-bullhorn"></i> Pengumuman</a></li>

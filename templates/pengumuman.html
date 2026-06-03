@@ -105,14 +105,22 @@
             </div>
             
             <div class="pengumuman-actions">
-                <button onclick="showDetailModal('{{ item.judul }}', '{{ item.id }}')" class="action-btn btn-info" title="Baca Detail">
+                <!-- PERBAIKAN HTML5 DATA ATTRIBUTES (ANTI-ERROR) -->
+                <button type="button" onclick="showDetailModal(this)" class="action-btn btn-info" title="Baca Detail"
+                        data-id="{{ item.id }}"
+                        data-judul="{{ item.judul }}">
                     <i class="fas fa-eye"></i> Detail
                 </button>
                 
                 {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-                <button onclick="editPengumuman('{{ item.id }}', '{{ item.judul }}', '{{ item.waktu_pelaksanaan }}', '{{ item.target }}')" class="action-btn btn-edit" title="Edit">
+                <button type="button" onclick="editPengumuman(this)" class="action-btn btn-edit" title="Edit"
+                        data-id="{{ item.id }}"
+                        data-judul="{{ item.judul }}"
+                        data-waktu="{{ item.waktu_pelaksanaan }}"
+                        data-target="{{ item.target }}">
                     <i class="fas fa-edit"></i>
                 </button>
+                
                 <form action="{{ url_for('pengumuman') }}" method="POST" style="display:inline; margin:0;">
                     <input type="hidden" name="action" value="hapus">
                     <input type="hidden" name="id" value="{{ item.id }}">
@@ -146,7 +154,6 @@
 </div>
 
 <script>
-    // Tutup dropdown jika diklik di luar
     document.addEventListener('click', function(event) {
         var isClickInside = document.getElementById('multi-select') ? document.getElementById('multi-select').contains(event.target) : false;
         if (!isClickInside && document.getElementById('targetDropdown')) {
@@ -154,7 +161,6 @@
         }
     });
 
-    // Menutup Modal saat mengetuk area gelap di luarnya (sangat berguna di HP)
     window.onclick = function(event) {
         var modal = document.getElementById('detailModal');
         if (event.target == modal) {
@@ -189,12 +195,13 @@
         updateSelectBoxText();
     }
 
-    // Menampilkan Modal Baca Deskripsi
-    function showDetailModal(judul, id) {
+    function showDetailModal(btn) {
+        var id = btn.getAttribute('data-id');
+        var judul = btn.getAttribute('data-judul');
         var deskripsi = document.getElementById('desc-' + id).innerText;
+        
         document.getElementById('modal-judul-teks').innerText = judul;
         
-        // Jika deskripsi kosong, berikan teks standar
         if (deskripsi.trim() === '') {
             document.getElementById('modal-deskripsi-teks').innerHTML = "<i>Tidak ada rincian tambahan untuk pengumuman ini.</i>";
         } else {
@@ -204,19 +211,18 @@
         document.getElementById('detailModal').style.display = "flex";
     }
 
-    // Menutup Modal
     function closeModal() {
         document.getElementById('detailModal').style.display = "none";
     }
 
-    // LOGIKA MODE EDIT (MENGAMBIL DATA DESKRIPSI)
-    function editPengumuman(id, judul, waktu, target_string) {
+    function editPengumuman(btn) {
+        var id = btn.getAttribute('data-id');
+        var target_string = btn.getAttribute('data-target');
+        
         document.getElementById('form-action').value = 'edit';
         document.getElementById('form-id').value = id;
-        document.getElementById('input-judul').value = judul;
-        document.getElementById('input-waktu').value = waktu;
-        
-        // Menarik isi deskripsi ke textarea
+        document.getElementById('input-judul').value = btn.getAttribute('data-judul');
+        document.getElementById('input-waktu').value = btn.getAttribute('data-waktu');
         document.getElementById('input-deskripsi').value = document.getElementById('desc-' + id).innerText;
         
         document.querySelectorAll('#targetDropdown input[type="checkbox"]').forEach(cb => cb.checked = false);
@@ -256,16 +262,14 @@
 .admin-action-box { background: var(--white); padding: 24px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 32px; border-left: 4px solid var(--primary-green); }
 .admin-action-box h3 { margin-bottom: 20px; color: var(--text-dark); font-size: 18px; display: flex; align-items: center; gap: 8px; }
 
-/* Grid Layout Fleksibel untuk Form */
 .pengumuman-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: end; }
-.full-width { grid-column: 1 / -1; } /* Kolom deskripsi menempati semua ruang ke samping */
+.full-width { grid-column: 1 / -1; } 
 
 .form-group label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--text-dark); }
 .form-group input, .form-group textarea { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; font-family: inherit; outline: none; transition: 0.3s; }
 .form-group textarea { resize: vertical; min-height: 80px; }
 .form-group input:focus, .form-group textarea:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45, 95, 63, 0.1); }
 
-/* Custom Multiselect */
 .custom-multiselect { position: relative; width: 100%; user-select: none; }
 .select-box { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background-color: var(--white); cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.3s; }
 .dropdown-content { display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--white); border: 1px solid var(--primary-green); border-radius: 8px; margin-top: 4px; max-height: 250px; overflow-y: auto; z-index: 100; box-shadow: var(--shadow-hover); padding: 10px; }
@@ -274,7 +278,6 @@
 .group-header { padding: 8px 10px; background: var(--bg-gray); margin-top: 10px; border-radius: 4px; }
 .group-items { padding-left: 28px; display: flex; flex-direction: column; margin-top: 6px; gap: 6px;}
 
-/* Tombol Form */
 .form-action { grid-column: 1 / -1; display: flex; gap: 12px; margin-top: 8px;}
 .form-action button { height: 45px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s;}
 .btn-primary { flex: 1; max-width: 250px; background: var(--primary-green); color: white; border: none; }
@@ -282,18 +285,16 @@
 .btn-outline { padding: 0 24px; border: 1px solid #dc3545; color: #dc3545; background: transparent; }
 .btn-outline:hover { background: #dc3545; color: var(--white); }
 
-/* Kartu Daftar Pengumuman */
 .pengumuman-container { display: flex; flex-direction: column; gap: 16px; }
 .pengumuman-card { background: var(--white); padding: 20px; border-radius: 12px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 20px; position: relative; }
 .pengumuman-icon { width: 45px; height: 45px; background: var(--light-green); color: var(--primary-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-.pengumuman-info { flex: 1; min-width: 0; /* Penting agar flex item tidak melebar keluar batas HP */ }
+.pengumuman-info { flex: 1; min-width: 0; }
 .pengumuman-info h3 { margin-bottom: 8px; font-size: 16px; color: var(--text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .pengumuman-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .pengumuman-meta .tanggal { font-size: 12px; color: var(--text-gray); display: flex; align-items: center; gap: 4px; }
 .highlight-time { color: var(--primary-green) !important; font-weight: 600; }
 .badge-internal { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
 
-/* Aksi Tabel di Sisi Kanan (Bisa dibaca di HP) */
 .pengumuman-actions { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap;}
 .action-btn { height: 36px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; transition: 0.3s; padding: 0 12px; gap: 6px;}
 .btn-info { background: #e0f3ff; color: #0d6efd; } .btn-info:hover { background: #0d6efd; color: white;}
@@ -302,9 +303,8 @@
 
 .no-data { text-align: center; padding: 60px 20px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow); }
 
-/* STYLE MODAL / POP-UP MOBILE FIRST */
 .modal-overlay {
-    display: none; /* Sembunyikan default */
+    display: none; 
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background-color: rgba(0, 0, 0, 0.6);
     z-index: 1000;
@@ -340,20 +340,14 @@
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(30px); opacity: 0;} to { transform: translateY(0); opacity: 1;} }
 
-/* RESPONSIVITAS KHUSUS LAYAR HP (MOBILE OPTIMIZATION) */
 @media (max-width: 768px) {
     .pengumuman-form { grid-template-columns: 1fr; gap: 12px; }
     .form-action { flex-direction: column; width: 100%; }
     .form-action button, .btn-primary { max-width: 100%; width: 100%; }
-    
-    /* Mengubah susunan kartu menjadi vertikal di HP */
     .pengumuman-card { flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px;}
-    .pengumuman-info h3 { white-space: normal; } /* Biarkan judul membungkus baris di HP */
-    
-    /* Tombol Aksi memenuhi layar memanjang di bawah */
+    .pengumuman-info h3 { white-space: normal; } 
     .pengumuman-actions { width: 100%; justify-content: flex-start; margin-left: 0; border-top: 1px dashed var(--border-color); padding-top: 12px; margin-top: 4px; }
     .action-btn { flex: 1; justify-content: center; height: 40px; }
-    
     .modal-content { max-height: 90vh; }
 }
 </style>

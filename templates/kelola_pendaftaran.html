@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Kelola Pendaftaran - MISDINAR{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Manajemen Pendaftaran (Dynamic Form)</h2>
+    <p>Kelola pertanyaan formulir dan tinjau calon misdinar baru</p>
+</div>
+
+<div class="admin-section">
+    <h3><i class="fas fa-tools"></i> Pengaturan Kolom Formulir</h3>
+    <p style="font-size: 13px; color: var(--text-gray); margin-bottom: 16px;">Tambahkan atau hapus pertanyaan yang akan muncul di halaman pendaftaran publik.</p>
+    
+    <div class="form-builder-card">
+        <form action="{{ url_for('kelola_pendaftaran') }}" method="POST" class="add-field-form">
+            <input type="hidden" name="action" value="tambah_field">
+            
+            <div class="form-group">
+                <input type="text" name="label" required placeholder="Judul Pertanyaan (Cth: Nama Sekolah)">
+            </div>
+            <div class="form-group">
+                <select name="tipe" required>
+                    <option value="text">Teks Pendek</option>
+                    <option value="textarea">Teks Panjang (Paragraf)</option>
+                    <option value="number">Angka / Nomor HP</option>
+                    <option value="date">Pemilih Tanggal</option>
+                </select>
+            </div>
+            <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" name="wajib" value="1" checked style="width: auto;"> Wajib Diisi
+            </div>
+            <button type="submit" class="btn-primary" style="height: 42px;"><i class="fas fa-plus"></i> Tambah Pertanyaan</button>
+        </form>
+
+        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
+
+        <div class="field-list">
+            {% for f in fields %}
+            <div class="field-item">
+                <div class="field-info">
+                    <span class="f-label">{{ f.label }}</span>
+                    <span class="badge-tipe">{{ f.tipe|upper }}</span>
+                    {% if f.wajib %}<span style="color: #dc3545; font-size: 12px; font-weight: bold;">(Wajib)</span>{% endif %}
+                </div>
+                <form action="{{ url_for('kelola_pendaftaran') }}" method="POST" style="margin: 0;">
+                    <input type="hidden" name="action" value="hapus_field">
+                    <input type="hidden" name="id" value="{{ f.id }}">
+                    <button type="submit" class="btn-del-field" onclick="return confirm('Hapus pertanyaan ini dari form?');"><i class="fas fa-times"></i></button>
+                </form>
+            </div>
+            {% endfor %}
+            {% if not fields %}
+            <div style="text-align: center; color: var(--text-gray); font-size: 13px;">Belum ada pertanyaan form yang dibuat.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="admin-section" style="margin-top: 32px;">
+    <h3><i class="fas fa-inbox"></i> Data Calon Misdinar Masuk</h3>
+    <p style="font-size: 13px; color: var(--text-gray); margin-bottom: 16px;">Tinjau jawaban pendaftar dan tentukan status kelulusan mereka.</p>
+
+    <div class="pendaftar-grid">
+        {% for p in pendaftar %}
+        <div class="pendaftar-card">
+            <div class="p-header">
+                <span class="p-date"><i class="far fa-clock"></i> {{ p.tanggal }}</span>
+                <span class="badge-status status-{{ p.status|lower|replace(' ', '-') }}">{{ p.status }}</span>
+            </div>
+            
+            <div class="p-body">
+                {% for key, value in p.data_parsed.items() %}
+                    <div class="json-item">
+                        <strong>{{ key }}</strong>
+                        <span>{{ value if value else '-' }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <div class="p-actions">
+                <form action="{{ url_for('kelola_pendaftaran') }}" method="POST" style="display: flex; gap: 8px; flex: 1;">
+                    <input type="hidden" name="action" value="update_status">
+                    <input type="hidden" name="id" value="{{ p.id }}">
+                    <select name="status" class="status-select" onchange="this.form.submit()">
+                        <option value="Menunggu" {% if p.status == 'Menunggu' %}selected{% endif %}>Menunggu</option>
+                        <option value="Diterima" {% if p.status == 'Diterima' %}selected{% endif %}>Diterima (Lulus)</option>
+                        <option value="Ditolak" {% if p.status == 'Ditolak' %}selected{% endif %}>Ditolak</option>
+                    </select>
+                </form>
+                
+                <form action="{{ url_for('kelola_pendaftaran') }}" method="POST">
+                    <input type="hidden" name="action" value="hapus_pendaftar">
+                    <input type="hidden" name="id" value="{{ p.id }}">
+                    <button type="submit" class="btn-del-pendaftar" onclick="return confirm('Hapus data pendaftar ini permanen?');"><i class="fas fa-trash"></i></button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+        
+        {% if not pendaftar %}
+        <div style="grid-column: 1/-1; text-align: center; padding: 40px; background: var(--white); border-radius: 12px;">
+            <i class="fas fa-folder-open" style="font-size: 32px; color: var(--text-gray); margin-bottom: 12px;"></i>
+            <p style="color: var(--text-gray); margin: 0;">Belum ada orang yang mengisi form pendaftaran.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.admin-section h3 { color: var(--text-dark); margin-bottom: 4px; }
+.form-builder-card { background: var(--white); padding: 24px; border-radius: 12px; box-shadow: var(--shadow); border-top: 4px solid var(--primary-green); }
+
+.add-field-form { display: grid; grid-template-columns: 2fr 1fr auto auto; gap: 12px; align-items: center; }
+.add-field-form input[type="text"], .add-field-form select { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; outline: none; }
+.add-field-form input[type="text"]:focus, .add-field-form select:focus { border-color: var(--primary-green); }
+.btn-primary { background: var(--primary-green); color: white; border: none; border-radius: 6px; padding: 0 16px; cursor: pointer; font-weight: bold; transition: 0.2s;}
+.btn-primary:hover { background: var(--accent-green); }
+
+.field-list { display: flex; flex-direction: column; gap: 8px; }
+.field-item { background: var(--bg-gray); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); }
+.f-label { font-weight: 600; font-size: 14px; margin-right: 12px; }
+.badge-tipe { background: #d4e8f4; color: #1f4a66; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+.btn-del-field { background: #f8d7da; color: #dc3545; border: none; width: 30px; height: 30px; border-radius: 6px; cursor: pointer; transition: 0.2s;}
+.btn-del-field:hover { background: #dc3545; color: white; }
+
+/* Grid Jawaban Pendaftar JSON */
+.pendaftar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+.pendaftar-card { background: var(--white); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; }
+.p-header { background: var(--bg-gray); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
+.p-date { font-size: 12px; color: var(--text-gray); font-weight: 600; }
+.badge-status { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+.status-menunggu { background: #fff3cd; color: #856404; }
+.status-diterima { background: #d4edda; color: #155724; }
+.status-ditolak { background: #f8d7da; color: #721c24; }
+
+.p-body { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+.json-item { display: flex; flex-direction: column; }
+.json-item strong { font-size: 11px; color: var(--text-gray); text-transform: uppercase; margin-bottom: 2px; }
+.json-item span { font-size: 14px; color: var(--text-dark); background: #fcfcfc; padding: 6px 10px; border-radius: 6px; border: 1px solid #f0f0f0; word-break: break-word;}
+
+.p-actions { padding: 12px 16px; border-top: 1px solid var(--border-color); display: flex; gap: 10px; align-items: center; }
+.status-select { flex: 1; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; outline: none; background: var(--bg-gray); font-weight: 600;}
+.status-select:focus { border-color: var(--primary-green); }
+.btn-del-pendaftar { background: #f8d7da; color: #dc3545; border: none; width: 36px; height: 36px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+.btn-del-pendaftar:hover { background: #dc3545; color: white; }
+
+@media(max-width: 768px) {
+    .add-field-form { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}

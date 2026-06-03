@@ -3,219 +3,85 @@
 {% block title %}Penjadwalan - MISDINAR{% endblock %}
 
 {% block content %}
-<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-    <div>
-        <h2>Manajemen Penjadwalan Misa</h2>
-        <p>Sistem otomatisasi pembuatan jadwal (Web & Excel) untuk sinkronisasi Database</p>
-    </div>
-    <a href="{{ url_for('cetak_jadwal') }}" class="btn-primary" style="text-decoration: none; display: flex; align-items: center; gap: 8px;">
-        <i class="fas fa-print"></i> Cetak Jadwal (Matriks Visual)
-    </a>
+<div class="page-header">
+    <h2>Manajemen Penjadwalan</h2>
+    <p>Sistem pengaturan jadwal pelayanan misa</p>
 </div>
 
-{% if editor_data %}
-<div class="spreadsheet-container">
-    <h3><i class="fas fa-table"></i> Live Editor Jadwal: {{ start_date }} s/d {{ end_date }}</h3>
-    <p style="color: var(--text-gray); font-size: 13px; margin-bottom: 16px;">Ketikkan <b>Username</b> petugas di dalam kotak putih. Jika petugas lebih dari satu, pisahkan menggunakan tanda koma (Contoh: <code>anton, budi, galant</code>).</p>
-    
-    <form action="{{ url_for('penjadwalan') }}" method="POST">
-        <input type="hidden" name="action" value="simpan_editor_web">
-        <table class="spreadsheet-table">
-            <thead>
-                <tr>
-                    <th width="15%">Tanggal</th>
-                    <th width="12%">Hari</th>
-                    <th width="10%">Pukul</th>
-                    <th width="15%">Acara</th>
-                    <th width="48%">Input Username Petugas (Autocomplete)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in editor_data %}
-                <tr>
-                    <td class="readonly">{{ row.tanggal }}<input type="hidden" name="tgl[]" value="{{ row.tanggal }}"></td>
-                    <td class="readonly">{{ row.hari }}<input type="hidden" name="hri[]" value="{{ row.hari }}"></td>
-                    <td class="readonly">{{ row.waktu }}<input type="hidden" name="wkt[]" value="{{ row.waktu }}"></td>
-                    <td class="readonly">{{ row.acara }}<input type="hidden" name="acr[]" value="{{ row.acara }}"></td>
-                    <td class="editable">
-                        <input type="text" name="ptgs[]" placeholder="Ketik disini..." list="user_datalist" autocomplete="off">
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        
-        <datalist id="user_datalist">
-            {% for u in users %}
-            <option value="{{ u.username }}">{{ u.nama }}</option>
-            {% endfor %}
-        </datalist>
-        
-        <div style="margin-top: 24px; text-align: right; display: flex; gap: 12px; justify-content: flex-end;">
-            <a href="{{ url_for('penjadwalan') }}" class="btn-outline" style="text-decoration: none; display: flex; align-items: center; justify-content: center; height: 45px;">Batalkan</a>
-            <button type="submit" class="btn-primary" style="height: 45px;"><i class="fas fa-save"></i> Simpan ke Database</button>
+<div class="maintenance-container">
+    <div class="maintenance-card">
+        <div class="icon-pulse">
+            <i class="fas fa-hard-hat maintenance-icon"></i>
         </div>
-    </form>
-</div>
-
-{% else %}
-<div class="schedule-dashboard" style="grid-template-columns: 1fr;">
-    <div class="panel-card" style="border-top-color: #ffc107;">
-        <div class="panel-header">
-            <div class="icon-circle bg-yellow" style="background: #ffc107; color: #000;"><i class="fas fa-laptop-code"></i></div>
-            <h3>Opsi 1: Buat Jadwal Langsung di Web (Sangat Direkomendasikan)</h3>
-        </div>
-        <p class="panel-desc">Sistem akan menampilkan tabel interaktif (Live Spreadsheet) di layar Anda. Cukup ketik nama, dan tekan Simpan! Tidak perlu repot men-download/upload file.</p>
+        <h2>Fitur Dalam Perbaikan</h2>
+        <p>Menu Penjadwalan saat ini sedang dalam tahap evaluasi dan pengembangan lebih lanjut untuk menyesuaikan dengan alur kerja divisi. Mohon kembali lagi nanti.</p>
         
-        <form action="{{ url_for('penjadwalan') }}" method="POST" class="generate-form">
-            <input type="hidden" name="action" value="editor_web">
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Tanggal Mulai Jadwal</label>
-                    <input type="date" name="start_date" required>
-                </div>
-                <div class="form-group">
-                    <label>Tanggal Akhir Jadwal</label>
-                    <input type="date" name="end_date" required>
-                </div>
-            </div>
-            <button type="submit" class="btn-primary w-100" style="background: #ffc107; color: #000;">
-                <i class="fas fa-external-link-alt"></i> Buka Tabel Editor Sekarang
-            </button>
-        </form>
+        <a href="{{ url_for('index') }}" class="btn-primary" style="text-decoration: none; margin-top: 24px; display: inline-flex; align-items: center; gap: 8px;">
+            <i class="fas fa-arrow-left"></i> Kembali ke Beranda
+        </a>
     </div>
 </div>
-
-<div class="schedule-dashboard">
-    <div class="panel-card template-panel">
-        <div class="panel-header">
-            <div class="icon-circle bg-blue"><i class="fas fa-file-excel"></i></div>
-            <h3>Opsi 2A: Buat Template (Excel)</h3>
-        </div>
-        <p class="panel-desc">Gunakan ini jika Anda lebih nyaman bekerja di aplikasi Microsoft Excel secara offline. Sistem akan membuatkan form kosong dengan Dropdown otomatis.</p>
-        
-        <form action="{{ url_for('penjadwalan') }}" method="POST" class="generate-form">
-            <input type="hidden" name="action" value="generate">
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Tanggal Mulai</label>
-                    <input type="date" name="start_date" required>
-                </div>
-                <div class="form-group">
-                    <label>Tanggal Akhir</label>
-                    <input type="date" name="end_date" required>
-                </div>
-            </div>
-            <button type="submit" class="btn-primary w-100">
-                <i class="fas fa-download"></i> Unduh File .xlsx
-            </button>
-        </form>
-    </div>
-
-    <div class="panel-card upload-panel">
-        <div class="panel-header">
-            <div class="icon-circle bg-green"><i class="fas fa-upload"></i></div>
-            <h3>Opsi 2B: Unggah Hasil (Import)</h3>
-        </div>
-        <p class="panel-desc">Setelah Anda selesai mengetik / memilih nama di file Excel tadi, unggah kembali filenya di sini agar tersinkronisasi ke dalam database Web.</p>
-        
-        <form action="{{ url_for('penjadwalan') }}" method="POST" enctype="multipart/form-data" class="upload-form">
-            <input type="hidden" name="action" value="upload">
-            <div class="upload-area">
-                <i class="fas fa-file-import"></i>
-                <input type="file" name="file_excel" accept=".xlsx, .xls" required>
-                <span>Klik disini untuk memilih file .xlsx</span>
-            </div>
-            <button type="submit" class="btn-success w-100">
-                <i class="fas fa-check-circle"></i> Proses ke Database
-            </button>
-        </form>
-    </div>
-</div>
-{% endif %}
 
 <style>
-/* CSS UNTUK LIVE EDITOR SPREADSHEET */
-.spreadsheet-container {
+.maintenance-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 50vh;
+    padding: 20px;
+}
+
+.maintenance-card {
     background: var(--white);
-    padding: 24px;
-    border-radius: 12px;
+    padding: 50px 40px;
+    border-radius: 16px;
     box-shadow: var(--shadow);
-    margin-top: 16px;
-    overflow-x: auto;
+    text-align: center;
+    max-width: 500px;
+    border-top: 6px solid #ffc107;
+    animation: slideUp 0.5s ease-out;
 }
-.spreadsheet-container h3 { color: var(--primary-green); margin-bottom: 8px; }
-.spreadsheet-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 16px;
-    min-width: 700px;
+
+.icon-pulse {
+    width: 100px;
+    height: 100px;
+    background: #fff8e1;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px auto;
+    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4);
+    animation: pulseYellow 2s infinite;
 }
-.spreadsheet-table th {
-    background: var(--bg-gray);
-    border: 1px solid var(--border-color);
-    padding: 14px 12px;
-    font-size: 13px;
-    text-align: left;
+
+.maintenance-icon {
+    font-size: 48px;
+    color: #ffc107;
+}
+
+.maintenance-card h2 {
     color: var(--text-dark);
-}
-.spreadsheet-table td {
-    border: 1px solid var(--border-color);
-    font-size: 14px;
-}
-.spreadsheet-table td.readonly {
-    background: #fcfcfc;
-    padding: 12px;
-    color: #495057;
-    font-weight: 500;
-}
-.spreadsheet-table td.editable {
-    padding: 0;
-    position: relative;
-}
-.spreadsheet-table input[type="text"] {
-    width: 100%;
-    height: 100%;
-    padding: 14px 12px;
-    border: none;
-    outline: none;
-    background: transparent;
-    font-family: monospace;
-    color: #0d6efd;
-    font-weight: bold;
-}
-.spreadsheet-table input[type="text"]:focus {
-    background: #e0f3ff;
-    box-shadow: inset 0 0 0 2px #0d6efd;
+    margin-bottom: 16px;
+    font-size: 24px;
 }
 
-/* KARTU MENU UTAMA */
-.schedule-dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
-.panel-card { background: var(--white); padding: 24px; border-radius: 12px; box-shadow: var(--shadow); border-top: 4px solid var(--border-color); }
-.template-panel { border-top-color: #0d6efd; }
-.upload-panel { border-top-color: var(--primary-green); }
-.panel-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.icon-circle { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; }
-.bg-blue { background: #0d6efd; } .bg-green { background: var(--primary-green); }
-.panel-header h3 { font-size: 18px; color: var(--text-dark); margin: 0; }
-.panel-desc { font-size: 13px; color: var(--text-gray); margin-bottom: 20px; line-height: 1.5; }
+.maintenance-card p {
+    color: var(--text-gray);
+    line-height: 1.6;
+    font-size: 15px;
+    margin: 0;
+}
 
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-.form-group label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--text-dark); }
-.form-group input[type="date"] { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; }
+@keyframes pulseYellow {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
+    70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(255, 193, 7, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+}
 
-.w-100 { width: 100%; justify-content: center; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px; color: white;}
-.btn-primary { background: #0d6efd; } .btn-primary:hover { background: #0b5ed7; }
-.btn-success { background: var(--primary-green); } .btn-success:hover { background: var(--accent-green); }
-.btn-outline { padding: 0 24px; border: 1px solid #dc3545; color: #dc3545; background: transparent; border-radius: 8px; font-weight: 600;}
-
-.upload-area { border: 2px dashed var(--border-color); border-radius: 8px; padding: 30px 20px; text-align: center; position: relative; margin-bottom: 20px; background: #fcfcfc; transition: 0.3s; }
-.upload-area:hover { border-color: var(--primary-green); background: #f0f7f3; }
-.upload-area i { font-size: 32px; color: var(--text-gray); margin-bottom: 10px; display: block; }
-.upload-area span { font-size: 13px; color: var(--text-dark); font-weight: 500; }
-.upload-area input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-
-@media(max-width: 992px) { .schedule-dashboard { grid-template-columns: 1fr; } }
-@media(max-width: 576px) { .form-row { grid-template-columns: 1fr; } }
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 </style>
 {% endblock %}

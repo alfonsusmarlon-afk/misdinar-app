@@ -1,41 +1,145 @@
 {% extends "base.html" %}
 
-{% block title %}${page^} - MISDINAR{% endblock %}
+{% block title %}Pendaftaran Misdinar - MISDINAR{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h2>${page^}</h2>
-    <p>Halaman ${page}</p>
+    <h2>Pendaftaran Calon Misdinar</h2>
+    <p>Mari bergabung bersama kami dalam melayani Tuhan di Altar!</p>
 </div>
 
-<div class="coming-soon">
-    <i class="fas fa-tools"></i>
-    <h3>Halaman Dalam Pengembangan</h3>
-    <p>Fitur ini akan segera hadir</p>
+<div class="pendaftaran-container">
+    {% if success %}
+    <!-- JIKA BERHASIL MENDAFTAR MUNCULKAN AKUN -->
+    <div class="success-card">
+        <i class="fas fa-check-circle success-icon"></i>
+        <h3>Pendaftaran Berhasil Dikirim!</h3>
+        <p>Terima kasih telah mendaftar. Data Anda sedang ditinjau, namun <b>Sistem telah membuatkan Akun Anggota sementara untuk Anda.</b></p>
+        
+        <div class="credentials-box">
+            <p><strong>Username Anda:</strong> <span class="highlight-text">{{ new_username }}</span></p>
+            <p><strong>Password Anda:</strong> <span class="highlight-text">{{ new_password }}</span></p>
+        </div>
+
+        <div class="warning-box">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+                <strong>PENTING: Jaga Kerahasiaan Akun!</strong><br>
+                Segera klik tombol Login di bawah, lalu masuk ke menu <strong>Pengaturan</strong> untuk mengubah Password Anda demi keamanan.
+            </div>
+        </div>
+
+        <button onclick="window.location.href='/login'" class="btn-primary" style="margin-top: 16px; width: 100%; max-width: 300px; font-size: 16px;">
+            Login Sekarang
+        </button>
+    </div>
+    
+    {% else %}
+    <!-- FORM PENDAFTARAN DINAMIS -->
+    <div class="form-card">
+        {% if fields|length == 0 %}
+        <div style="text-align: center; padding: 40px;">
+            <i class="fas fa-door-closed" style="font-size: 40px; color: var(--text-gray); margin-bottom: 12px;"></i>
+            <h3>Pendaftaran Belum Dibuka</h3>
+            <p>Pengurus belum mengatur formulir pendaftaran saat ini.</p>
+        </div>
+        {% else %}
+        
+        <form action="{{ url_for('pendaftaran') }}" method="POST" class="dynamic-form">
+            <p class="form-info"><i class="fas fa-info-circle"></i> Isilah formulir di bawah ini dengan data yang sebenarnya.</p>
+            <hr>
+            
+            {% for f in fields %}
+            <div class="form-group {% if f.tipe == 'textarea' %}full-width{% endif %}">
+                <label>{{ f.label }} {% if f.wajib %}<span style="color: #dc3545;">*</span>{% endif %}</label>
+                
+                {% if f.tipe == 'textarea' %}
+                    <textarea name="field_{{ f.id }}" rows="3" {% if f.wajib %}required{% endif %} placeholder="Tulis jawaban di sini..."></textarea>
+                
+                {% else %}
+                    <input type="{{ f.tipe }}" name="field_{{ f.id }}" {% if f.wajib %}required{% endif %} placeholder="Ketik {{ f.label }}...">
+                {% endif %}
+            </div>
+            {% endfor %}
+            
+            <div class="form-action full-width" style="margin-top: 24px;">
+                <button type="submit" class="btn-primary w-100" style="padding: 14px; font-size: 16px;">
+                    <i class="fas fa-paper-plane"></i> Kirim Formulir Pendaftaran
+                </button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 
 <style>
-.coming-soon {
-    text-align: center;
-    padding: 80px 20px;
-    background: var(--white);
+.pendaftaran-container { max-width: 800px; margin: 0 auto; }
+.form-card, .success-card { background: var(--white); padding: 32px; border-radius: 12px; box-shadow: var(--shadow); border-top: 4px solid var(--primary-green); }
+.success-card { text-align: center; padding: 50px 20px; }
+.success-icon { font-size: 64px; color: #28a745; margin-bottom: 16px; }
+
+/* Styling Area Akun & Peringatan */
+.credentials-box {
+    background: #f8f9fa;
+    border: 1px solid var(--border-color);
+    padding: 20px;
     border-radius: 12px;
-    box-shadow: var(--shadow);
+    margin: 24px auto;
+    max-width: 350px;
+    text-align: left;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
 }
-
-.coming-soon i {
-    font-size: 64px;
+.credentials-box p {
+    margin: 12px 0;
+    font-size: 15px;
+    color: var(--text-dark);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.highlight-text {
+    font-family: monospace;
+    font-weight: 900;
     color: var(--primary-green);
-    margin-bottom: 24px;
+    background: #e2f0e6;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 16px;
+    letter-spacing: 1px;
 }
-
-.coming-soon h3 {
-    font-size: 24px;
-    margin-bottom: 12px;
+.warning-box {
+    background: #fff3cd;
+    color: #856404;
+    padding: 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin: 0 auto 32px auto;
+    max-width: 500px;
+    text-align: left;
+    line-height: 1.5;
 }
+.warning-box i { font-size: 24px; margin-top: 2px; }
 
-.coming-soon p {
-    color: var(--text-gray);
+.dynamic-form { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.form-info { grid-column: 1 / -1; color: var(--text-gray); font-size: 14px; margin-bottom: 0; }
+.dynamic-form hr { grid-column: 1 / -1; border: 0; border-top: 1px solid var(--border-color); margin: 0 0 10px 0; }
+
+.full-width { grid-column: 1 / -1; }
+.form-group label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--text-dark); }
+.form-group input, .form-group textarea { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; font-family: inherit; transition: 0.3s; }
+.form-group input:focus, .form-group textarea:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45, 95, 63, 0.1); }
+.form-group textarea { resize: vertical; min-height: 80px; }
+
+.btn-primary { background: var(--primary-green); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s;}
+.btn-primary:hover { background: var(--accent-green); }
+
+@media(max-width: 768px) {
+    .dynamic-form { grid-template-columns: 1fr; }
+    .credentials-box p { flex-direction: column; align-items: flex-start; gap: 8px;}
 }
 </style>
 {% endblock %}

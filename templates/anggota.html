@@ -1,136 +1,144 @@
 {% extends "base.html" %}
 
-{% block title %}Anggota - MISDINAR{% endblock %}
+{% block title %}Manajemen Anggota - MISDINAR{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h2>Daftar Anggota & Manajemen Role</h2>
-    <p>Lihat profil anggota dan kelola tingkatan hak akses akun</p>
+    <h2>Direktori Anggota</h2>
+    <p>Kelola data akun dan hak akses (Role) seluruh anggota misdinar.</p>
 </div>
 
-<div class="anggota-container">
-    <div class="table-card">
-        <table class="anggota-table">
-            <thead>
-                <tr>
-                    <th><i class="fas fa-id-card"></i> Nama Lengkap</th>
-                    <th><i class="fas fa-envelope"></i> Username</th>
-                    
-                    {% if current_role == 'super admin' %}
-                    <th><i class="fas fa-key"></i> Password (Admin)</th>
-                    {% endif %}
-                    
-                    <th><i class="fas fa-user-tag"></i> Role Saat Ini</th>
-                    
-                    {% if current_role in ['super admin', 'bph'] %}
-                    <th><i class="fas fa-tools"></i> Aksi Pengaturan</th>
-                    {% endif %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for user in users %}
-                {% set form_id = "form-role-" ~ loop.index %}
+<div class="anggota-grid">
+    {% for u in users %}
+    <div class="anggota-card">
+        <div class="anggota-avatar">
+            <i class="fas fa-user-circle"></i>
+        </div>
+        <div class="anggota-info">
+            <h3>{{ u.nama }}</h3>
+            <p><i class="fas fa-id-badge"></i> {{ u.username }}</p>
+            <p><i class="fas fa-phone"></i> {{ u.no_hp if u.no_hp else 'Tidak ada No. HP' }}</p>
+            <span class="badge-role">{{ u.role | upper }}</span>
+        </div>
+        
+        {% if current_role in ['super admin', 'bph'] %}
+        <div class="anggota-actions">
+            <button type="button" class="btn-edit" 
+                    onclick="editAnggota(this)"
+                    data-username="{{ u.username }}"
+                    data-nama="{{ u.nama }}"
+                    data-role="{{ u.role }}">
+                <i class="fas fa-edit"></i> Edit Role
+            </button>
+            
+            <form action="{{ url_for('hapus_anggota') }}" method="POST" style="display: flex; flex: 1;">
+                <input type="hidden" name="username" value="{{ u.username }}">
+                <button type="submit" class="btn-delete" onclick="return confirm('Apakah Anda yakin ingin menghapus pengguna {{ u.nama }} secara permanen?');">
+                    <i class="fas fa-trash-alt"></i> Hapus
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<div id="editModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-user-cog"></i> Atur Pengguna</h3>
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form action="{{ url_for('ubah_role') }}" method="POST" id="edit-form">
+                <input type="hidden" name="username" id="modal-username">
                 
-                <tr>
-                    <td class="user-nama-cell">
-                        <div class="table-avatar">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <strong>{{ user.nama }}</strong>
-                    </td>
-                    <td class="username-text"><code>{{ user.username }}</code></td>
-                    
-                    {% if current_role == 'super admin' %}
-                        <td>
-                            <input type="text" form="{{ form_id }}" name="password" value="{{ user.password }}" class="table-input-pwd" required autocomplete="off">
-                        </td>
-                        
-                        <td>
-                            <span class="role-badge role-{{ user.role.replace(' ', '-') }}">{{ user.role | upper }}</span>
-                        </td>
-                        
-                        <td>
-                            <form id="{{ form_id }}" action="{{ url_for('ubah_role') }}" method="POST" class="row-role-form">
-                                <input type="hidden" name="username" value="{{ user.username }}">
-                                <select name="role" class="table-select-role" required>
-                                    <option value="user" {% if user.role == 'user' %}selected{% endif %}>User Biasa</option>
-                                    <option value="bph" {% if user.role == 'bph' %}selected{% endif %}>BPH</option>
-                                    <option value="penjadwalan" {% if user.role == 'penjadwalan' %}selected{% endif %}>Penjadwalan</option>
-                                    <option value="pelatihan" {% if user.role == 'pelatihan' %}selected{% endif %}>Pelatihan</option>
-                                    <option value="super admin" {% if user.role == 'super admin' %}selected{% endif %}>Super Admin</option>
-                                </select>
-                                <button type="submit" class="btn-table-save" onclick="return confirm('Simpan pembaruan password dan role untuk {{ user.nama }}?');">
-                                    <i class="fas fa-save"></i> Simpan
-                                </button>
-                            </form>
-                        </td>
-                    
-                    {% else %}
-                        <td>
-                            <span class="role-badge role-{{ user.role.replace(' ', '-') }}">{{ user.role | upper }}</span>
-                        </td>
-                        
-                        {% if current_role == 'bph' %}
-                        <td>
-                            <form id="{{ form_id }}" action="{{ url_for('ubah_role') }}" method="POST" class="row-role-form">
-                                <input type="hidden" name="username" value="{{ user.username }}">
-                                <select name="role" class="table-select-role" required>
-                                    <option value="user" {% if user.role == 'user' %}selected{% endif %}>User Biasa</option>
-                                    <option value="bph" {% if user.role == 'bph' %}selected{% endif %}>BPH</option>
-                                    <option value="penjadwalan" {% if user.role == 'penjadwalan' %}selected{% endif %}>Penjadwalan</option>
-                                    <option value="pelatihan" {% if user.role == 'pelatihan' %}selected{% endif %}>Pelatihan</option>
-                                </select>
-                                <button type="submit" class="btn-table-save" onclick="return confirm('Apakah Anda yakin ingin merubah divisi akun {{ user.nama }}?');">
-                                    <i class="fas fa-save"></i> Simpan
-                                </button>
-                            </form>
-                        </td>
+                <div class="form-group">
+                    <label>Nama Pengguna</label>
+                    <input type="text" id="modal-nama" readonly style="background: var(--bg-gray); cursor: not-allowed;">
+                </div>
+                
+                <div class="form-group">
+                    <label>Pilih Role (Hak Akses)</label>
+                    <select name="role" id="modal-role" class="table-select-role">
+                        <option value="user">User Biasa</option>
+                        <option value="pelatihan">Pengurus Pelatihan</option>
+                        <option value="penjadwalan">Pengurus Penjadwalan</option>
+                        <option value="bph">BPH (Badan Pengurus Harian)</option>
+                        {% if current_role == 'super admin' %}
+                        <option value="super admin">Super Admin</option>
                         {% endif %}
-                    {% endif %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                    </select>
+                </div>
+                
+                {% if current_role == 'super admin' %}
+                <div class="form-group full-width" style="margin-top: 20px;">
+                    <label>Reset Password (Opsional)</label>
+                    <input type="text" name="password" placeholder="Ketik password baru jika ingin mereset...">
+                    <small style="color: var(--text-gray); font-size: 11px;">Kosongkan jika tidak ingin mengubah password.</small>
+                </div>
+                {% endif %}
+                
+                <div class="form-action" style="margin-top: 24px;">
+                    <button type="submit" class="btn-primary" style="width: 100%;">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
+<script>
+    function editAnggota(btn) {
+        document.getElementById('modal-username').value = btn.getAttribute('data-username');
+        document.getElementById('modal-nama').value = btn.getAttribute('data-nama');
+        document.getElementById('modal-role').value = btn.getAttribute('data-role');
+        document.getElementById('editModal').style.display = "flex";
+    }
+
+    function closeModal() {
+        document.getElementById('editModal').style.display = "none";
+    }
+
+    window.onclick = function(event) {
+        var modal = document.getElementById('editModal');
+        if (event.target == modal) {
+            closeModal();
+        }
+    }
+</script>
+
 <style>
-/* Tampilan Wadah Konten */
-.anggota-container { margin-top: 24px; }
-.table-card { background: var(--white); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.anggota-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+.anggota-card { background: var(--white); border-radius: 12px; box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; border-top: 4px solid var(--primary-green); }
+.anggota-avatar { background: var(--light-green); color: var(--primary-green); height: 80px; display: flex; align-items: center; justify-content: center; font-size: 38px; }
+.anggota-info { padding: 20px; flex: 1; text-align: center; }
+.anggota-info h3 { margin: 0 0 12px 0; color: var(--text-dark); font-size: 18px; font-weight: bold;}
+.anggota-info p { margin: 0 0 8px 0; color: var(--text-gray); font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.badge-role { display: inline-block; background: var(--primary-green); color: white; padding: 4px 14px; border-radius: 20px; font-size: 11px; font-weight: bold; margin-top: 10px; }
 
-/* Desain Tabel Komponen */
-.anggota-table { width: 100%; border-collapse: collapse; text-align: left; }
-.anggota-table th { background-color: var(--bg-gray); color: var(--text-dark); padding: 16px 20px; font-size: 14px; font-weight: 600; border-bottom: 2px solid var(--border-color); }
-.anggota-table td { padding: 16px 20px; border-bottom: 1px solid var(--border-color); font-size: 14px; vertical-align: middle; }
-.anggota-table tr:hover { background-color: rgba(45, 95, 63, 0.02); }
+.anggota-actions { display: flex; border-top: 1px solid var(--border-color); }
+.anggota-actions button { flex: 1; padding: 14px; border: none; background: transparent; cursor: pointer; font-weight: bold; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; outline: none;}
+.btn-edit { color: var(--primary-green); border-right: 1px solid var(--border-color) !important; width: 100%;}
+.btn-edit:hover { background: var(--light-green); }
+.btn-delete { color: #dc3545; width: 100%; }
+.btn-delete:hover { background: #f8d7da; }
 
-.user-nama-cell { display: flex; align-items: center; gap: 12px; }
-.table-avatar { width: 32px; height: 32px; background: var(--light-green); color: var(--primary-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; }
-.username-text code { background: var(--bg-gray); padding: 4px 8px; border-radius: 4px; font-family: monospace; color: #cc2424; }
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 20px; animation: fadeIn 0.2s ease-in-out; }
+.modal-content { background-color: var(--white); border-radius: 12px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: slideUp 0.3s ease-out; overflow: hidden;}
+.modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--light-green); }
+.modal-header h3 { margin: 0; font-size: 16px; color: var(--primary-green); display: flex; align-items: center; gap: 8px;}
+.close-btn { font-size: 24px; font-weight: bold; color: var(--text-gray); cursor: pointer; transition: 0.2s; line-height: 1; }
+.close-btn:hover { color: #dc3545; }
+.modal-body { padding: 24px; }
 
-/* Style Input Password Tampil Jelas */
-.table-input-pwd { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; outline: none; width: 120px; font-family: monospace; font-weight: 600; color: #0d6efd; letter-spacing: 1px;}
-.table-input-pwd:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45,95,63,0.1); }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--text-dark); }
+.form-group input, .table-select-role { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; }
+.form-group input:focus, .table-select-role:focus { border-color: var(--primary-green); }
+.btn-primary { background: var(--primary-green); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; }
+.btn-primary:hover { background: var(--accent-green); }
 
-/* badge Pewarnaan Macam Peran Akun */
-.role-badge { padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-block; }
-.role-user { background: #e9ecef; color: var(--text-gray); }
-.role-bph { background: #fff3cd; color: #856404; }
-.role-penjadwalan { background: #d4e8f4; color: #1f4a66; }
-.role-pelatihan { background: #e2f0e6; color: #1e5a32; }
-.role-super-admin { background: #f8d7da; color: #721c24; }
-
-/* Desain Form Aksi */
-.row-role-form { display: flex; gap: 8px; align-items: center; margin: 0; }
-.table-select-role { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; outline: none; background-color: var(--white); cursor: pointer; font-weight: 500; }
-.table-select-role:focus { border-color: var(--primary-green); }
-
-.btn-table-save { padding: 8px 14px; background-color: var(--primary-green); color: var(--white); border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background 0.2s; }
-.btn-table-save:hover { background-color: var(--accent-green); }
-
-@media (max-width: 768px) {
-    .table-card { overflow-x: auto; }
-}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { transform: translateY(30px); opacity: 0;} to { transform: translateY(0); opacity: 1;} }
 </style>
 {% endblock %}

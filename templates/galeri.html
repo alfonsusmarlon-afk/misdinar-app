@@ -5,42 +5,42 @@
 {% block content %}
 <div class="page-header">
     <h2>Galeri Kegiatan</h2>
-    <p>Dokumentasi foto dan video momentum kebersamaan pelayanan misdinar</p>
+    <p>Dokumentasi momen-momen pelayanan dan kebersamaan misdinar.</p>
 </div>
 
 {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
 <div class="admin-action-box" id="form-container">
-    <h3 id="form-title"><i class="fas fa-camera-retro"></i> Unggah Foto & Video Dokumentasi</h3>
+    <h3 id="form-title"><i class="fas fa-image"></i> Tambah Album Foto</h3>
     
-    <form action="{{ url_for('galeri') }}" method="POST" enctype="multipart/form-data" id="galeri-form" class="pengumuman-form">
+    <form action="{{ url_for('galeri') }}" method="POST" id="galeri-form" class="pengumuman-form" enctype="multipart/form-data">
         <input type="hidden" name="action" id="form-action" value="tambah">
         <input type="hidden" name="id" id="form-id" value="">
         
         <div class="form-group">
-            <label>Keterangan / Judul Acara</label>
-            <input type="text" name="judul" id="input-judul" required placeholder="Contoh: Makrab & Rekreasi Pengurus 2024">
+            <label>Judul Kegiatan / Album</label>
+            <input type="text" name="judul" id="input-judul" required placeholder="Cth: Foto Misa Natal 2023">
         </div>
         
         <div class="form-group">
-            <label>Pilih File Foto/Video (Bisa Banyak Sekaligus)</label>
-            <input type="file" name="foto" id="input-foto" accept="image/*,video/*" multiple>
+            <label>Pilih Foto (Bisa banyak sekaligus)</label>
+            <input type="file" name="foto" id="input-foto" accept="image/*" multiple required style="background: var(--white);">
+            <small style="color: var(--text-gray); font-size: 11px;">(Kosongkan file ini saat mengedit jika tidak ingin menimpa foto lama)</small>
         </div>
         
         <div class="form-group">
-            <label>Izin Visibilitas Dokumentasi</label>
+            <label>Pilih Target (Hak Akses Lihat)</label>
             <div class="custom-multiselect" id="multi-select">
                 <div class="select-box" onclick="toggleDropdown()" id="select-box">
-                    <span id="select-box-text">Pilih Hak Tampil Foto...</span>
+                    <span id="select-box-text">Pilih Target Anggota...</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
                 
                 <div class="dropdown-content" id="targetDropdown">
                     <div class="group-header select-all-header">
                         <label>
-                            <input type="checkbox" id="checkAll" value="semua" name="target" onchange="toggleAll(this)"> <strong>Semua Orang (Publik)</strong>
+                            <input type="checkbox" id="checkAll" value="semua" name="target" onchange="toggleAll(this)"> <strong>Semua / Publik (Broadcast)</strong>
                         </label>
                     </div>
-                    
                     {% for div_role, members in users_by_role.items() %}
                     {% set outer_loop_index = loop.index %}
                     <div class="group-header">
@@ -62,75 +62,83 @@
         
         <div class="form-action">
             <button type="submit" id="btn-submit" class="btn-primary">
-                <i class="fas fa-images"></i> Publikasikan Dokumentasi
+                <i class="fas fa-cloud-upload-alt"></i> Unggah Foto
             </button>
             <button type="button" id="btn-cancel" class="btn-outline" style="display: none;" onclick="cancelEdit()">
-                Batal Edit
+                Batal
             </button>
         </div>
     </form>
 </div>
 {% endif %}
 
-<div class="galeri-grid">
+<div class="galeri-grid-layout">
     {% if galeri %}
         {% for item in galeri %}
         <div class="galeri-card">
-            <div class="img-wrapper">
-                {% if item.foto_path %}
-                {% set paths = item.foto_path.split(',') %}
-                <div class="media-scroller">
-                    {% for path in paths %}
-                        {% set ext = path.split('.')[-1]|lower %}
-                        {% if ext in ['mp4', 'webm', 'ogg', 'mov'] %}
-                        <video src="{{ url_for('static', filename=path) }}" class="media-item" controls preload="metadata"></video>
-                        {% else %}
-                        <img src="{{ url_for('static', filename=path) }}" alt="{{ item.judul }}" class="media-item">
-                        {% endif %}
-                    {% endfor %}
-                </div>
-                
-                {% if paths|length > 1 %}
-                <div class="multi-badge"><i class="fas fa-layer-group"></i> {{ paths|length }} File</div>
+            
+            <div class="galeri-images-box">
+                {% set photos = item.foto_path.split(',') %}
+                {% if photos[0] %}
+                    <img src="{{ url_for('static', filename=photos[0]) }}" alt="Thumbnail Album" loading="lazy">
                 {% endif %}
                 
-                {% else %}
-                <div class="no-img-placeholder"><i class="far fa-image"></i></div>
-                {% endif %}
-                
-                {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-                <div class="card-overlay-actions">
-                    <button onclick="editGaleri('{{ item.id }}', '{{ item.judul }}', '{{ item.target }}')" class="overlay-btn btn-blue" title="Edit Keterangan"><i class="fas fa-edit"></i></button>
-                    <form action="{{ url_for('galeri') }}" method="POST" style="display:inline;">
-                        <input type="hidden" name="action" value="hapus">
-                        <input type="hidden" name="id" value="{{ item.id }}">
-                        <button type="submit" class="overlay-btn btn-red" title="Hapus Dokumentasi" onclick="return confirm('Hapus dokumentasi ini dari galeri secara permanen?');"><i class="fas fa-trash-alt"></i></button>
-                    </form>
-                </div>
+                {% if photos|length > 1 %}
+                    <div class="photo-counter">
+                        <i class="fas fa-images"></i> +{{ photos|length - 1 }} Foto
+                    </div>
                 {% endif %}
             </div>
-            <div class="galeri-caption">
-                <h4>{{ item.judul }}</h4>
-                <div class="caption-bottom">
-                    <span><i class="far fa-calendar"></i> {{ item.tanggal_dibuat }}</span>
-                    {% if item.target != 'semua' %}<span class="private-lock" title="Internal Terbatas"><i class="fas fa-lock"></i></span>{% endif %}
+            
+            <div class="galeri-info">
+                <h3>{{ item.judul }}</h3>
+                <div class="dokumen-meta">
+                    <span><i class="far fa-calendar-alt"></i> {{ item.tanggal_dibuat }}</span>
+                </div>
+                
+                <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <a href="{{ url_for('static', filename=photos[0]) }}" target="_blank" class="download-badge">
+                        Lihat Album
+                    </a>
+                    
+                    {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+                    <div class="dokumen-actions-grid">
+                        <!-- PERBAIKAN HTML5 DATA ATTRIBUTES (ANTI-ERROR) -->
+                        <button type="button" class="management-btn edit-color" title="Edit"
+                                onclick="editGaleri(this)"
+                                data-id="{{ item.id }}"
+                                data-judul="{{ item.judul }}"
+                                data-target="{{ item.target }}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        
+                        <form action="{{ url_for('galeri') }}" method="POST" style="display:inline; margin:0;">
+                            <input type="hidden" name="action" value="hapus">
+                            <input type="hidden" name="id" value="{{ item.id }}">
+                            <button type="submit" class="management-btn delete-color" title="Hapus Foto Fisik & Data" onclick="return confirm('Hapus album foto secara permanen dari server?');">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
+            
         </div>
         {% endfor %}
     {% else %}
-        <div class="no-data-box-wide">
-            <i class="fas fa-images"></i>
-            <h3>Koleksi Galeri Kosong</h3>
-            <p>Belum ada dokumentasi foto atau video yang diunggah.</p>
+        <div class="no-data-box" style="grid-column: 1 / -1;">
+            <i class="fas fa-camera"></i>
+            <h3>Galeri Kosong</h3>
+            <p>Belum ada dokumentasi foto yang diunggah.</p>
         </div>
     {% endif %}
 </div>
 
 <script>
-    document.addEventListener('click', function(e) {
-        var inside = document.getElementById('multi-select') ? document.getElementById('multi-select').contains(e.target) : false;
-        if (!inside && document.getElementById('targetDropdown')) {
+    document.addEventListener('click', function(event) {
+        var isClickInside = document.getElementById('multi-select') ? document.getElementById('multi-select').contains(event.target) : false;
+        if (!isClickInside && document.getElementById('targetDropdown')) {
             document.getElementById('targetDropdown').classList.remove('show');
         }
     });
@@ -141,7 +149,7 @@
         const checked = document.querySelectorAll('.item-cb:checked');
         const boxText = document.getElementById('select-box-text');
         if (document.getElementById('checkAll').checked) boxText.innerHTML = "<b>Semua Terpilih</b>";
-        else if (checked.length === 0) boxText.innerText = "Pilih Hak Tampil Dokumentasi...";
+        else if (checked.length === 0) boxText.innerText = "Pilih Target Anggota...";
         else if (checked.length <= 3) boxText.innerHTML = "<b>" + Array.from(checked).map(cb => cb.dataset.name).join(', ') + "</b>";
         else boxText.innerHTML = "<b>" + checked.length + " Orang Terpilih</b>";
     }
@@ -162,10 +170,14 @@
         updateSelectBoxText();
     }
 
-    function editGaleri(id, judul, target_string) {
+    function editGaleri(btn) {
+        var id = btn.getAttribute('data-id');
+        var target_string = btn.getAttribute('data-target');
+        
         document.getElementById('form-action').value = 'edit';
         document.getElementById('form-id').value = id;
-        document.getElementById('input-judul').value = judul;
+        document.getElementById('input-judul').value = btn.getAttribute('data-judul');
+        
         document.getElementById('input-foto').required = false; 
         
         document.querySelectorAll('#targetDropdown input[type="checkbox"]').forEach(cb => cb.checked = false);
@@ -180,9 +192,10 @@
             updateSelectBoxText();
         }
         
-        document.getElementById('form-title').innerHTML = '<i class="fas fa-edit"></i> Edit Deskripsi Galeri';
-        document.getElementById('btn-submit').innerHTML = '<i class="fas fa-save"></i> Perbarui Postingan';
-        document.getElementById('btn-cancel').style.display = 'inline-block';
+        document.getElementById('form-title').innerHTML = '<i class="fas fa-edit"></i> Edit Album Foto';
+        document.getElementById('btn-submit').innerHTML = '<i class="fas fa-save"></i> Simpan Perubahan';
+        document.getElementById('btn-cancel').style.display = 'inline-flex';
+        
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -190,10 +203,13 @@
         document.getElementById('form-action').value = 'tambah';
         document.getElementById('form-id').value = '';
         document.getElementById('galeri-form').reset();
+        document.getElementById('input-foto').required = true;
+        
         document.querySelectorAll('#targetDropdown input[type="checkbox"]').forEach(cb => cb.checked = false);
         updateSelectBoxText();
-        document.getElementById('form-title').innerHTML = '<i class="fas fa-camera-retro"></i> Unggah Foto & Video Dokumentasi';
-        document.getElementById('btn-submit').innerHTML = '<i class="fas fa-images"></i> Publikasikan Dokumentasi';
+        
+        document.getElementById('form-title').innerHTML = '<i class="fas fa-image"></i> Tambah Album Foto';
+        document.getElementById('btn-submit').innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Unggah Foto';
         document.getElementById('btn-cancel').style.display = 'none';
     }
 </script>
@@ -201,44 +217,49 @@
 <style>
 .admin-action-box { background: var(--white); padding: 24px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 32px; border-left: 4px solid var(--primary-green); }
 .admin-action-box h3 { margin-bottom: 20px; color: var(--text-dark); font-size: 18px; display: flex; align-items: center; gap: 8px; }
-.pengumuman-form { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 16px; align-items: end; }
+.pengumuman-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: end; }
+.full-width { grid-column: 1 / -1; } 
+
 .form-group label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--text-dark); }
-.form-group input[type="text"], .form-group input[type="file"] { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--white); }
-.custom-multiselect { position: relative; width: 100%; }
-.select-box { padding: 11px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--white); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-.dropdown-content { display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--white); border: 1px solid var(--primary-green); border-radius: 8px; margin-top: 4px; max-height: 230px; overflow-y: auto; z-index: 100; padding: 10px; box-shadow: var(--shadow-hover); }
+.form-group input { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none;}
+.form-group input:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45, 95, 63, 0.1); }
+
+.custom-multiselect { position: relative; width: 100%; user-select: none; }
+.select-box { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background-color: var(--white); cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.3s; }
+.dropdown-content { display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--white); border: 1px solid var(--primary-green); border-radius: 8px; margin-top: 4px; max-height: 250px; overflow-y: auto; z-index: 100; box-shadow: var(--shadow-hover); padding: 10px; }
 .dropdown-content.show { display: block; }
-.select-all-header { background: #d4edda; padding: 8px; border-radius: 6px; }
-.group-header { padding: 6px 10px; background: var(--bg-gray); margin-top: 8px; border-radius: 4px; font-size: 13px; }
-.group-items { padding-left: 24px; display: flex; flex-direction: column; font-size: 13px; }
-.group-items label, .group-header label, .select-all-header label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-.form-action { grid-column: 1 / -1; display: flex; gap: 12px; }
+.select-all-header { background: #d4edda; border-radius: 6px; border: 1px solid #c3e6cb; }
+.group-header { padding: 8px 10px; background: var(--bg-gray); margin-top: 10px; border-radius: 4px; }
+.group-items { padding-left: 28px; display: flex; flex-direction: column; margin-top: 6px; gap: 6px;}
 
-/* Grid layout Galeri */
-.galeri-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
-.galeri-card { background: var(--white); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); transition: 0.3s; }
-.galeri-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
+.form-action { grid-column: 1 / -1; display: flex; gap: 12px; margin-top: 8px;}
+.form-action button { height: 45px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s;}
+.btn-primary { flex: 1; max-width: 250px; background: var(--primary-green); color: white; border: none; }
+.btn-outline { padding: 0 24px; border: 1px solid #dc3545; color: #dc3545; background: transparent; }
 
-/* SCROLLER UNTUK MULTI FOTO/VIDEO */
-.img-wrapper { position: relative; width: 100%; height: 220px; background: #000; overflow: hidden; }
-.media-scroller { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; width: 100%; height: 100%; scrollbar-width: none; }
-.media-scroller::-webkit-scrollbar { display: none; }
-.media-item { flex: 0 0 100%; scroll-snap-align: start; object-fit: contain; width: 100%; height: 100%; background: #1a1a1a; }
-.multi-badge { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.7); color: white; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; pointer-events: none; }
+.galeri-grid-layout { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;}
+.galeri-card { background: var(--white); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column;}
+.galeri-images-box { width: 100%; height: 180px; position: relative; background: #e9ecef; }
+.galeri-images-box img { width: 100%; height: 100%; object-fit: cover; }
+.photo-counter { position: absolute; bottom: 12px; right: 12px; background: rgba(0,0,0,0.7); color: white; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px;}
+.galeri-info { padding: 16px; flex: 1; display: flex; flex-direction: column; }
+.galeri-info h3 { margin: 0 0 6px 0; font-size: 16px; color: var(--text-dark); line-height: 1.3;}
+.dokumen-meta { font-size: 12px; color: var(--text-gray); }
 
-.no-img-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 32px; color: var(--border-color); background: #eaedeb;}
-.card-overlay-actions { position: absolute; top: 0; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.5); opacity: 0; display: flex; align-items: center; justify-content: center; gap: 12px; transition: 0.3s; pointer-events: none; }
-.img-wrapper:hover .card-overlay-actions { opacity: 1; pointer-events: auto; }
-.overlay-btn { width: 40px; height: 40px; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: 0.2s;}
-.btn-blue { background: #fff; color: #0d6efd; } .btn-blue:hover { background: #0d6efd; color: #fff; transform: scale(1.1); }
-.btn-red { background: #fff; color: #dc3545; } .btn-red:hover { background: #dc3545; color: #fff; transform: scale(1.1); }
-.galeri-caption { padding: 16px 18px; }
-.galeri-caption h4 { font-size: 15px; margin-bottom: 8px; color: var(--text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.caption-bottom { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-gray); }
-.private-lock { color: #dc3545; font-size: 13px; }
-.no-data-box-wide { grid-column: 1 / -1; text-align: center; padding: 80px; background: var(--white); border-radius: 12px; }
-.no-data-box-wide i { font-size: 54px; color: var(--border-color); margin-bottom: 16px; }
+.download-badge { display: inline-block; background: var(--light-green); padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; color: var(--primary-green); text-decoration: none; transition: 0.2s;}
+.download-badge:hover { background: var(--primary-green); color: white; }
 
-@media(max-width:768px){.pengumuman-form{grid-template-columns:1fr;}}
+.dokumen-actions-grid { display: flex; gap: 6px; }
+.management-btn { width: 34px; height: 34px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: 0.2s;}
+.edit-color { background: #e2f0e6; color: var(--primary-green); } .edit-color:hover { background: var(--primary-green); color: white;}
+.delete-color { background: #f8d7da; color: #dc3545; } .delete-color:hover { background: #dc3545; color: white;}
+
+.no-data-box { text-align: center; padding: 60px 20px; background: var(--white); border-radius: 12px; }
+.no-data-box i { font-size: 48px; color: var(--border-color); margin-bottom: 12px; }
+
+@media(max-width:768px){
+    .pengumuman-form{grid-template-columns:1fr;}
+    .galeri-grid-layout { grid-template-columns: 1fr; }
+}
 </style>
 {% endblock %}
