@@ -9,8 +9,6 @@ import io
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.worksheet.datavalidation import DataValidation
-import requests
-from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-misdinar-2024'
@@ -47,6 +45,9 @@ def init_db():
     conn.execute('''CREATE TABLE IF NOT EXISTS dokumen (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, file_path TEXT NOT NULL, tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL)''')
     conn.execute('''CREATE TABLE IF NOT EXISTS galeri (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, foto_path TEXT NOT NULL, tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL)''')
     
+    conn.execute('''CREATE TABLE IF NOT EXISTS kehadiran (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, nama TEXT NOT NULL, tanggal TEXT NOT NULL, kegiatan TEXT NOT NULL, status TEXT NOT NULL, keterangan TEXT)''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS hukuman (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, nama TEXT NOT NULL, tanggal TEXT NOT NULL, pelanggaran TEXT NOT NULL, tindakan TEXT NOT NULL, status TEXT NOT NULL)''')
+
     users = [
         ('superadmin', 'super123', 'Super Admin', 'super admin', '081234567890'),
         ('abi', 'abi123', 'Abi', 'bph', '081111111111'),
@@ -208,6 +209,94 @@ def bph():
     if session.get('role') not in ['super admin', 'bph']: return redirect(url_for('index'))
     return render_template('bph.html')
 
+@app.route('/kehadiran', methods=['GET', 'POST'])
+@login_required
+def kehadiran():
+    user_id = session.get('user_id')
+    user_role = session.get('role')
+    conn = get_db_connection()
+    
+    if request.method == 'POST' and user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan']:
+        action = request.form.get('action')
+        
+        if action in ['tambah', 'edit']:
+            username_target = request.form.get('username')
+            tanggal = request.form.get('tanggal')
+            kegiatan = request.form.get('kegiatan')
+            status = request.form.get('status')
+            keterangan = request.form.get('keterangan', '')
+            
+            target_user = conn.execute("SELECT nama FROM users WHERE username=?", (username_target,)).fetchone()
+            nama_target = target_user['nama'] if target_user else username_target
+            
+            if action == 'tambah':
+                conn.execute('INSERT INTO kehadiran (username, nama, tanggal, kegiatan, status, keterangan) VALUES (?, ?, ?, ?, ?, ?)', (username_target, nama_target, tanggal, kegiatan, status, keterangan))
+            else:
+                k_id = request.form.get('id')
+                conn.execute('UPDATE kehadiran SET username=?, nama=?, tanggal=?, kegiatan=?, status=?, keterangan=? WHERE id=?', (username_target, nama_target, tanggal, kegiatan, status, keterangan, k_id))
+        
+        elif action == 'hapus':
+            k_id = request.form.get('id')
+            conn.execute('DELETE FROM kehadiran WHERE id=?', (k_id,))
+            
+        conn.commit()
+        conn.close()
+        return redirect(url_for('kehadiran'))
+
+    if user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan']:
+        data_kehadiran = conn.execute('SELECT * FROM kehadiran ORDER BY id DESC').fetchall()
+        users_list = conn.execute("SELECT username, nama FROM users WHERE role != 'super admin' ORDER BY nama ASC").fetchall()
+    else:
+        data_kehadiran = conn.execute('SELECT * FROM kehadiran WHERE username=? ORDER BY id DESC', (user_id,)).fetchall()
+        users_list = []
+        
+    conn.close()
+    return render_template('kehadiran.html', kehadiran=data_kehadiran, users=users_list, role=user_role)
+
+@app.route('/hukuman', methods=['GET', 'POST'])
+@login_required
+def hukuman():
+    user_id = session.get('user_id')
+    user_role = session.get('role')
+    conn = get_db_connection()
+    
+    if request.method == 'POST' and user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan']:
+        action = request.form.get('action')
+        
+        if action in ['tambah', 'edit']:
+            username_target = request.form.get('username')
+            tanggal = request.form.get('tanggal')
+            pelanggaran = request.form.get('pelanggaran')
+            tindakan = request.form.get('tindakan')
+            status = request.form.get('status')
+            
+            target_user = conn.execute("SELECT nama FROM users WHERE username=?", (username_target,)).fetchone()
+            nama_target = target_user['nama'] if target_user else username_target
+            
+            if action == 'tambah':
+                conn.execute('INSERT INTO hukuman (username, nama, tanggal, pelanggaran, tindakan, status) VALUES (?, ?, ?, ?, ?, ?)', (username_target, nama_target, tanggal, pelanggaran, tindakan, status))
+            else:
+                h_id = request.form.get('id')
+                conn.execute('UPDATE hukuman SET username=?, nama=?, tanggal=?, pelanggaran=?, tindakan=?, status=? WHERE id=?', (username_target, nama_target, tanggal, pelanggaran, tindakan, status, h_id))
+        
+        elif action == 'hapus':
+            h_id = request.form.get('id')
+            conn.execute('DELETE FROM hukuman WHERE id=?', (h_id,))
+            
+        conn.commit()
+        conn.close()
+        return redirect(url_for('hukuman'))
+
+    if user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan']:
+        data_hukuman = conn.execute('SELECT * FROM hukuman ORDER BY id DESC').fetchall()
+        users_list = conn.execute("SELECT username, nama FROM users WHERE role != 'super admin' ORDER BY nama ASC").fetchall()
+    else:
+        data_hukuman = conn.execute('SELECT * FROM hukuman WHERE username=? ORDER BY id DESC', (user_id,)).fetchall()
+        users_list = []
+        
+    conn.close()
+    return render_template('hukuman.html', hukuman=data_hukuman, users=users_list, role=user_role)
+
 @app.route('/penjadwalan', methods=['GET', 'POST'])
 @login_required
 def penjadwalan():
@@ -219,7 +308,6 @@ def penjadwalan():
     if request.method == 'POST':
         action = request.form.get('action')
         
-        # 1. RUTE BARU: Menampilkan Web Spreadsheet (Live Editor)
         if action == 'editor_web':
             start_date_str = request.form.get('start_date')
             end_date_str = request.form.get('end_date')
@@ -243,16 +331,12 @@ def penjadwalan():
                 
                 for waktu, acara in masses:
                     editor_data.append({
-                        'tanggal': tgl_str,
-                        'hari': hari,
-                        'waktu': waktu,
-                        'acara': acara
+                        'tanggal': tgl_str, 'hari': hari, 'waktu': waktu, 'acara': acara
                     })
                 current_date += timedelta(days=1)
             
             return render_template('penjadwalan.html', users=users_db, editor_data=editor_data, start_date=start_date_str, end_date=end_date_str)
             
-        # 2. RUTE BARU: Menyimpan Hasil Ketikan dari Web Spreadsheet
         elif action == 'simpan_editor_web':
             tanggals = request.form.getlist('tgl[]')
             haris = request.form.getlist('hri[]')
@@ -263,9 +347,15 @@ def penjadwalan():
             conn = get_db_connection()
             months_id = {1: 'JAN', 2: 'FEB', 3: 'MAR', 4: 'APR', 5: 'MEI', 6: 'JUNI', 7: 'JULI', 8: 'AGUST', 9: 'SEPT', 10: 'OKT', 11: 'NOV', 12: 'DES'}
             
+            # PENCEGAH BUG: Hapus jadwal lama di rentang tanggal agar tidak double insert!
+            if tanggals:
+                min_date = min(tanggals)
+                max_date = max(tanggals)
+                conn.execute("DELETE FROM jadwal WHERE date(jadwal_datetime) BETWEEN ? AND ?", (min_date, max_date))
+            
             for i in range(len(tanggals)):
                 ptgs_raw = petugas_list[i]
-                if not ptgs_raw or not ptgs_raw.strip(): continue # Lewati baris yang tidak diisi petugas
+                if not ptgs_raw or not ptgs_raw.strip(): continue
                 
                 tgl_raw = tanggals[i]
                 waktu = waktus[i]
@@ -275,7 +365,6 @@ def penjadwalan():
                 dt = datetime.strptime(tgl_raw, '%Y-%m-%d')
                 jadwal_dt = datetime.strptime(f"{tgl_raw} {waktu.replace('.', ':')}:00", '%Y-%m-%d %H:%M:%S')
                 
-                # Memproses jika diketik banyak nama pakai koma
                 list_petugas = [p.strip() for p in ptgs_raw.split(',')]
                 for p in list_petugas:
                     if not p: continue
@@ -288,7 +377,6 @@ def penjadwalan():
             conn.close()
             return redirect(url_for('cetak_jadwal'))
 
-        # 3. Rute Lama: Download Excel
         elif action == 'generate':
             start_date_str = request.form.get('start_date')
             end_date_str = request.form.get('end_date')
@@ -361,7 +449,6 @@ def penjadwalan():
             output.seek(0)
             return send_file(output, download_name=f'Form_Jadwal_{start_date_str}.xlsx', as_attachment=True)
             
-        # 4. Rute Lama: Upload Excel    
         elif action == 'upload':
             file = request.files.get('file_excel')
             if file and file.filename.endswith('.xlsx'):
@@ -369,16 +456,31 @@ def penjadwalan():
                     df = pd.read_excel(file)
                     conn = get_db_connection()
                     months_id = {1: 'JAN', 2: 'FEB', 3: 'MAR', 4: 'APR', 5: 'MEI', 6: 'JUNI', 7: 'JULI', 8: 'AGUST', 9: 'SEPT', 10: 'OKT', 11: 'NOV', 12: 'DES'}
+                    
+                    # PENCEGAH BUG: Hapus data untuk tanggal-tanggal yang ada di file Excel agar tidak menumpuk ganda
+                    tgl_list = []
+                    for index, row in df.iterrows():
+                        tgl_raw = str(row[df.columns[0]]).split(' ')[0]
+                        if tgl_raw != 'nan' and tgl_raw.strip():
+                            tgl_list.append(tgl_raw)
+                            
+                    if tgl_list:
+                        min_date = min(tgl_list)
+                        max_date = max(tgl_list)
+                        conn.execute("DELETE FROM jadwal WHERE date(jadwal_datetime) BETWEEN ? AND ?", (min_date, max_date))
+
                     for index, row in df.iterrows():
                         col_petugas = [c for c in df.columns if 'user' in c.lower() or 'petugas' in c.lower()][0]
                         petugas_raw = str(row.get(col_petugas, ''))
                         if pd.isna(row.get(col_petugas)) or petugas_raw.strip() == '' or petugas_raw.lower() == 'nan': continue
+                        
                         tgl_raw = str(row[df.columns[0]]).split(' ')[0] 
                         waktu = str(row[df.columns[2]]).replace(':', '.') 
                         acara = str(row[df.columns[3]])
                         hari = str(row[df.columns[1]])
                         dt = datetime.strptime(tgl_raw, '%Y-%m-%d')
                         jadwal_dt = datetime.strptime(f"{tgl_raw} {waktu.replace('.', ':')}:00", '%Y-%m-%d %H:%M:%S')
+                        
                         list_petugas = [p.strip() for p in petugas_raw.split(',')]
                         for p in list_petugas:
                             if not p: continue
@@ -415,7 +517,6 @@ def cetak_jadwal():
                 'tanggal_teks': f"{r['hari']}, {dt.day} {r['bulan'].capitalize()} {dt.year}", 
                 'misa': {}
             }
-        
         wkt = r['waktu']
         if wkt not in jadwal_dict[date_key]['misa']: 
             jadwal_dict[date_key]['misa'][wkt] = []
@@ -438,10 +539,12 @@ def cetak_jadwal():
             
         day_obj = {'tanggal_teks': jadwal_dict[d]['tanggal_teks'], 'misa': formatted_misa, 'max_slots': max_slots}
         
+        # PENCEGAH BUG: Perbaikan logika batas Mingguan, tidak hanya mengandalkan Hari Senin
+        if day_idx == 0 and (len(current_week['senin_kamis']) > 0 or len(current_week['jumat_minggu']) > 0):
+            weeks.append(current_week)
+            current_week = {'senin_kamis': [], 'jumat_minggu': []}
+            
         if day_idx <= 3: 
-            if day_idx == 0 and len(current_week['senin_kamis']) > 0: 
-                weeks.append(current_week)
-                current_week = {'senin_kamis': [], 'jumat_minggu': []}
             current_week['senin_kamis'].append(day_obj)
         else: 
             current_week['jumat_minggu'].append(day_obj)
