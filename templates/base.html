@@ -58,7 +58,12 @@
         <div class="sidebar-footer">
             {% if session.get('user_id') %}
             <div class="user-info">
-                <div class="user-avatar"><i class="fas fa-user"></i></div>
+                {% if session.get('foto_profil') %}
+                    <img src="{{ url_for('static', filename=session.get('foto_profil')) }}" class="user-avatar" style="object-fit: cover;">
+                {% else %}
+                    <div class="user-avatar"><i class="fas fa-user"></i></div>
+                {% endif %}
+                
                 <div class="user-details">
                     <h4>{{ session.get('nama_user').split()[0] if session.get('nama_user') else session.get('user_id') }}</h4>
                     <span>{{ session.get('role') | capitalize }}</span>

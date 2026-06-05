@@ -1,87 +1,79 @@
 {% extends "base.html" %}
 
-{% block title %}Penjadwalan - MISDINAR{% endblock %}
+{% block title %}Scanner Jadwal Otomatis - MISDINAR{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h2>Manajemen Penjadwalan</h2>
-    <p>Sistem pengaturan jadwal pelayanan misa</p>
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+    <div>
+        <h2>Scanner Jadwal Excel Otomatis</h2>
+        <p>Unggah file Excel format matriks Anda, dan sistem akan merakitnya secara otomatis!</p>
+    </div>
+    <a href="{{ url_for('cetak_jadwal') }}" class="btn-primary" style="text-decoration: none; display: flex; align-items: center; gap: 8px;">
+        <i class="fas fa-print"></i> Lihat & Cetak Matriks
+    </a>
 </div>
 
-<div class="maintenance-container">
-    <div class="maintenance-card">
-        <div class="icon-pulse">
-            <i class="fas fa-hard-hat maintenance-icon"></i>
-        </div>
-        <h2>Fitur Dalam Perbaikan</h2>
-        <p>Menu Penjadwalan saat ini sedang dalam tahap evaluasi dan pengembangan lebih lanjut untuk menyesuaikan dengan alur kerja divisi. Mohon kembali lagi nanti.</p>
+<div class="setup-container">
+    <div class="setup-card">
         
-        <a href="{{ url_for('index') }}" class="btn-primary" style="text-decoration: none; margin-top: 24px; display: inline-flex; align-items: center; gap: 8px;">
-            <i class="fas fa-arrow-left"></i> Kembali ke Beranda
-        </a>
+        <!-- Pesan Error Jika Excel Tidak Terbaca -->
+        {% if error %}
+        <div class="error-box">
+            <i class="fas fa-exclamation-triangle"></i> {{ error }}
+        </div>
+        {% endif %}
+
+        <div class="icon-header">
+            <i class="fas fa-file-excel"></i>
+        </div>
+        
+        <h3>Mesin Pemindai Jadwal</h3>
+        <p>Pilih file (.xlsx / .xls). AI Pemindai akan menelusuri kolom Hari, Waktu Misa, dan Slot Petugas ke dalam Database tanpa perlu diketik ulang.</p>
+        
+        <form action="{{ url_for('penjadwalan') }}" method="POST" enctype="multipart/form-data" class="generate-form">
+            <input type="hidden" name="action" value="upload_excel">
+            
+            <div class="form-group" style="text-align: left; margin-bottom: 24px;">
+                <label>Pilih File Excel Jadwal</label>
+                <input type="file" name="file_excel" accept=".xlsx, .xls" required class="file-input-box">
+            </div>
+            
+            <button type="submit" class="btn-primary w-100" id="btn-scan" onclick="showLoading()">
+                <i class="fas fa-sync-alt"></i> Pindai & Ekstrak Jadwal
+            </button>
+            
+            <!-- Animasi Loading -->
+            <div id="loading-spinner" style="display: none; margin-top: 16px; color: var(--primary-blue); font-weight: bold;">
+                <i class="fas fa-spinner fa-spin"></i> Sedang memindai dokumen... Mohon tunggu.
+            </div>
+        </form>
     </div>
 </div>
 
+<script>
+    function showLoading() {
+        var fileInput = document.querySelector('input[type="file"]').value;
+        if(fileInput != "") {
+            document.getElementById('btn-scan').style.display = 'none';
+            document.getElementById('loading-spinner').style.display = 'block';
+        }
+    }
+</script>
+
 <style>
-.maintenance-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 50vh;
-    padding: 20px;
-}
+.setup-container { display: flex; justify-content: center; padding: 40px 20px; }
+.setup-card { background: var(--white); padding: 40px; border-radius: 16px; box-shadow: var(--shadow); max-width: 500px; width: 100%; text-align: center; border-top: 5px solid var(--primary-blue);}
+.icon-header { width: 80px; height: 80px; background: #e2f0e6; color: #1e5a32; font-size: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; }
+.setup-card h3 { color: var(--text-dark); margin-bottom: 8px; font-size: 22px; }
+.setup-card p { color: var(--text-gray); font-size: 14px; margin-bottom: 30px; line-height: 1.6;}
 
-.maintenance-card {
-    background: var(--white);
-    padding: 50px 40px;
-    border-radius: 16px;
-    box-shadow: var(--shadow);
-    text-align: center;
-    max-width: 500px;
-    border-top: 6px solid #ffc107;
-    animation: slideUp 0.5s ease-out;
-}
+.file-input-box { background: var(--bg-gray); padding: 16px !important; border-radius: 8px; border: 2px dashed var(--primary-blue) !important; width: 100%; cursor: pointer;}
+.file-input-box:focus { background: #eef2ff;}
 
-.icon-pulse {
-    width: 100px;
-    height: 100px;
-    background: #fff8e1;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 24px auto;
-    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4);
-    animation: pulseYellow 2s infinite;
-}
+.form-group label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-dark); }
+.w-100 { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--primary-blue); color: white; transition: 0.3s;}
+.w-100:hover { background: var(--accent-blue); transform: translateY(-2px); }
 
-.maintenance-icon {
-    font-size: 48px;
-    color: #ffc107;
-}
-
-.maintenance-card h2 {
-    color: var(--text-dark);
-    margin-bottom: 16px;
-    font-size: 24px;
-}
-
-.maintenance-card p {
-    color: var(--text-gray);
-    line-height: 1.6;
-    font-size: 15px;
-    margin: 0;
-}
-
-@keyframes pulseYellow {
-    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
-    70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(255, 193, 7, 0); }
-    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
-}
-
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
+.error-box { background: #f8d7da; color: #721c24; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; margin-bottom: 24px; text-align: left;}
 </style>
 {% endblock %}
