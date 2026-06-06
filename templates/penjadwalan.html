@@ -6,11 +6,8 @@
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
     <div>
         <h2>Editor Matriks Penjadwalan</h2>
-        <p>Ketik jadwal langsung di tabel seperti menggunakan Excel. Gunakan tombol <b>TAB</b> untuk berpindah kotak.</p>
+        <p>Ketik jadwal langsung di tabel seperti menggunakan Excel. Gunakan tombol <b>TAB</b> untuk berpindah kotak. Jam misa bisa Anda klik dan ubah angkanya.</p>
     </div>
-    <a href="{{ url_for('cetak_jadwal') }}" class="btn-outline" style="text-decoration: none; display: flex; align-items: center; gap: 8px;">
-        <i class="fas fa-print"></i> Lihat & Cetak Jadwal
-    </a>
 </div>
 
 {% if not matrix %}
@@ -51,19 +48,26 @@
             <thead>
                 <tr>
                     {% for m in matrix %}
-                    <th colspan="{{ m.masses|length }}" class="header-main">
-                        {{ m.tanggal_format }}
+                    <th colspan="{{ m.wkt_list|length }}" class="header-main">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                            <span>{{ m.tanggal_format }}</span>
+                            <!-- Keterangan Acara Spesial diletakkan di sebelah (di bawah) tanggal -->
+                            <div style="display: flex; align-items: center; gap: 4px; justify-content: center; background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px;">
+                                <span>(</span>
+                                {% set ket_val = acara_data.get(m.date_str, '') if acara_data else '' %}
+                                <input type="text" name="ket|{{ m.date_str }}" value="{{ ket_val }}" placeholder="Keterangan Acara" class="acara-input" title="Contoh: Hari Raya Paskah">
+                                <span>)</span>
+                            </div>
+                        </div>
                     </th>
                     {% endfor %}
                 </tr>
                 <tr>
                     {% for m in matrix %}
-                        {% for wkt, acara in m.masses %}
+                        {% for wkt in m.wkt_list %}
                         <th class="header-sub">
-                            <b>{{ wkt }}</b><br>
-                            <!-- PERMINTAAN 4: Keterangan (Acara) yang bisa diubah oleh admin -->
-                            <input type="text" name="acr|{{ m.date_str }}|{{ wkt }}" value="{{ acara }}" class="acara-input" title="Keterangan Acara">
-                            <input type="hidden" name="hri|{{ m.date_str }}|{{ wkt }}" value="{{ m.hari }}">
+                            <!-- FITUR BARU: JAM BISA DIEDIT -->
+                            <input type="text" name="wkt|{{ m.date_str }}|{{ loop.index0 }}" value="{{ wkt }}" class="wkt-input" title="Ubah Jam Misa">
                         </th>
                         {% endfor %}
                     {% endfor %}
@@ -73,9 +77,17 @@
                 {% for row_idx in range(9) %}
                 <tr>
                     {% for m in matrix %}
-                        {% for wkt, acara in m.masses %}
+                        {% for wkt in m.wkt_list %}
+                        
+                        <!-- Memori Cerdas: Menarik kembali nama dari data existing -->
+                        {% set key = m.date_str ~ '|' ~ wkt %}
+                        {% set val = '' %}
+                        {% if existing_data and existing_data.get(key) and existing_data[key]|length > row_idx %}
+                            {% set val = existing_data[key][row_idx] %}
+                        {% endif %}
+                        
                         <td>
-                            <input type="text" name="ptgs|{{ m.date_str }}|{{ wkt }}" class="sheet-input" list="user_datalist" autocomplete="off" placeholder="Nama...">
+                            <input type="text" name="ptgs|{{ m.date_str }}|{{ loop.index0 }}|{{ m.hari }}" value="{{ val }}" class="sheet-input" list="user_datalist" autocomplete="off" placeholder="Nama...">
                         </td>
                         {% endfor %}
                     {% endfor %}
@@ -114,14 +126,19 @@
 .spreadsheet-container { width: 100%; overflow-x: auto; background: var(--white); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 100px; padding-bottom: 10px; }
 .spreadsheet-table { border-collapse: collapse; white-space: nowrap; min-width: 100%; }
 .spreadsheet-table th, .spreadsheet-table td { border: 1px solid #cbd5e1; padding: 0; text-align: center; }
-.header-main { background: var(--primary-blue); color: white; font-size: 13px; padding: 8px !important; text-transform: uppercase; letter-spacing: 0.5px; }
-.header-sub { background: var(--light-blue); color: var(--text-dark); padding: 8px 12px !important; font-size: 13px; }
+.header-main { background: var(--primary-blue); color: white; font-size: 14px; padding: 12px !important; text-transform: uppercase; letter-spacing: 0.5px; }
+.header-sub { background: var(--light-blue); color: var(--text-dark); padding: 6px !important; font-size: 14px; }
 
-/* CSS Input Keterangan Acara */
-.acara-input { width: 100%; background: transparent; border: 1px dashed transparent; text-align: center; font-size: 11px; color: var(--text-gray); padding: 2px; outline: none; transition: 0.2s; font-family: inherit;}
-.acara-input:hover, .acara-input:focus { border-color: var(--primary-blue); background: #fff; color: var(--text-dark); border-radius: 4px;}
+/* CSS Keterangan Acara Spesial */
+.acara-input { width: 150px; background: transparent; border: none; text-align: center; font-size: 12px; color: white; outline: none; transition: 0.2s; font-family: inherit;}
+.acara-input::placeholder { color: rgba(255,255,255,0.6); }
+.acara-input:focus { background: white; color: var(--primary-blue); border-radius: 4px; padding: 2px;}
 
-.sheet-input { border: none; outline: none; width: 130px; padding: 10px 8px; font-size: 13px; text-align: center; background: transparent; transition: 0.2s; font-family: inherit; color: var(--text-dark); font-weight: 500; }
+/* CSS Jam yang Dapat Diedit */
+.wkt-input { width: 80px; background: transparent; border: none; border-bottom: 1px dashed var(--text-gray); text-align: center; font-weight: bold; font-size: 14px; color: var(--text-dark); outline: none; font-family: inherit; padding: 4px 2px;}
+.wkt-input:focus { border-bottom: 1px solid var(--primary-blue); background: white; border-radius: 4px;}
+
+.sheet-input { border: none; outline: none; width: 130px; padding: 12px 8px; font-size: 13px; text-align: center; background: transparent; transition: 0.2s; font-family: inherit; color: var(--text-dark); font-weight: 500; }
 .sheet-input:focus { background: #eef2ff; box-shadow: inset 0 0 0 2px var(--primary-blue); }
 .sheet-input::placeholder { color: #cbd5e1; font-weight: normal; }
 

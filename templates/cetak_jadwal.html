@@ -6,13 +6,27 @@
 <div class="page-header no-print" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
     <div>
         <h2>Cetak Matriks Jadwal</h2>
-        <p>Pratinjau jadwal dalam format tabel matriks. Klik Cetak untuk menyimpannya sebagai file PDF atau Print fisik.</p>
+        <p>Pratinjau jadwal dalam format matriks. Tekan <b>Apply ke Web</b> agar jadwal tampil di Dashboard anggota.</p>
     </div>
     <div style="display: flex; gap: 12px;">
-        <a href="{{ url_for('penjadwalan') }}" class="btn-outline no-print" style="text-decoration: none;">Kembali ke Editor</a>
-        <button onclick="window.print()" class="btn-primary no-print" style="display: flex; align-items: center; gap: 8px;">
-            <i class="fas fa-print"></i> Cetak ke PDF / Print
+        <form action="{{ url_for('penjadwalan') }}" method="POST" style="margin: 0;" class="no-print">
+            <input type="hidden" name="action" value="buat_matriks">
+            <input type="hidden" name="start_date" value="{{ s_str }}">
+            <input type="hidden" name="end_date" value="{{ e_str }}">
+            <button type="submit" class="btn-outline no-print">Kembali ke Editor</button>
+        </form>
+        
+        <button onclick="window.print()" class="btn-outline no-print" style="display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-print"></i> PDF / Print
         </button>
+
+        <form action="{{ url_for('publikasi_jadwal') }}" method="POST" style="margin: 0;" class="no-print" onsubmit="return confirm('Apakah Anda yakin ingin mempublikasikan jadwal ini ke Web Jadwal Pelayanan? Semua anggota akan langsung mendapatkan jadwal ini di dashboard mereka.');">
+            <input type="hidden" name="target_start" value="{{ s_str }}">
+            <input type="hidden" name="target_end" value="{{ e_str }}">
+            <button type="submit" class="btn-primary no-print" style="display: flex; align-items: center; gap: 8px; background-color: #10b981; border: none;">
+                <i class="fas fa-paper-plane"></i> Apply ke Web Pelayanan
+            </button>
+        </form>
     </div>
 </div>
 
@@ -33,7 +47,6 @@
 <div class="print-container">
     <div class="print-header">
         <h2>JADWAL PELAYANAN MISDINAR</h2>
-        <!-- PERMINTAAN 1: Menambahkan label periode tanggal otomatis -->
         <h3 class="periode-text">Periode: {{ periode }}</h3>
     </div>
 
@@ -47,10 +60,9 @@
 
     {% for week in weeks %}
         
-        <!-- PERMINTAAN 3: Jika tabel kosong tidak ada petugas (max_slots_sk == 0), tabel tidak akan dicetak! -->
+        <!-- BLOK SENIN - KAMIS -->
         {% if week.senin_kamis and week.max_slots_sk > 0 %}
-        <div class="matrix-section">
-            <h3 class="section-title">Periode Senin - Kamis</h3>
+        <div class="matrix-section" style="margin-bottom: 30px;">
             <table class="matriks-table">
                 <thead>
                     <tr>
@@ -63,11 +75,8 @@
                     <tr>
                         {% for day in week.senin_kamis %}
                             {% if day.misa %}
-                                {% for wkt, m_data in day.misa.items() %}
-                                <th class="header-time">
-                                    {{ wkt }}<br>
-                                    <small style="font-weight: normal; font-size: 11px;">{{ m_data.acara }}</small>
-                                </th>
+                                {% for wkt, ptgs in day.misa.items() %}
+                                <th class="header-time">{{ wkt }}</th>
                                 {% endfor %}
                             {% else %}
                                 <th class="header-time">-</th>
@@ -80,11 +89,15 @@
                     <tr>
                         {% for day in week.senin_kamis %}
                             {% if day.misa %}
-                                {% for wkt, m_data in day.misa.items() %}
-                                <td>{{ m_data.petugas[i] }}</td>
+                                {% for wkt, ptgs in day.misa.items() %}
+                                    {% if ptgs[i] == '' %}
+                                        <td class="empty-cell"></td>
+                                    {% else %}
+                                        <td>{{ ptgs[i] }}</td>
+                                    {% endif %}
                                 {% endfor %}
                             {% else %}
-                                <td></td>
+                                <td class="empty-cell"></td>
                             {% endif %}
                         {% endfor %}
                     </tr>
@@ -94,9 +107,9 @@
         </div>
         {% endif %}
 
+        <!-- BLOK JUMAT - MINGGU -->
         {% if week.jumat_minggu and week.max_slots_jm > 0 %}
-        <div class="matrix-section">
-            <h3 class="section-title">Periode Jumat - Minggu</h3>
+        <div class="matrix-section" style="margin-bottom: 30px;">
             <table class="matriks-table">
                 <thead>
                     <tr>
@@ -109,11 +122,8 @@
                     <tr>
                         {% for day in week.jumat_minggu %}
                             {% if day.misa %}
-                                {% for wkt, m_data in day.misa.items() %}
-                                <th class="header-time">
-                                    {{ wkt }}<br>
-                                    <small style="font-weight: normal; font-size: 11px;">{{ m_data.acara }}</small>
-                                </th>
+                                {% for wkt, ptgs in day.misa.items() %}
+                                <th class="header-time">{{ wkt }}</th>
                                 {% endfor %}
                             {% else %}
                                 <th class="header-time">-</th>
@@ -126,11 +136,15 @@
                     <tr>
                         {% for day in week.jumat_minggu %}
                             {% if day.misa %}
-                                {% for wkt, m_data in day.misa.items() %}
-                                <td>{{ m_data.petugas[i] }}</td>
+                                {% for wkt, ptgs in day.misa.items() %}
+                                    {% if ptgs[i] == '' %}
+                                        <td class="empty-cell"></td>
+                                    {% else %}
+                                        <td>{{ ptgs[i] }}</td>
+                                    {% endif %}
                                 {% endfor %}
                             {% else %}
-                                <td></td>
+                                <td class="empty-cell"></td>
                             {% endif %}
                         {% endfor %}
                     </tr>
@@ -140,7 +154,7 @@
         </div>
         {% endif %}
         
-        {% if not loop.last %}
+        {% if not loop.last and (week.max_slots_sk > 0 or week.max_slots_jm > 0) %}
         <div class="page-break"></div>
         {% endif %}
         
@@ -154,22 +168,22 @@
 .form-group input:focus { border-color: var(--primary-blue); }
 
 .btn-primary { background: var(--primary-blue); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-.btn-primary:hover { background: var(--accent-blue); transform: translateY(-2px);}
-.btn-outline { padding: 10px 24px; border: 1px solid var(--text-gray); color: var(--text-gray); border-radius: 8px; font-weight: bold; transition: 0.3s; background: transparent; cursor: pointer;}
+.btn-primary:hover { transform: translateY(-2px); opacity: 0.9;}
+.btn-outline { padding: 10px 24px; border: 1px solid var(--text-gray); color: var(--text-gray); border-radius: 8px; font-weight: bold; transition: 0.3s; background: transparent; cursor: pointer; height: 100%;}
 .btn-outline:hover { background: var(--bg-gray); color: var(--text-dark); }
 
 .print-container { background: white; padding: 30px; border-radius: 12px; box-shadow: var(--shadow); overflow-x: auto;}
-.print-header h2 { text-align: center; color: var(--text-dark); margin-bottom: 0px; font-size: 20px; font-weight: 800;}
-.periode-text { text-align: center; color: var(--text-gray); font-size: 15px; margin-top: 6px; margin-bottom: 32px; font-weight: 600; }
+.print-header h2 { text-align: center; color: var(--text-dark); margin-bottom: 0px; font-size: 22px; font-weight: 800;}
+.periode-text { text-align: center; color: var(--text-gray); font-size: 15px; margin-top: 6px; margin-bottom: 32px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;}
 
-.section-title { font-size: 15px; color: var(--primary-blue); margin-bottom: 12px; font-weight: bold; border-bottom: 2px solid var(--primary-blue); display: inline-block; padding-bottom: 4px;}
-
-/* PERMINTAAN 2: Table-layout fixed memastikan kolom sama lebarnya/seimbang! */
-.matriks-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; min-width: 800px; table-layout: fixed; }
-.matriks-table th, .matriks-table td { border: 1px solid #94a3b8; padding: 8px 6px; text-align: center; font-size: 13px; word-wrap: break-word; }
+.matriks-table { width: 100%; border-collapse: collapse; min-width: 800px; table-layout: fixed;}
+.matriks-table th, .matriks-table td { border: 1px solid #94a3b8; padding: 10px 6px; text-align: center; font-size: 14px; word-wrap: break-word; }
 .header-day { background-color: var(--primary-blue); color: white; font-weight: bold; text-transform: uppercase; font-size: 14px !important;}
-.header-time { background-color: var(--light-blue); color: var(--text-dark); font-weight: bold; }
-.matriks-table td { height: 26px; color: var(--text-dark); }
+.header-time { background-color: #e2e8f0; color: var(--text-dark); font-weight: bold; font-size: 14px !important;}
+.matriks-table td { height: 28px; color: var(--text-dark); font-weight: 500;}
+
+/* PRIORITAS TINGGI UNTUK SEL KOSONG DI WEB */
+.matriks-table td.empty-cell { border: none !important; background-color: transparent !important; }
 
 @media print {
     .sidebar, .topbar, .no-print, .mobile-toggle { display: none !important; }
@@ -178,17 +192,18 @@
     .content-wrapper { padding: 0 !important; }
     .print-container { box-shadow: none !important; padding: 0 !important; }
     
-    .matriks-table { width: 100% !important; min-width: 0 !important; border-collapse: collapse !important; table-layout: fixed !important;}
-    .matriks-table th, .matriks-table td { border: 1px solid black !important; font-size: 11pt !important; padding: 4px !important; color: black !important; }
+    .matriks-table { width: 100% !important; min-width: 0 !important; border-collapse: collapse !important; table-layout: fixed !important; margin-bottom: 30px !important;}
+    .matriks-table th, .matriks-table td { border: 1px solid black !important; font-size: 12pt !important; padding: 6px !important; color: black !important; background-color: white !important;}
     
-    .periode-text { color: black !important; }
-    .header-day { background-color: #1e3a8a !important; color: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    .header-time { background-color: #e2e8f0 !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    /* PRIORITAS TINGGI UNTUK SEL KOSONG DI KERTAS CETAKAN (ANTI GAGAL) */
+    .matriks-table td.empty-cell { border: none !important; background-color: transparent !important; color: transparent !important; }
     
-    .section-title { color: black !important; border-bottom: 2px solid black !important; }
-    .page-break { page-break-before: always; }
+    .header-day { font-weight: bold !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;}
+    .header-time { font-weight: bold !important; border-bottom: 2px solid black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;}
     
-    @page { size: A4 landscape; margin: 1.5cm; }
+    .periode-text { color: black !important; font-weight: bold !important;}
+    .matrix-section { page-break-inside: avoid; }
+    @page { size: A4 landscape; margin: 1cm; }
 }
 </style>
 {% endblock %}
