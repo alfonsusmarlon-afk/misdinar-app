@@ -98,7 +98,7 @@ def get_filtered_items(table_name, user_id=None):
 def get_jadwal_from_db():
     conn = get_db_connection()
     threshold_time = (datetime.now() - timedelta(minutes=30)).strftime('%Y-%m-%d %H:%M:%S')
-    rows = conn.execute('SELECT * FROM jadwal WHERE jadwal_datetime >= ? ORDER BY jadwal_datetime ASC', (threshold_time,)).fetchall()
+    rows = conn.execute("SELECT * FROM jadwal WHERE jadwal_datetime >= ? AND nama_pengguna != '' ORDER BY jadwal_datetime ASC", (threshold_time,)).fetchall()
     conn.close()
     return [dict(row) for row in rows]
 
@@ -280,8 +280,7 @@ def pendaftaran():
                      
         respon_data['[Sistem] Username Dibuat'] = username
         conn.execute('INSERT INTO pendaftaran (tanggal, data_respon, status) VALUES (?, ?, ?)', (datetime.now().strftime('%Y-%m-%d %H:%M'), json.dumps(respon_data), 'Menunggu'))
-        conn.commit()
-        conn.close()
+        conn.commit(); conn.close()
         return render_template('pendaftaran.html', success=True, new_username=username, new_password=random_password)
 
     fields = conn.execute('SELECT * FROM form_fields ORDER BY id ASC').fetchall()
@@ -328,8 +327,7 @@ def kehadiran():
             if action == 'tambah': conn.execute('INSERT INTO kehadiran (username, nama, tanggal, kegiatan, status, keterangan) VALUES (?, ?, ?, ?, ?, ?)', (request.form.get('username'), nama, request.form.get('tanggal'), request.form.get('kegiatan'), request.form.get('status'), request.form.get('keterangan', '')))
             else: conn.execute('UPDATE kehadiran SET username=?, nama=?, tanggal=?, kegiatan=?, status=?, keterangan=? WHERE id=?', (request.form.get('username'), nama, request.form.get('tanggal'), request.form.get('kegiatan'), request.form.get('status'), request.form.get('keterangan', ''), request.form.get('id')))
         elif action == 'hapus': conn.execute('DELETE FROM kehadiran WHERE id=?', (request.form.get('id'),))
-        conn.commit()
-        return redirect(url_for('kehadiran'))
+        conn.commit(); return redirect(url_for('kehadiran'))
 
     users_list = conn.execute("SELECT username, nama FROM users WHERE role != 'super admin' ORDER BY nama ASC").fetchall() if user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] else []
     data_kehadiran = conn.execute('SELECT * FROM kehadiran ORDER BY id DESC').fetchall() if user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] else conn.execute('SELECT * FROM kehadiran WHERE username=? ORDER BY id DESC', (user_id,)).fetchall()
@@ -349,8 +347,7 @@ def hukuman():
             if action == 'tambah': conn.execute('INSERT INTO hukuman (username, nama, tanggal, pelanggaran, tindakan, status) VALUES (?, ?, ?, ?, ?, ?)', (request.form.get('username'), nama, request.form.get('tanggal'), request.form.get('pelanggaran'), request.form.get('tindakan'), request.form.get('status')))
             else: conn.execute('UPDATE hukuman SET username=?, nama=?, tanggal=?, pelanggaran=?, tindakan=?, status=? WHERE id=?', (request.form.get('username'), nama, request.form.get('tanggal'), request.form.get('pelanggaran'), request.form.get('tindakan'), request.form.get('status'), request.form.get('id')))
         elif action == 'hapus': conn.execute('DELETE FROM hukuman WHERE id=?', (request.form.get('id'),))
-        conn.commit()
-        return redirect(url_for('hukuman'))
+        conn.commit(); return redirect(url_for('hukuman'))
 
     users_list = conn.execute("SELECT username, nama FROM users WHERE role != 'super admin' ORDER BY nama ASC").fetchall() if user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] else []
     data_hukuman = conn.execute('SELECT * FROM hukuman ORDER BY id DESC').fetchall() if user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] else conn.execute('SELECT * FROM hukuman WHERE username=? ORDER BY id DESC', (user_id,)).fetchall()
@@ -453,181 +450,175 @@ def kontak():
 
 
 # ==========================================
-# 8. MESIN PEMINDAI (SCANNER) EXCEL JADWAL (REVISI FINAL)
+# 8. SISTEM PENJADWALAN (MATRIKS SPREADSHEET WEB)
 # ==========================================
 @app.route('/penjadwalan', methods=['GET', 'POST'])
 @login_required
 def penjadwalan():
     if session.get('role') not in ['super admin', 'penjadwalan']: return redirect(url_for('index'))
     
-    error_msg = request.args.get('error')
+    conn = get_db_connection()
+    users_db = conn.execute("SELECT username, nama FROM users WHERE role != 'super admin' ORDER BY nama ASC").fetchall()
     
     if request.method == 'POST':
         action = request.form.get('action')
         
-        if action == 'upload_excel':
-            file = request.files.get('file_excel')
-            if file and file.filename.endswith(('.xlsx', '.xls')):
-                try:
-                    import pandas as pd
-                    import re
+        # FITUR 1: MEMBUAT KANVAS SPREADSHEET DI WEB
+        if action == 'buat_matriks':
+            start_str = request.form.get('start_date')
+            end_str = request.form.get('end_date')
+            
+            if not start_str or not end_str: return redirect(url_for('penjadwalan'))
+            
+            start_dt = datetime.strptime(start_str, '%Y-%m-%d')
+            end_dt = datetime.strptime(end_str, '%Y-%m-%d')
+            days_id = {0: 'Senin', 1: 'Selasa', 2: 'Rabu', 3: 'Kamis', 4: 'Jumat', 5: 'Sabtu', 6: 'Minggu'}
+            
+            matrix_data = []
+            curr = start_dt
+            
+            while curr <= end_dt:
+                hari_idx = curr.weekday()
+                if hari_idx == 5: masses = [('05.30', 'Misa Pagi'), ('17.00', 'Misa Vigili')]
+                elif hari_idx == 6: masses = [('06.00', 'Misa Pagi'), ('08.00', 'Misa Pagi II'), ('10.00', 'Misa Siang'), ('17.00', 'Misa Sore')]
+                else: masses = [('05.30', 'Misa Pagi'), ('18.00', 'Misa Sore')]
+                
+                matrix_data.append({
+                    'date_str': curr.strftime('%Y-%m-%d'),
+                    'hari': days_id[hari_idx],
+                    'tanggal_format': f"{days_id[hari_idx]}, {curr.day} {curr.strftime('%b')}",
+                    'masses': masses
+                })
+                curr += timedelta(days=1)
+                
+            conn.close()
+            return render_template('penjadwalan.html', matrix=matrix_data, users=users_db, start=start_str, end=end_str)
+
+        # FITUR 2: MENYIMPAN HASIL KETIKAN DARI MATRIKS WEB KE DB
+        elif action == 'simpan_matriks':
+            months_id = {1: 'JAN', 2: 'FEB', 3: 'MAR', 4: 'APR', 5: 'MEI', 6: 'JUNI', 7: 'JULI', 8: 'AGUST', 9: 'SEPT', 10: 'OKT', 11: 'NOV', 12: 'DES'}
+            parsed_data = []
+            
+            rendered_dates_raw = request.form.get('rendered_dates')
+            if rendered_dates_raw:
+                s_str, e_str = rendered_dates_raw.split('|')
+                s_dt = datetime.strptime(s_str, '%Y-%m-%d')
+                e_dt = datetime.strptime(e_str, '%Y-%m-%d')
+                all_dates = []
+                c = s_dt
+                while c <= e_dt:
+                    all_dates.append(c.strftime('%Y-%m-%d'))
+                    c += timedelta(days=1)
+                
+                placeholders = ','.join('?' for _ in all_dates)
+                conn.execute(f"DELETE FROM jadwal WHERE date(jadwal_datetime) IN ({placeholders})", all_dates)
+            
+            for key in request.form.keys():
+                if key.startswith('ptgs|'):
+                    parts = key.split('|')
+                    tgl_str = parts[1]
+                    wkt = parts[2]
                     
-                    df = pd.read_excel(file, header=None)
-                    conn = get_db_connection()
-                    months_id = {1: 'JAN', 2: 'FEB', 3: 'MAR', 4: 'APR', 5: 'MEI', 6: 'JUNI', 7: 'JULI', 8: 'AGUST', 9: 'SEPT', 10: 'OKT', 11: 'NOV', 12: 'DES'}
-                    m_dict = {'januari':1, 'februari':2, 'maret':3, 'april':4, 'mei':5, 'juni':6, 'juli':7, 'agustus':8, 'september':9, 'oktober':10, 'november':11, 'desember':12}
-                    days_of_week = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
+                    # Dinamis mengambil Nama Acara (Keterangan) yang diedit
+                    acara = request.form.get(f"acr|{tgl_str}|{wkt}", 'Misa')
+                    hari = request.form.get(f"hri|{tgl_str}|{wkt}", '')
                     
-                    parsed_schedules = []
-                    uploaded_dates = set()
-
-                    # Fungsi Bantuan: Cek apakah isi Cell adalah Tanggal yang Valid
-                    def get_valid_date(val):
-                        if pd.isna(val): return None
-                        if isinstance(val, pd.Timestamp) or hasattr(val, 'weekday'):
-                            try: return f"{days_of_week[val.weekday()]}, {val.day} {months_id[val.month].capitalize()} {val.year}"
-                            except: pass
-                        val_str = str(val).strip()
-                        for d in days_of_week:
-                            if val_str.lower().startswith(d.lower()): return val_str
-                        return None
-
-                    # Fungsi Bantuan: Cek apakah isi Cell adalah Waktu Misa yang Valid
-                    def get_valid_time(val):
-                        if pd.isna(val): return None
-                        if hasattr(val, 'hour') and hasattr(val, 'minute'): return f"Pkl. {val.hour:02d}.{val.minute:02d}"
-                        val_str = str(val).strip()
-                        if 'pkl' in val_str.lower() or re.search(r'\d{1,2}[.:]\d{2}', val_str): return val_str
-                        return None
-
-                    for row_idx in range(len(df)):
-                        row = df.iloc[row_idx]
-                        
-                        date_cells = {}
-                        for col_idx, cell in enumerate(row):
-                            parsed_d = get_valid_date(cell)
-                            if parsed_d: date_cells[col_idx] = parsed_d
-
-                        if date_cells:
-                            if row_idx + 1 < len(df):
-                                time_row = df.iloc[row_idx + 1]
-                                sorted_cols = sorted(list(date_cells.keys()))
-                                
-                                for i, date_col in enumerate(sorted_cols):
-                                    date_val = date_cells[date_col]
-                                    end_col = sorted_cols[i + 1] if i + 1 < len(sorted_cols) else len(row)
-                                        
-                                    time_cols = {}
-                                    for t_col in range(date_col, end_col):
-                                        parsed_t = get_valid_time(time_row.iloc[t_col])
-                                        if parsed_t: time_cols[t_col] = parsed_t
-                                            
-                                    for t_col, t_val in time_cols.items():
-                                        slot_row_idx = row_idx + 2
-                                        max_scan = min(slot_row_idx + 20, len(df)) 
-                                        
-                                        while slot_row_idx < max_scan:
-                                            slot_cell = df.iloc[slot_row_idx, t_col]
-                                            name_cell = df.iloc[slot_row_idx, t_col + 1] if t_col + 1 < len(row) else None
-                                            
-                                            s_str = str(slot_cell).strip() if pd.notna(slot_cell) else ""
-                                            n_str = str(name_cell).strip() if pd.notna(name_cell) else ""
-                                            if s_str.endswith('.0'): s_str = s_str[:-2]
-                                            
-                                            has_num = bool(re.match(r'^\d+', s_str))
-                                            has_text = bool(re.search(r'[A-Za-z]', n_str))
-                                            merged_text = bool(re.search(r'[A-Za-z]', s_str))
-                                            
-                                            if has_num or has_text or merged_text:
-                                                actual_name = ""
-                                                if has_text: actual_name = n_str
-                                                elif merged_text:
-                                                    m = re.match(r'^\d+[\s\.\-\_]*(.*)', s_str)
-                                                    if m: actual_name = m.group(1).strip()
-                                                    else: actual_name = s_str
-                                                
-                                                if actual_name.lower() == 'nan': actual_name = ""
-                                                
-                                                date_match = re.search(r'(\d{1,2})[\s\-\/]*([A-Za-z]+)[\s\-\/]*(\d{4})', date_val)
-                                                time_match = re.search(r'(\d{1,2})[.:](\d{2})', str(t_val))
-                                                
-                                                if date_match and time_match:
-                                                    d, m_str, y = date_match.groups()
-                                                    hh, mm = time_match.groups()
-                                                    
-                                                    m_str_lower = m_str.lower()
-                                                    m = 1
-                                                    for k, v in m_dict.items():
-                                                        if m_str_lower in k or k in m_str_lower: m = v; break
-                                                    
-                                                    jadwal_dt = datetime(int(y), int(m), int(d), int(hh), int(mm))
-                                                    hari_teks = date_val.split(',')[0].strip()
-                                                    waktu_teks = f"{hh}.{mm}"
-                                                    
-                                                    if int(hh) <= 9: acara = "Misa Pagi"
-                                                    elif 10 <= int(hh) <= 14: acara = "Misa Siang"
-                                                    else: acara = "Misa Sore"
-                                                    
-                                                    names = [n.strip() for n in actual_name.split(',') if n.strip()] if actual_name else ["Kosong"]
-                                                    
-                                                    for n in names:
-                                                        parsed_schedules.append({
-                                                            'dt': jadwal_dt, 'tanggal': d, 'bulan': months_id[int(m)],
-                                                            'hari': hari_teks, 'waktu': waktu_teks, 'acara': acara, 'nama': n
-                                                        })
-                                                        uploaded_dates.add(jadwal_dt.strftime('%Y-%m-%d'))
-                                            
-                                            elif s_str == "" and n_str == "": pass
-                                            elif get_valid_date(slot_cell): break 
-                                            slot_row_idx += 1
-                                            
-                    if uploaded_dates and parsed_schedules:
-                        placeholders = ','.join('?' for _ in uploaded_dates)
-                        conn.execute(f"DELETE FROM jadwal WHERE date(jadwal_datetime) IN ({placeholders})", list(uploaded_dates))
-                        
-                        for s in parsed_schedules:
-                            username = s['nama']
-                            nama_pengguna = s['nama']
-                            if s['nama'] != "Kosong":
-                                user_db = conn.execute("SELECT username, nama FROM users WHERE nama LIKE ? OR nama_panggilan LIKE ? OR username = ?", (f"%{s['nama']}%", f"%{s['nama']}%", s['nama'])).fetchone()
-                                if user_db:
-                                    username, nama_pengguna = user_db['username'], user_db['nama']
-                            
-                            conn.execute('INSERT INTO jadwal (jadwal_datetime, tanggal, bulan, hari, waktu, acara, status, pengguna, nama_pengguna) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', 
-                                         (s['dt'].strftime('%Y-%m-%d %H:%M:%S'), s['tanggal'], s['bulan'], s['hari'], s['waktu'], s['acara'], 'Bertugas', username, nama_pengguna))
-                        
-                        conn.commit(); conn.close()
-                        return redirect(url_for('cetak_jadwal')) 
+                    dt = datetime.strptime(tgl_str, '%Y-%m-%d')
+                    try: jadwal_dt = datetime.strptime(f"{tgl_str} {wkt.replace('.', ':')}:00", '%Y-%m-%d %H:%M:%S')
+                    except: jadwal_dt = dt
                     
-                    conn.close()
-                    return redirect(url_for('penjadwalan', error="Gagal memindai. Format File mungkin tidak sesuai atau tidak ada tanggal yang terbaca oleh sistem."))
-                except Exception as e:
-                    print("Error parsing Excel:", e)
-                    return redirect(url_for('penjadwalan', error=f"Terjadi error saat parsing. Detail: {str(e)}"))
-            else:
-                 return redirect(url_for('penjadwalan', error="Harap unggah file format .xlsx atau .xls"))
-                 
-    return render_template('penjadwalan.html', error=error_msg)
+                    values = request.form.getlist(key)
+                    for val in values:
+                        if val and val.strip():
+                            names = [n.strip() for n in val.split(',') if n.strip()]
+                            for n in names:
+                                parsed_data.append({
+                                    'jadwal_dt': jadwal_dt, 'dt': dt, 'hari': hari,
+                                    'wkt': wkt, 'acara': acara, 'nama': n
+                                })
+            
+            for p in parsed_data:
+                user_db = conn.execute("SELECT username, nama FROM users WHERE nama LIKE ? OR nama_panggilan LIKE ? OR username = ?", (f"%{p['nama']}%", f"%{p['nama']}%", p['nama'])).fetchone()
+                username = user_db['username'] if user_db else p['nama']
+                nama_pengguna = user_db['nama'] if user_db else p['nama']
+                
+                conn.execute('INSERT INTO jadwal (jadwal_datetime, tanggal, bulan, hari, waktu, acara, status, pengguna, nama_pengguna) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+                             (p['jadwal_dt'].strftime('%Y-%m-%d %H:%M:%S'), p['dt'].strftime('%d'), months_id[p['dt'].month], p['hari'], p['wkt'], p['acara'], 'Bertugas', username, nama_pengguna))
+            
+            conn.commit()
+            conn.close()
+            return redirect(url_for('cetak_jadwal', target_start=s_str, target_end=e_str))
 
+    conn.close()
+    return render_template('penjadwalan.html', users=users_db)
+
+# ==========================================
+# 9. CETAK JADWAL
+# ==========================================
 @app.route('/cetak-jadwal')
 @login_required
 def cetak_jadwal():
     if session.get('role') not in ['super admin', 'penjadwalan', 'bph']: return redirect(url_for('index'))
     
+    target_start = request.args.get('target_start')
+    target_end = request.args.get('target_end')
+    
     conn = get_db_connection()
-    threshold_time = datetime.now().strftime('%Y-%m-%d 00:00:00')
-    rows = conn.execute('SELECT * FROM jadwal WHERE jadwal_datetime >= ? ORDER BY jadwal_datetime ASC', (threshold_time,)).fetchall()
+    if target_start and target_end:
+        start_time = f"{target_start} 00:00:00"
+        end_time = f"{target_end} 23:59:59"
+        rows = conn.execute('SELECT * FROM jadwal WHERE jadwal_datetime >= ? AND jadwal_datetime <= ? ORDER BY jadwal_datetime ASC', (start_time, end_time)).fetchall()
+    else:
+        threshold_time = datetime.now().strftime('%Y-%m-%d 00:00:00')
+        end_limit = (datetime.now() + timedelta(days=60)).strftime('%Y-%m-%d 23:59:59')
+        rows = conn.execute('SELECT * FROM jadwal WHERE jadwal_datetime >= ? AND jadwal_datetime <= ? ORDER BY jadwal_datetime ASC', (threshold_time, end_limit)).fetchall()
     conn.close()
 
+    if not rows:
+        return render_template('cetak_jadwal.html', weeks=[], periode="-")
+
+    min_date = min([datetime.strptime(r['jadwal_datetime'], '%Y-%m-%d %H:%M:%S') for r in rows])
+    max_date = max([datetime.strptime(r['jadwal_datetime'], '%Y-%m-%d %H:%M:%S') for r in rows])
+    
+    if target_start and target_end:
+        min_date = datetime.strptime(target_start, '%Y-%m-%d')
+        max_date = datetime.strptime(target_end, '%Y-%m-%d')
+
+    months_id = {1: 'Januari', 2: 'Februari', 3: 'Maret', 4: 'April', 5: 'Mei', 6: 'Juni', 7: 'Juli', 8: 'Agustus', 9: 'September', 10: 'Oktober', 11: 'November', 12: 'Desember'}
+    days_id = {0: 'Senin', 1: 'Selasa', 2: 'Rabu', 3: 'Kamis', 4: 'Jumat', 5: 'Sabtu', 6: 'Minggu'}
+    
+    # PERMINTAAN 1: BIKIN STRING PERIODE
+    periode_str = f"{min_date.day} {months_id[min_date.month]} {min_date.year} - {max_date.day} {months_id[max_date.month]} {max_date.year}"
+
     jadwal_dict = {}
+    
+    # Prefill struktur tabel supaya rentang hari lengkap
+    curr = min_date
+    while curr <= max_date:
+        date_key = curr.strftime('%Y-%m-%d')
+        hari_idx = curr.weekday()
+        if hari_idx == 5: masses = [('05.30', 'Misa Pagi'), ('17.00', 'Misa Vigili')]
+        elif hari_idx == 6: masses = [('06.00', 'Misa Pagi'), ('08.00', 'Misa Pagi II'), ('10.00', 'Misa Siang'), ('17.00', 'Misa Sore')]
+        else: masses = [('05.30', 'Misa Pagi'), ('18.00', 'Misa Sore')]
+        
+        jadwal_dict[date_key] = {
+            'hari': days_id[hari_idx],
+            'tanggal_teks': f"{days_id[hari_idx]}, {curr.day} {months_id[curr.month]} {curr.year}",
+            'misa': {w: {'acara': a, 'petugas': []} for w, a in masses}
+        }
+        curr += timedelta(days=1)
+
     for r in rows:
         dt = datetime.strptime(r['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
         date_key = dt.strftime('%Y-%m-%d')
-        if date_key not in jadwal_dict:
-            jadwal_dict[date_key] = {'hari': r['hari'], 'tanggal_teks': f"{r['hari']}, {dt.day} {r['bulan'].capitalize()} {dt.year}", 'misa': {}}
-        wkt = r['waktu']
-        if wkt not in jadwal_dict[date_key]['misa']: jadwal_dict[date_key]['misa'][wkt] = []
-        jadwal_dict[date_key]['misa'][wkt].append(r['nama_pengguna'])
+        if date_key in jadwal_dict:
+            wkt = r['waktu']
+            if wkt not in jadwal_dict[date_key]['misa']:
+                jadwal_dict[date_key]['misa'][wkt] = {'acara': r['acara'], 'petugas': []}
+            
+            jadwal_dict[date_key]['misa'][wkt]['acara'] = r['acara']
+            if r['nama_pengguna'] != '':
+                jadwal_dict[date_key]['misa'][wkt]['petugas'].append(r['nama_pengguna'])
 
     weeks = []
     current_week = {'senin_kamis': [], 'jumat_minggu': []}
@@ -636,16 +627,7 @@ def cetak_jadwal():
     for d in sorted_dates:
         dt = datetime.strptime(d, '%Y-%m-%d')
         day_idx = dt.weekday()
-        max_slots = 9 if day_idx >= 4 else 4
-        
-        misa_data = jadwal_dict[d]['misa']
-        formatted_misa = {}
-        for wkt, ptgs in misa_data.items():
-            padded = ptgs.copy()
-            while len(padded) < max_slots: padded.append("")
-            formatted_misa[wkt] = padded
-            
-        day_obj = {'tanggal_teks': jadwal_dict[d]['tanggal_teks'], 'misa': formatted_misa, 'max_slots': max_slots}
+        day_obj = {'tanggal_teks': jadwal_dict[d]['tanggal_teks'], 'misa': jadwal_dict[d]['misa']}
         
         if day_idx == 0 and (len(current_week['senin_kamis']) > 0 or len(current_week['jumat_minggu']) > 0):
             weeks.append(current_week)
@@ -656,7 +638,32 @@ def cetak_jadwal():
             
     if current_week['senin_kamis'] or current_week['jumat_minggu']: weeks.append(current_week)
         
-    return render_template('cetak_jadwal.html', weeks=weeks)
+    final_weeks = []
+    for w in weeks:
+        # PERMINTAAN 3: HITUNG SLOTS OTOMATIS (Mencegah tabel kosong diprint)
+        max_sk = 0
+        for day in w['senin_kamis']:
+            for wkt, m_data in day['misa'].items():
+                if len(m_data['petugas']) > max_sk: max_sk = len(m_data['petugas'])
+        w['max_slots_sk'] = max_sk
+        
+        max_jm = 0
+        for day in w['jumat_minggu']:
+            for wkt, m_data in day['misa'].items():
+                if len(m_data['petugas']) > max_jm: max_jm = len(m_data['petugas'])
+        w['max_slots_jm'] = max_jm
+        
+        for day in w['senin_kamis']:
+            for wkt, m_data in day['misa'].items():
+                while len(m_data['petugas']) < max_sk: m_data['petugas'].append("")
+                    
+        for day in w['jumat_minggu']:
+            for wkt, m_data in day['misa'].items():
+                while len(m_data['petugas']) < max_jm: m_data['petugas'].append("")
+        
+        final_weeks.append(w)
+        
+    return render_template('cetak_jadwal.html', weeks=final_weeks, periode=periode_str)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
