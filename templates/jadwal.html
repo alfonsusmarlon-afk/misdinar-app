@@ -1,253 +1,180 @@
 {% extends "base.html" %}
 
-{% block title %}Jadwal - MISDINAR{% endblock %}
+{% block title %}Jadwal Pelayanan - MISDINAR{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    {% if is_logged_in %}
-    <h2>Jadwal Pelayanan Saya</h2>
-    <p>Lihat dan kelola jadwal pelayanan Anda</p>
-    {% else %}
-    <h2>Jadwal Pelayanan</h2>
-    <p>Lihat jadwal pelayanan semua anggota misdinar</p>
-    {% endif %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+    <div>
+        <h2>Jadwal Pelayanan Misdinar</h2>
+        {% if view_mode == 'private' %}
+        <p>Menampilkan jadwal pelayanan pribadi Anda yang akan datang.</p>
+        {% else %}
+        <p>Jadwal pelayanan seluruh anggota misdinar.</p>
+        {% endif %}
+    </div>
+    <div style="display: flex; gap: 10px;">
+        {% if is_logged_in %}
+            {% if view_mode == 'public' %}
+            <a href="{{ url_for('jadwal', view='private') }}" class="btn-outline"><i class="fas fa-user"></i> Jadwal Saya</a>
+            {% else %}
+            <a href="{{ url_for('jadwal') }}" class="btn-outline"><i class="fas fa-users"></i> Semua Jadwal</a>
+            {% endif %}
+            
+            {% if session.get('role') in ['super admin', 'penjadwalan', 'bph'] %}
+            <a href="{{ url_for('penjadwalan') }}" class="btn-primary"><i class="fas fa-edit"></i> Edit Matriks Jadwal</a>
+            {% endif %}
+        {% endif %}
+    </div>
 </div>
 
-<div class="jadwal-container">
-    {% if jadwal %}
-        {% for item in jadwal %}
-        <div class="jadwal-card">
-            <div class="jadwal-header">
-                <div class="jadwal-date-large">
-                    <span class="day">{{ item.tanggal }}</span>
-                    <span class="month">{{ item.bulan }}</span>
-                </div>
-                {% if is_logged_in %}
-                <div class="jadwal-status-badge {% if item.status == 'Bertugas' %}status-active{% else %}status-inactive{% endif %}">
-                    {{ item.status }}
-                </div>
-                {% endif %}
-            </div>
-            <div class="jadwal-body">
-                <h3>{{ item.acara }}</h3>
-                <div class="jadwal-details">
-                    {% if not is_logged_in %}
-                    <div class="detail-item">
-                        <i class="fas fa-user"></i>
-                        <span><strong>{{ item.nama_pengguna }}</strong></span>
-                    </div>
-                    {% endif %}
-                    <div class="detail-item">
-                        <i class="far fa-clock"></i>
-                        <span>{{ item.hari }}, {{ item.waktu }}</span>
-                    </div>
-                </div>
-            </div>
-            {% if is_logged_in %}
-            <div class="jadwal-footer">
-                <button class="btn-outline" onclick="alert('Daftar Petugas untuk {{ item.acara }}:\n\n- {{ item.nama_pengguna }} (Misdinar)\n- [Nama Petugas Lainnya]')">Detail</button>
-                <button class="btn-outline" onclick="if(confirm('Apakah Anda ingin mengajukan izin tidak bertugas untuk jadwal {{ item.acara }} kepada Pengurus?')) alert('Permohonan izin Anda telah terkirim kepada Pengurus.')">Ubah Status</button>
-            </div>
-            {% endif %}
-        </div>
-        {% endfor %}
+<div class="schedule-container">
+    {% if not jadwal %}
+    <div class="empty-state">
+        <i class="fas fa-calendar-times empty-icon"></i>
+        <h3>Belum Ada Jadwal</h3>
+        {% if view_mode == 'private' %}
+        <p>Anda belum memiliki jadwal pelayanan dalam waktu dekat.</p>
+        {% else %}
+        <p>Belum ada jadwal pelayanan yang dipublikasikan oleh pengurus.</p>
+        {% endif %}
+    </div>
     {% else %}
-    <div class="no-data">
-        <i class="fas fa-calendar-times"></i>
-        <h3>Tidak ada jadwal</h3>
-        <p>Belum ada jadwal pelayanan untuk Anda saat ini</p>
+    
+    <div class="schedule-list">
+        {% set grouped_jadwal = {} %}
+        
+        {% for j in jadwal %}
+            {% set key = j.tanggal ~ '-' ~ j.bulan ~ '-' ~ j.waktu %}
+            
+            {% if key not in grouped_jadwal %}
+                {% set _ = grouped_jadwal.update({key: {'data': j, 'petugas': [j.nama_pengguna]}}) %}
+            {% else %}
+                {% set _ = grouped_jadwal[key]['petugas'].append(j.nama_pengguna) %}
+            {% endif %}
+        {% endfor %}
+
+        {% for key, group in grouped_jadwal.items() %}
+            {% set j = group['data'] %}
+            <div class="schedule-card">
+                <div class="date-box">
+                    <span class="date">{{ j.tanggal }}</span>
+                    <span class="month">{{ j.bulan }}</span>
+                </div>
+                <div class="schedule-info">
+                    <h4>{{ j.hari }}, Pkl. {{ j.waktu }}</h4>
+                    <span class="badge badge-primary">{{ j.acara }}</span>
+                    
+                    <div class="petugas-list" style="margin-top: 12px;">
+                        <span style="font-size: 12px; color: var(--text-gray); display: block; margin-bottom: 4px;">Bertugas:</span>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            {% for p in group['petugas'] %}
+                                <span class="badge" style="background-color: var(--light-blue); color: var(--primary-blue); font-size: 13px; padding: 6px 12px;"><i class="fas fa-user-circle" style="margin-right: 4px;"></i> {{ p }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
     </div>
     {% endif %}
 </div>
 
-{% if not is_logged_in %}
-<div class="public-info-box">
-    <i class="fas fa-info-circle"></i>
-    <p>Anda sedang melihat jadwal pelayanan publik. <a href="{{ url_for('login') }}">Login sekarang</a> untuk melihat jadwal pribadi Anda dan fitur lainnya.</p>
-</div>
-{% endif %}
-
 <style>
-.page-header {
-    margin-bottom: 32px;
+.schedule-container {
+    background: var(--white);
+    padding: 30px;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
 }
 
-.page-header h2 {
-    font-size: 28px;
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.empty-icon {
+    font-size: 48px;
+    color: #cbd5e1;
+    margin-bottom: 16px;
+}
+
+.empty-state h3 {
+    color: var(--text-dark);
     margin-bottom: 8px;
 }
 
-.page-header p {
+.empty-state p {
     color: var(--text-gray);
 }
 
-.jadwal-container {
+.schedule-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
 }
 
-.jadwal-card {
-    background: var(--white);
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: var(--shadow);
-    transition: all 0.3s;
-}
-
-.jadwal-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-hover);
-}
-
-.jadwal-header {
+.schedule-card {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--border-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: 0.3s;
+    background: #fafafa;
 }
 
-.jadwal-date-large .day {
-    display: block;
-    font-size: 32px;
-    font-weight: 700;
-    color: var(--primary-green);
+.schedule-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+    border-color: var(--primary-blue);
+}
+
+.date-box {
+    background: var(--primary-blue);
+    color: var(--white);
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-width: 90px;
+}
+
+.date-box .date {
+    font-size: 28px;
+    font-weight: 800;
     line-height: 1;
 }
 
-.jadwal-date-large .month {
-    display: block;
-    font-size: 12px;
-    color: var(--text-gray);
+.date-box .month {
+    font-size: 14px;
     font-weight: 600;
     text-transform: uppercase;
     margin-top: 4px;
 }
 
-.jadwal-status-badge {
-    padding: 6px 12px;
-    border-radius: 6px;
+.schedule-info {
+    padding: 20px;
+    flex: 1;
+    background: white;
+}
+
+.schedule-info h4 {
+    color: var(--text-dark);
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
     font-size: 12px;
     font-weight: 600;
 }
 
-.status-active {
-    background: #d4f4dd;
-    color: #2d5f3f;
-}
-
-.status-inactive {
-    background: #e9ecef;
-    color: var(--text-gray);
-}
-
-.jadwal-body h3 {
-    font-size: 18px;
-    margin-bottom: 16px;
-}
-
-.jadwal-details {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.detail-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    color: var(--text-gray);
-}
-
-.detail-item i {
-    width: 16px;
-    color: var(--primary-green);
-}
-
-.jadwal-footer {
-    display: flex;
-    gap: 8px;
-    margin-top: 20px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border-color);
-}
-
-.btn-outline {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid var(--primary-green);
-    background: transparent;
-    color: var(--primary-green);
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    transition: all 0.3s;
-}
-
-.btn-outline:hover {
-    background: var(--primary-green);
-    color: var(--white);
-}
-
-.no-data {
-    text-align: center;
-    padding: 80px 20px;
-    background: var(--white);
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-}
-
-.no-data i {
-    font-size: 64px;
-    color: var(--primary-green);
-    margin-bottom: 24px;
-}
-
-.no-data h3 {
-    font-size: 24px;
-    margin-bottom: 12px;
-}
-
-.no-data p {
-    color: var(--text-gray);
-}
-
-.public-info-box {
-    background: #d4f4dd;
-    border-left: 4px solid var(--primary-green);
-    padding: 16px;
-    border-radius: 8px;
-    margin-top: 32px;
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    color: var(--text-dark);
-}
-
-.public-info-box i {
-    font-size: 20px;
-    color: var(--primary-green);
-    flex-shrink: 0;
-}
-
-.public-info-box a {
-    color: var(--primary-green);
-    font-weight: 600;
-    text-decoration: none;
-}
-
-.public-info-box a:hover {
-    text-decoration: underline;
-}
-
-@media (max-width: 768px) {
-    .jadwal-container {
-        grid-template-columns: 1fr;
-    }
+.badge-primary {
+    background: #eef2ff;
+    color: var(--primary-blue);
 }
 </style>
 {% endblock %}
