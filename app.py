@@ -50,6 +50,11 @@ def init_db():
 
     conn.execute('''CREATE TABLE IF NOT EXISTS pengumuman (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, deskripsi TEXT DEFAULT "", waktu_pelaksanaan TEXT NOT NULL, tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL)''')
     conn.execute('''CREATE TABLE IF NOT EXISTS jadwal (id INTEGER PRIMARY KEY AUTOINCREMENT, jadwal_datetime TIMESTAMP NOT NULL, tanggal TEXT NOT NULL, bulan TEXT NOT NULL, hari TEXT NOT NULL, waktu TEXT NOT NULL, acara TEXT NOT NULL, status TEXT NOT NULL, pengguna TEXT NOT NULL, nama_pengguna TEXT NOT NULL, FOREIGN KEY(pengguna) REFERENCES users(username))''')
+    
+    existing_jadwal_cols = [col[1] for col in conn.execute('PRAGMA table_info(jadwal)').fetchall()]
+    if 'jenis' not in existing_jadwal_cols:
+        conn.execute('ALTER TABLE jadwal ADD COLUMN jenis TEXT DEFAULT "Matriks"')
+        
     conn.execute('''CREATE TABLE IF NOT EXISTS dokumen (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, file_path TEXT NOT NULL, tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL)''')
     conn.execute('''CREATE TABLE IF NOT EXISTS galeri (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, foto_path TEXT NOT NULL, tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL)''')
     conn.execute('''CREATE TABLE IF NOT EXISTS kehadiran (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, nama TEXT NOT NULL, tanggal TEXT NOT NULL, kegiatan TEXT NOT NULL, status TEXT NOT NULL, keterangan TEXT)''')
@@ -95,6 +100,17 @@ def get_filtered_items(table_name, user_id=None):
             filtered.append(p)
     return filtered
 
+def get_jadwal_from_db(upcoming_only=True):
+    conn = get_db_connection()
+    if upcoming_only:
+        threshold_time = (datetime.now() - timedelta(minutes=30)).strftime('%Y-%m-%d %H:%M:%S')
+    else:
+        threshold_time = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d 00:00:00')
+        
+    rows = conn.execute("SELECT * FROM jadwal WHERE jadwal_datetime >= ? AND nama_pengguna != '' AND status = 'Bertugas' ORDER BY jadwal_datetime ASC", (threshold_time,)).fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
 def get_grouped_users():
     conn = get_db_connection()
     all_users = conn.execute("SELECT username, nama, role FROM users WHERE role != 'super admin'").fetchall()
@@ -107,7 +123,7 @@ def get_grouped_users():
     return users_by_role
 
 # ==========================================
-# 4. ROUTING UTAMA (BERANDA & JADWAL PUBLIK/PRIVAT)
+# 4. ROUTING UTAMA
 # ==========================================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -168,13 +184,11 @@ def jadwal():
     threshold_time = (datetime.now() - timedelta(minutes=30)).strftime('%Y-%m-%d %H:%M:%S')
     
     if view_req == 'private' and 'user_id' in session:
-        # LOGIKA JADWAL PRIVAT
         rows = conn.execute("SELECT * FROM jadwal WHERE jadwal_datetime >= ? AND status = 'Bertugas' AND pengguna = ? ORDER BY jadwal_datetime ASC", (threshold_time, session['user_id'])).fetchall()
         jadwal_data = [dict(r) for r in rows]
         conn.close()
         return render_template('jadwal.html', jadwal=jadwal_data, user_id=session['user_id'], is_logged_in=True, view_mode='private')
     else:
-        # LOGIKA JADWAL PUBLIK GLOBAL
         rows = conn.execute("SELECT * FROM jadwal WHERE jadwal_datetime >= ? AND status = 'Bertugas' AND nama_pengguna != '' ORDER BY jadwal_datetime ASC", (threshold_time,)).fetchall()
         jadwal_data = [dict(r) for r in rows]
         conn.close()
@@ -446,7 +460,7 @@ def kontak():
 
 
 # ==========================================
-# 8. SISTEM PENJADWALAN MATRIKS WEB (DENGAN HISTORY & MISA KHUSUS)
+# 8. SISTEM PENJADWALAN MATRIKS WEB
 # ==========================================
 @app.route('/penjadwalan', methods=['GET', 'POST'])
 @login_required
@@ -459,7 +473,7 @@ def penjadwalan():
     if request.method == 'POST':
         action = request.form.get('action')
         
-        # --- BUKA EDITOR WEB & MUAT DATA LAMA (AUTOSAVE) ---
+        # --- BUKA EDITOR WEB ---
         if action == 'buat_matriks':
             start_str, end_str = request.form.get('start_date'), request.form.get('end_date')
             if not start_str or not end_str: return redirect(url_for('penjadwalan'))
@@ -467,7 +481,7 @@ def penjadwalan():
             start_time = f"{start_str} 00:00:00"
             end_time = f"{end_str} 23:59:59"
             
-            existing_rows = conn.execute('SELECT * FROM jadwal WHERE jadwal_datetime >= ? AND jadwal_datetime <= ? ORDER BY id ASC', (start_time, end_time)).fetchall()
+            existing_rows = conn.execute('SELECT * FROM jadwal WHERE jadwal_datetime >= ? AND jadwal_datetime <= ? AND jenis="Matriks" ORDER BY id ASC', (start_time, end_time)).fetchall()
             
             existing_wkt = {}
             existing_data = {}
@@ -521,7 +535,7 @@ def penjadwalan():
             conn.close()
             return render_template('penjadwalan.html', matrix=matrix_data, users=users_db, start=start_str, end=end_str, existing_data=existing_data, acara_data=acara_data)
 
-        # --- SIMPAN DATA KE DATABASE SEBAGAI DRAFT ---
+        # --- SIMPAN MATRIKS (ANTI DOUBLE NAMA) ---
         elif action == 'simpan_matriks':
             months_id = {1: 'JAN', 2: 'FEB', 3: 'MAR', 4: 'APR', 5: 'MEI', 6: 'JUNI', 7: 'JULI', 8: 'AGUST', 9: 'SEPT', 10: 'OKT', 11: 'NOV', 12: 'DES'}
             parsed_data = []
@@ -538,7 +552,7 @@ def penjadwalan():
                     c += timedelta(days=1)
                 
                 placeholders = ','.join('?' for _ in all_dates)
-                conn.execute(f"DELETE FROM jadwal WHERE status='Draft' AND date(jadwal_datetime) IN ({placeholders})", all_dates)
+                conn.execute(f"DELETE FROM jadwal WHERE status='Draft' AND jenis='Matriks' AND date(jadwal_datetime) IN ({placeholders})", all_dates)
             
             for key in request.form.keys():
                 if key.startswith('ptgs|'):
@@ -547,10 +561,8 @@ def penjadwalan():
                     
                     wkt = request.form.get(f"wkt|{tgl_str}|{wkt_idx}", "00.00").strip()
                     acara_tambahan = request.form.get(f"ket|{tgl_str}", "").strip()
-                    acara_final = f"Misa"
-                    if acara_tambahan:
-                        acara_tambahan = acara_tambahan.replace('(', '').replace(')', '')
-                        acara_final = f"Misa {acara_tambahan}"
+                    acara_final = f"Misa {acara_tambahan}" if acara_tambahan else "Misa"
+                    acara_final = acara_final.replace('(', '').replace(')', '')
                     
                     dt = datetime.strptime(tgl_str, '%Y-%m-%d')
                     try: jadwal_dt = datetime.strptime(f"{tgl_str} {wkt.replace('.', ':')}:00", '%Y-%m-%d %H:%M:%S')
@@ -558,12 +570,19 @@ def penjadwalan():
                     
                     values = request.form.getlist(key)
                     has_entry = False
+                    
+                    # FILTER ANTI DOUBLE NAMA DI BACKEND
+                    unique_names_in_shift = set()
+                    
                     for val in values:
                         if val and val.strip():
                             names = [n.strip() for n in val.split(',') if n.strip()]
                             for n in names:
-                                parsed_data.append({'jadwal_dt': jadwal_dt, 'dt': dt, 'hari': hari, 'wkt': wkt, 'acara': acara_final, 'nama': n})
-                                has_entry = True
+                                n_lower = n.lower()
+                                if n_lower not in unique_names_in_shift:
+                                    unique_names_in_shift.add(n_lower)
+                                    parsed_data.append({'jadwal_dt': jadwal_dt, 'dt': dt, 'hari': hari, 'wkt': wkt, 'acara': acara_final, 'nama': n})
+                                    has_entry = True
                                 
                     if not has_entry:
                         parsed_data.append({'jadwal_dt': jadwal_dt, 'dt': dt, 'hari': hari, 'wkt': wkt, 'acara': acara_final, 'nama': ''})
@@ -575,13 +594,13 @@ def penjadwalan():
                     username = user_db['username'] if user_db else p['nama']
                     nama_pengguna = user_db['nama'] if user_db else p['nama']
                 
-                conn.execute('INSERT INTO jadwal (jadwal_datetime, tanggal, bulan, hari, waktu, acara, status, pengguna, nama_pengguna) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+                conn.execute('INSERT INTO jadwal (jadwal_datetime, tanggal, bulan, hari, waktu, acara, status, pengguna, nama_pengguna, jenis) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "Matriks")', 
                              (p['jadwal_dt'].strftime('%Y-%m-%d %H:%M:%S'), p['dt'].strftime('%d'), months_id[p['dt'].month], p['hari'], p['wkt'], p['acara'], 'Draft', username, nama_pengguna))
             
             conn.commit(); conn.close()
             return redirect(url_for('cetak_jadwal', target_start=s_str, target_end=e_str))
 
-        # --- TAMBAH JADWAL KHUSUS ---
+        # --- TAMBAH JADWAL KHUSUS (MISA MANTEN/ARWAH) ---
         elif action == 'tambah_khusus':
             tgl_str = request.form.get('tanggal')
             wkt_raw = request.form.get('waktu') 
@@ -600,9 +619,14 @@ def penjadwalan():
                 hari = days_id[dt.weekday()]
                 
                 petugas_list = [p for p in petugas_list if p]
-                if not petugas_list: petugas_list = ['']
+                unique_petugas = []
+                for p in petugas_list:
+                    if p not in unique_petugas:
+                        unique_petugas.append(p)
+                        
+                if not unique_petugas: unique_petugas = ['']
                     
-                for p_id in petugas_list:
+                for p_id in unique_petugas:
                     username, nama_pengguna = '', ''
                     if p_id:
                         user_db = conn.execute("SELECT username, nama FROM users WHERE username = ?", (p_id,)).fetchone()
@@ -610,31 +634,33 @@ def penjadwalan():
                             username = user_db['username']
                             nama_pengguna = user_db['nama']
                         else:
-                            username = p_id
-                            nama_pengguna = p_id
+                            username, nama_pengguna = p_id, p_id
                     
-                    conn.execute('INSERT INTO jadwal (jadwal_datetime, tanggal, bulan, hari, waktu, acara, status, pengguna, nama_pengguna) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+                    conn.execute('INSERT INTO jadwal (jadwal_datetime, tanggal, bulan, hari, waktu, acara, status, pengguna, nama_pengguna, jenis) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "Khusus")', 
                                  (jadwal_dt.strftime('%Y-%m-%d %H:%M:%S'), dt.strftime('%d'), months_id[dt.month], hari, wkt, acara, status, username, nama_pengguna))
                 conn.commit()
                 flash("Jadwal khusus berhasil ditambahkan!", "success")
             return redirect(url_for('penjadwalan'))
 
-        # --- HAPUS JADWAL GROUP VIA HISTORY ---
-        elif action == 'hapus_jadwal_group':
-            dt_val = request.form.get('dt')
-            acara_val = request.form.get('acara')
-            if dt_val and acara_val:
-                conn.execute("DELETE FROM jadwal WHERE jadwal_datetime = ? AND acara = ?", (dt_val, acara_val))
+        # --- FITUR HAPUS BANYAK HISTORY (BULK DELETE) ---
+        elif action == 'hapus_jadwal_bulk':
+            hapus_items = request.form.getlist('hapus_items')
+            if hapus_items:
+                for item in hapus_items:
+                    parts = item.split('|')
+                    if len(parts) == 3:
+                        dt_val, acara_val, jenis_val = parts
+                        conn.execute("DELETE FROM jadwal WHERE jadwal_datetime = ? AND acara = ? AND jenis = ?", (dt_val, acara_val, jenis_val))
                 conn.commit()
-                flash("Jadwal berhasil dihapus secara permanen!", "success")
+                flash(f"{len(hapus_items)} Jadwal berhasil dihapus secara permanen!", "success")
             return redirect(url_for('penjadwalan'))
 
-    # MUAT DATA HISTORY UNTUK DITAMPILKAN DI DASHBOARD PENJADWALAN
+    # MUAT DATA HISTORY SIMPLE UNTUK TAMPILAN
     history_rows = conn.execute('''
-        SELECT jadwal_datetime, hari, waktu, acara, status, 
+        SELECT jadwal_datetime, hari, waktu, acara, status, jenis,
         GROUP_CONCAT(NULLIF(nama_pengguna, ''), ', ') as petugas 
         FROM jadwal 
-        GROUP BY jadwal_datetime, acara, status 
+        GROUP BY jadwal_datetime, acara, status, jenis
         ORDER BY jadwal_datetime DESC 
         LIMIT 100
     ''').fetchall()
@@ -644,7 +670,7 @@ def penjadwalan():
         d = dict(r)
         try:
             dt_obj = datetime.strptime(d['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
-            d['waktu_format'] = f"{d['hari']}, {dt_obj.day} {dt_obj.strftime('%b %Y')} Pkl. {d['waktu']}"
+            d['waktu_format'] = f"{dt_obj.strftime('%d %b %Y')} - {d['waktu']}"
         except:
             d['waktu_format'] = d['jadwal_datetime']
         history.append(d)
@@ -688,11 +714,11 @@ def cetak_jadwal():
     s_str = target_start if target_start else min_date.strftime('%Y-%m-%d')
     e_str = target_end if target_end else max_date.strftime('%Y-%m-%d')
 
-    months_id = {1: 'Januari', 2: 'Februari', 3: 'Maret', 4: 'April', 5: 'Mei', 6: 'Juni', 7: 'Juli', 8: 'Agustus', 9: 'September', 10: 'Oktober', 11: 'November', 12: 'Desember'}
-    periode_str = f"{min_date.day} {months_id[min_date.month]} {min_date.year} - {max_date.day} {months_id[max_date.month]} {max_date.year}"
-
     if not rows:
         return render_template('cetak_jadwal.html', weeks=[], s_str=s_str, e_str=e_str, periode="-")
+
+    months_id = {1: 'Januari', 2: 'Februari', 3: 'Maret', 4: 'April', 5: 'Mei', 6: 'Juni', 7: 'Juli', 8: 'Agustus', 9: 'September', 10: 'Oktober', 11: 'November', 12: 'Desember'}
+    periode_str = f"{min_date.day} {months_id[min_date.month]} {min_date.year} - {max_date.day} {months_id[max_date.month]} {max_date.year}"
 
     jadwal_dict = {}
     for r in rows:
@@ -774,14 +800,8 @@ def publikasi_jadwal():
         start_time = f"{target_start} 00:00:00"
         end_time = f"{target_end} 23:59:59"
         
-        # PERBAIKAN: Kami HANYA menghapus jadwal rutin yang ada di rentang tanggal ini.
-        # Jadwal Khusus atau jadwal di minggu lain TETAP AMAN.
-        conn.execute("DELETE FROM jadwal WHERE status='Bertugas' AND jadwal_datetime >= ? AND jadwal_datetime <= ?", (start_time, end_time))
-        
-        # Ubah Draf menjadi Bertugas
+        conn.execute("DELETE FROM jadwal WHERE status='Bertugas' AND jenis='Matriks' AND jadwal_datetime >= ? AND jadwal_datetime <= ?", (start_time, end_time))
         conn.execute("UPDATE jadwal SET status='Bertugas' WHERE status='Draft' AND jadwal_datetime >= ? AND jadwal_datetime <= ?", (start_time, end_time))
-        
-        # Hapus sisa-sisa draft
         conn.execute("DELETE FROM jadwal WHERE status='Draft' AND jadwal_datetime >= ? AND jadwal_datetime <= ?", (start_time, end_time))
         
     else:
