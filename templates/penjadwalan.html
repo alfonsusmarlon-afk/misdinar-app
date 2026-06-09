@@ -4,8 +4,6 @@
 
 {% block content %}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
     <div>
@@ -67,7 +65,7 @@
                     <input type="text" name="acara" placeholder="Contoh: Misa Arwah" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; outline: none;">
                 </div>
                 <div class="form-group" style="text-align: left; margin-bottom: 16px;">
-                    <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-dark);">Pilih Petugas Khusus</label>
+                    <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-dark);">Pilih Petugas (Bisa Search)</label>
                     <select name="petugas" class="select2-petugas" multiple="multiple" required style="width: 100%;">
                         {% for u in users %}
                         <option value="{{ u.username }}">{{ u.nama }}</option>
@@ -108,7 +106,7 @@
                     <thead>
                         <tr>
                             <th style="padding: 12px 10px; color: var(--text-gray); border-bottom: 2px solid #e2e8f0; width: 5%; text-align: center;">
-                                <input type="checkbox" id="selectAllHistory" style="width: 16px; height: 16px; cursor: pointer;">
+                                <input type="checkbox" onclick="toggleAllCheckboxes(this)" style="width: 16px; height: 16px; cursor: pointer;">
                             </th>
                             <th style="padding: 12px 10px; color: var(--text-gray); border-bottom: 2px solid #e2e8f0; width: 25%;">Tgl & Jam</th>
                             <th style="padding: 12px 10px; color: var(--text-gray); border-bottom: 2px solid #e2e8f0; width: 25%;">Nama Acara</th>
@@ -150,7 +148,7 @@
                                 {% endif %}
                             </td>
                             <td style="padding: 14px 10px; text-align: center;">
-                                <button type="button" class="delete-history-btn" data-delete-value="{{ (h.jadwal_datetime ~ "|" ~ h.acara ~ "|" ~ h.jenis) | tojson }}" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 18px; transition: 0.2s;" onmouseover="this.style.color='#b91c1c'" onmouseout="this.style.color='#ef4444'" title="Hapus Jadwal Ini">
+                                <button type="button" class="btn-delete-single" data-val="{{ h.jadwal_datetime }}|{{ h.acara }}|{{ h.jenis }}" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 18px; transition: 0.2s;" onmouseover="this.style.color='#b91c1c'" onmouseout="this.style.color='#ef4444'" title="Hapus Jadwal Ini">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </td>
@@ -240,6 +238,8 @@
     </div>
 </form>
 
+{% endif %}
+
 <style>
 /* Styling Select2 Agar Sesuai Tema */
 .select2-container--default .select2-selection--multiple {
@@ -289,39 +289,75 @@
 @media(max-width: 768px) { .sticky-footer-action { left: 0; } }
 </style>
 
-<script>
-$(document).ready(function() {
-    // 1. INISIALISASI PENCARIAN PETUGAS KHUSUS (SELECT2)
-    $('.select2-petugas').select2({
-        placeholder: "🔍 Cari dan pilih nama petugas...",
-        allowClear: true
-    });
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-    // 2. FUNGSI SELECT ALL HISTORY
-    const selectAllCb = document.getElementById('selectAllHistory');
-    if (selectAllCb) {
-        selectAllCb.addEventListener('change', function() {
-            document.querySelectorAll('.history-checkbox').forEach(cb => {
-                cb.checked = this.checked;
-            });
+<script type="application/json" id="userDataJson">
+{{ users | tojson }}
+</script>
+
+<script>
+// Parse user data dari JSON (menghindari Jinja2 syntax di dalam script)
+const userData = JSON.parse(document.getElementById('userDataJson').textContent);
+const allUsers = userData.map(u => u.nama);
+
+// 1. FUNGSI SELECT ALL CHECKBOX SECARA NATIVE
+function toggleAllCheckboxes(source) {
+    const checkboxes = document.getElementsByName('hapus_items');
+    for(let i=0, n=checkboxes.length; i<n; i++) {
+        checkboxes[i].checked = source.checked;
+    }
+}
+
+// 2. FUNGSI KONFIRMASI BULK DELETE
+function confirmBulkDelete() {
+    let checkedBoxes = document.querySelectorAll('.history-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        alert("Silakan centang minimal satu jadwal yang ingin dihapus dari history.");
+        return false;
+    }
+    
+    if(confirm("Anda akan menghapus " + checkedBoxes.length + " jadwal terpilih secara permanen. Lanjutkan?")) {
+        document.getElementById('bulkDeleteForm').submit();
+    }
+}
+
+// 3. FUNGSI DELETE SINGLE ITEM
+function deleteSingleHistory(value) {
+    if(confirm('Apakah Anda yakin ingin menghapus jadwal ini secara permanen?')) {
+        let form = document.getElementById('bulkDeleteForm');
+        document.querySelectorAll('.history-checkbox').forEach(cb => cb.checked = false);
+        
+        let input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'hapus_items';
+        input.value = value;
+        form.appendChild(input);
+        form.submit();
+    }
+}
+
+$(document).ready(function() {
+    // 4. INISIALISASI PENCARIAN PETUGAS KHUSUS (SELECT2)
+    if ($('.select2-petugas').length > 0) {
+        $('.select2-petugas').select2({
+            placeholder: "🔍 Ketik untuk mencari nama petugas...",
+            allowClear: true,
+            width: '100%'
         });
     }
 
-    // 3. FUNGSI ANTI-DOUBLE NAMA & DINAMIS DROPDOWN
-    // Menggunakan filter tojson bawaan Jinja agar string javascript dijamin 100% aman
-    const allUsers = [{% for u in users %}{{ u.nama | tojson }}{{ "," if not loop.last }}{% endfor %}];
-
-    // Event listener untuk tombol hapus history
-    document.querySelectorAll('.delete-history-btn').forEach(btn => {
+    // 5. EVENT LISTENER TOMBOL HAPUS HISTORY
+    document.querySelectorAll('.btn-delete-single').forEach(btn => {
         btn.addEventListener('click', function() {
-            const value = this.getAttribute('data-delete-value');
-            deleteSingleHistory(JSON.parse(value));
+            const value = this.getAttribute('data-val');
+            deleteSingleHistory(value);
         });
     });
 
+    // 6. FUNGSI ANTI-DOUBLE NAMA & DINAMIS DROPDOWN
     const matrixInputs = document.querySelectorAll('.sheet-input');
     matrixInputs.forEach(input => {
-        // Saat kotak Misa di-klik, buatkan dropdown nama yang BELUM dipakai di jam/hari tsb
         input.addEventListener('focus', function() {
             let colId = this.getAttribute('data-col');
             let inputsInSameCol = document.querySelectorAll(`.sheet-input[data-col="${colId}"]`);
@@ -337,7 +373,6 @@ $(document).ready(function() {
             datalist.innerHTML = ''; 
             
             allUsers.forEach(nama => {
-                // Jika nama belum ada di baris-baris atas/bawahnya, tampilkan sebagai opsi
                 if (!usedNames.includes(nama.toLowerCase())) {
                     let opt = document.createElement('option');
                     opt.value = nama;
@@ -346,7 +381,6 @@ $(document).ready(function() {
             });
         });
         
-        // Cek Keamanan: Jika BPH memaksakan ketik manual nama yang sama
         input.addEventListener('change', function() {
             let val = this.value.trim().toLowerCase();
             if (!val) return;
@@ -362,42 +396,11 @@ $(document).ready(function() {
             });
             
             if (duplicateCount > 1) {
-                // PERBAIKAN: Menggunakan petik yang aman agar tidak syntax error
-                alert("⚠️ Nama '" + this.value + "' sudah Anda tugaskan pada jam dan hari ini.\nSistem otomatis menghapusnya untuk mencegah duplikasi (Anti-Double).");
+                alert("⚠️ Nama yang Anda pilih sudah bertugas pada jam dan hari ini.\n\nSistem otomatis menghapusnya untuk mencegah data ganda.");
                 this.value = ''; 
             }
         });
     });
 });
-
-// FUNGSI KONFIRMASI BULK DELETE (Hapus Banyak)
-function confirmBulkDelete() {
-    let checkedBoxes = document.querySelectorAll('.history-checkbox:checked');
-    if (checkedBoxes.length === 0) {
-        alert("Silakan centang minimal satu jadwal yang ingin dihapus dari history.");
-        return false;
-    }
-    
-    // PERBAIKAN: Menggunakan petik yang aman agar tidak syntax error
-    if(confirm("Anda akan menghapus " + checkedBoxes.length + " jadwal terpilih secara permanen. Lanjutkan?")) {
-        document.getElementById('bulkDeleteForm').submit();
-    }
-}
-
-// FUNGSI HAPUS SINGLE VIA TOMBOL TONG SAMPAH
-function deleteSingleHistory(value) {
-    if(confirm('Apakah Anda yakin ingin menghapus jadwal ini secara permanen?')) {
-        let form = document.getElementById('bulkDeleteForm');
-        document.querySelectorAll('.history-checkbox').forEach(cb => cb.checked = false);
-        
-        let input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'hapus_items';
-        input.value = value;
-        form.appendChild(input);
-        form.submit();
-    }
-}
 </script>
-{% endif %}
 {% endblock %}

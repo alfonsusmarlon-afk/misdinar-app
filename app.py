@@ -468,7 +468,8 @@ def penjadwalan():
     if session.get('role') not in ['super admin', 'penjadwalan']: return redirect(url_for('index'))
     
     conn = get_db_connection()
-    users_db = conn.execute("SELECT username, nama FROM users WHERE role != 'super admin' ORDER BY nama ASC").fetchall()
+    users_db_rows = conn.execute("SELECT username, nama FROM users WHERE role != 'super admin' ORDER BY nama ASC").fetchall()
+    users_db = [dict(u) for u in users_db_rows]
     
     if request.method == 'POST':
         action = request.form.get('action')
@@ -535,7 +536,7 @@ def penjadwalan():
             conn.close()
             return render_template('penjadwalan.html', matrix=matrix_data, users=users_db, start=start_str, end=end_str, existing_data=existing_data, acara_data=acara_data)
 
-        # --- SIMPAN MATRIKS (ANTI DOUBLE NAMA) ---
+        # --- SIMPAN MATRIKS ---
         elif action == 'simpan_matriks':
             months_id = {1: 'JAN', 2: 'FEB', 3: 'MAR', 4: 'APR', 5: 'MEI', 6: 'JUNI', 7: 'JULI', 8: 'AGUST', 9: 'SEPT', 10: 'OKT', 11: 'NOV', 12: 'DES'}
             parsed_data = []
@@ -571,7 +572,6 @@ def penjadwalan():
                     values = request.form.getlist(key)
                     has_entry = False
                     
-                    # FILTER ANTI DOUBLE NAMA DI BACKEND
                     unique_names_in_shift = set()
                     
                     for val in values:
@@ -600,7 +600,7 @@ def penjadwalan():
             conn.commit(); conn.close()
             return redirect(url_for('cetak_jadwal', target_start=s_str, target_end=e_str))
 
-        # --- TAMBAH JADWAL KHUSUS (MISA MANTEN/ARWAH) ---
+        # --- TAMBAH JADWAL KHUSUS ---
         elif action == 'tambah_khusus':
             tgl_str = request.form.get('tanggal')
             wkt_raw = request.form.get('waktu') 
@@ -642,7 +642,7 @@ def penjadwalan():
                 flash("Jadwal khusus berhasil ditambahkan!", "success")
             return redirect(url_for('penjadwalan'))
 
-        # --- FITUR HAPUS BANYAK HISTORY (BULK DELETE) ---
+        # --- HAPUS JADWAL VIA HISTORY ---
         elif action == 'hapus_jadwal_bulk':
             hapus_items = request.form.getlist('hapus_items')
             if hapus_items:
@@ -655,7 +655,6 @@ def penjadwalan():
                 flash(f"{len(hapus_items)} Jadwal berhasil dihapus secara permanen!", "success")
             return redirect(url_for('penjadwalan'))
 
-    # MUAT DATA HISTORY SIMPLE UNTUK TAMPILAN
     history_rows = conn.execute('''
         SELECT jadwal_datetime, hari, waktu, acara, status, jenis,
         GROUP_CONCAT(NULLIF(nama_pengguna, ''), ', ') as petugas 
@@ -714,11 +713,11 @@ def cetak_jadwal():
     s_str = target_start if target_start else min_date.strftime('%Y-%m-%d')
     e_str = target_end if target_end else max_date.strftime('%Y-%m-%d')
 
-    if not rows:
-        return render_template('cetak_jadwal.html', weeks=[], s_str=s_str, e_str=e_str, periode="-")
-
     months_id = {1: 'Januari', 2: 'Februari', 3: 'Maret', 4: 'April', 5: 'Mei', 6: 'Juni', 7: 'Juli', 8: 'Agustus', 9: 'September', 10: 'Oktober', 11: 'November', 12: 'Desember'}
     periode_str = f"{min_date.day} {months_id[min_date.month]} {min_date.year} - {max_date.day} {months_id[max_date.month]} {max_date.year}"
+
+    if not rows:
+        return render_template('cetak_jadwal.html', weeks=[], s_str=s_str, e_str=e_str, periode="-")
 
     jadwal_dict = {}
     for r in rows:
