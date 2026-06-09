@@ -13,7 +13,7 @@
         {% endif %}
     </div>
     <div style="display: flex; gap: 10px;">
-        {% if is_logged_in and session.get('role') in ['super admin', 'penjadwalan', 'bph'] %}
+        {% if is_logged_in and session.get('role') in ['super admin', 'penjadwalan'] %}
         <a href="{{ url_for('penjadwalan') }}" class="btn-primary" style="background-color: var(--white); color: var(--primary-blue); border: 1px solid var(--primary-blue);"><i class="fas fa-edit"></i> Edit Matriks Jadwal</a>
         {% endif %}
     </div>
@@ -35,7 +35,6 @@
     <div class="schedule-list">
         {% set grouped_jadwal = {} %}
         
-        <!-- MENGELOMPOKKAN JADWAL BERDASARKAN TANGGAL & WAKTU -->
         {% for j in jadwal %}
             {% set key = j.tanggal ~ '-' ~ j.bulan ~ '-' ~ j.waktu %}
             
@@ -46,7 +45,6 @@
             {% endif %}
         {% endfor %}
 
-        <!-- MENAMPILKAN JADWAL YANG SUDAH DIKELOMPOKKAN -->
         {% for key, group in grouped_jadwal.items() %}
             {% set j = group['data'] %}
             <div class="schedule-card">
@@ -66,6 +64,14 @@
                             {% endfor %}
                         </div>
                     </div>
+                    
+                    {% if view_mode == 'private' %}
+                    <div style="margin-top: 16px; border-top: 1px dashed #e2e8f0; padding-top: 12px;">
+                        <button type="button" onclick="showQR('{{ j.id }}', '{{ user_id }}', '{{ j.acara }}', '{{ j.tanggal }} {{ j.bulan }} {{ j.waktu }}')" style="background: #10b981; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; width: 100%; transition: 0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                            <i class="fas fa-qrcode"></i> Tampilkan QR Kehadiran
+                        </button>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         {% endfor %}
@@ -73,103 +79,47 @@
     {% endif %}
 </div>
 
+{% if view_mode == 'private' %}
+<div id="qrModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+    <div style="background: white; padding: 30px; border-radius: 16px; text-align: center; max-width: 350px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+        <h3 style="margin-top:0; color: var(--text-dark);" id="qrTitle">QR Kehadiran</h3>
+        <p style="color: var(--text-gray); font-size: 13px; margin-bottom: 20px;" id="qrDesc">Tunjukkan ke pengurus untuk absen.</p>
+        
+        <div style="background: #f8fafc; padding: 15px; border-radius: 12px; display: inline-block;">
+            <img id="qrImage" src="" style="width: 200px; height: 200px; display: block;" />
+        </div>
+        
+        <button onclick="document.getElementById('qrModal').style.display='none'" style="margin-top: 24px; background: #e2e8f0; color: #475569; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 15px;">Tutup QR</button>
+    </div>
+</div>
+
+<script>
+function showQR(jadwalId, username, acara, waktu) {
+    let dataObj = {j: jadwalId, u: username};
+    let dataStr = JSON.stringify(dataObj);
+    let qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" + encodeURIComponent(dataStr);
+    
+    document.getElementById('qrImage').src = qrUrl;
+    document.getElementById('qrTitle').innerText = "QR Absen " + acara;
+    document.getElementById('qrDesc').innerText = waktu + "\nArahkan ini ke kamera Pengurus.";
+    document.getElementById('qrModal').style.display = 'flex';
+}
+</script>
+{% endif %}
+
 <style>
-.schedule-container {
-    background: var(--white);
-    padding: 30px;
-    border-radius: 16px;
-    box-shadow: var(--shadow);
-}
-
-.empty-state {
-    text-align: center;
-    padding: 60px 20px;
-}
-
-.empty-icon {
-    font-size: 48px;
-    color: #cbd5e1;
-    margin-bottom: 16px;
-}
-
-.empty-state h3 {
-    color: var(--text-dark);
-    margin-bottom: 8px;
-}
-
-.empty-state p {
-    color: var(--text-gray);
-}
-
-.schedule-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 20px;
-}
-
-.schedule-card {
-    display: flex;
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    overflow: hidden;
-    transition: 0.3s;
-    background: #fafafa;
-}
-
-.schedule-card:hover {
-    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-    transform: translateY(-2px);
-    border-color: var(--primary-blue);
-}
-
-.date-box {
-    background: var(--primary-blue);
-    color: var(--white);
-    padding: 20px 24px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    min-width: 90px;
-}
-
-.date-box .date {
-    font-size: 28px;
-    font-weight: 800;
-    line-height: 1;
-}
-
-.date-box .month {
-    font-size: 14px;
-    font-weight: 600;
-    text-transform: uppercase;
-    margin-top: 4px;
-}
-
-.schedule-info {
-    padding: 20px;
-    flex: 1;
-    background: white;
-}
-
-.schedule-info h4 {
-    color: var(--text-dark);
-    font-size: 17px;
-    font-weight: 800;
-    margin-bottom: 8px;
-}
-
-.badge {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.badge-primary {
-    background: #eef2ff;
-    color: var(--primary-blue);
-}
+.schedule-container { background: var(--white); padding: 30px; border-radius: 16px; box-shadow: var(--shadow); }
+.empty-state { text-align: center; padding: 60px 20px; }
+.empty-icon { font-size: 48px; color: #cbd5e1; margin-bottom: 16px; }
+.schedule-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+.schedule-card { display: flex; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; transition: 0.3s; background: #fafafa; }
+.schedule-card:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); transform: translateY(-2px); border-color: var(--primary-blue); }
+.date-box { background: var(--primary-blue); color: var(--white); padding: 20px 24px; display: flex; flex-direction: column; justify-content: center; align-items: center; min-width: 90px; }
+.date-box .date { font-size: 28px; font-weight: 800; line-height: 1; }
+.date-box .month { font-size: 14px; font-weight: 600; text-transform: uppercase; margin-top: 4px; }
+.schedule-info { padding: 20px; flex: 1; background: white; }
+.schedule-info h4 { color: var(--text-dark); font-size: 17px; font-weight: 800; margin-bottom: 8px; }
+.badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.badge-primary { background: #eef2ff; color: var(--primary-blue); }
 </style>
 {% endblock %}

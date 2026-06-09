@@ -1,13 +1,23 @@
 {% extends "base.html" %}
+
 {% block title %}Direktori Anggota - MISDINAR{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h2>Direktori & Database Anggota</h2>
-    <p>Kelola data akun dan hak akses (Role) seluruh anggota misdinar.</p>
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+    <div>
+        <h2>Direktori & Database Anggota</h2>
+        <p>Kelola data akun dan hak akses (Role) seluruh anggota misdinar.</p>
+    </div>
+    
+    <div style="flex: 1; min-width: 250px; max-width: 350px;">
+        <div style="position: relative;">
+            <i class="fas fa-search" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-gray);"></i>
+            <input type="text" id="searchAnggota" placeholder="Cari nama atau username..." style="width: 100%; padding: 12px 16px 12px 42px; border: 1px solid var(--border-color); border-radius: 30px; font-family: inherit; font-size: 14px; outline: none; transition: 0.2s;">
+        </div>
+    </div>
 </div>
 
-<div class="anggota-grid">
+<div class="anggota-grid" id="anggotaGrid">
     {% for u in users %}
     <div class="anggota-card">
         <div class="anggota-header-bg"></div>
@@ -20,9 +30,9 @@
         </div>
         
         <div class="anggota-info">
-            <h3>{{ u.nama }}</h3>
-            <span class="badge-role role-{{ u.role|replace(' ', '-') }}">{{ u.role | upper }}</span>
-            <p style="margin-top: 12px;"><i class="fas fa-id-badge"></i> {{ u.username }}</p>
+            <h3 class="search-target-name">{{ u.nama }}</h3>
+            <span class="badge-role role-{{ u.role|replace(' ', '-') }} search-target-role">{{ u.role | upper }}</span>
+            <p style="margin-top: 12px;" class="search-target-user"><i class="fas fa-id-badge"></i> {{ u.username }}</p>
             <p><i class="fas fa-phone"></i> {{ u.no_hp if u.no_hp else '-' }}</p>
         </div>
         
@@ -34,21 +44,21 @@
                 data-panggilan="{{ u.nama_panggilan or '' }}"
                 data-tgllahir="{{ u.tanggal_lahir or '' }}"
                 data-email="{{ u.email or '' }}"
-                data-hp="{{ u.no_hp or '' }}"
+                data-nohp="{{ u.no_hp or '' }}"
                 data-alamat="{{ u.alamat or '' }}"
-                data-ortu="{{ u.nama_ortu or '' }}"
-                data-hportu="{{ u.no_hp_ortu or '' }}"
-                data-foto="{{ u.foto_profil or '' }}">
-                <i class="fas fa-address-card"></i> Lihat Detail
+                data-namaortu="{{ u.nama_ortu or '' }}"
+                data-nohportu="{{ u.no_hp_ortu or '' }}">
+                <i class="fas fa-info-circle"></i> Detail
             </button>
             
             {% if current_role in ['super admin', 'bph'] %}
-            <button type="button" class="btn-edit" onclick="editAnggota('{{ u.username }}', '{{ u.nama }}', '{{ u.role }}')">
-                <i class="fas fa-cog"></i> Role
+            <button type="button" class="btn-edit" onclick="showEditRole('{{ u.username }}', '{{ u.role }}', '{{ u.nama }}')">
+                <i class="fas fa-user-cog"></i> Akses
             </button>
-            <form action="{{ url_for('hapus_anggota') }}" method="POST" style="margin:0;">
+            
+            <form action="{{ url_for('hapus_anggota') }}" method="POST" onsubmit="return confirm('Hapus anggota {{ u.nama }} secara permanen?');" style="margin: 0;">
                 <input type="hidden" name="username" value="{{ u.username }}">
-                <button type="submit" class="btn-delete" onclick="return confirm('Hapus {{ u.nama }} beserta data absen/sanksi nya secara permanen?');"><i class="fas fa-trash"></i></button>
+                <button type="submit" class="btn-delete"><i class="fas fa-trash-alt"></i></button>
             </form>
             {% endif %}
         </div>
@@ -56,132 +66,101 @@
     {% endfor %}
 </div>
 
-<div id="detailModal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 500px;">
+<script>
+document.getElementById('searchAnggota').addEventListener('keyup', function() {
+    let filter = this.value.toLowerCase();
+    let cards = document.querySelectorAll('.anggota-card');
+    
+    cards.forEach(card => {
+        let name = card.querySelector('.search-target-name').innerText.toLowerCase();
+        let user = card.querySelector('.search-target-user').innerText.toLowerCase();
+        let role = card.querySelector('.search-target-role').innerText.toLowerCase();
+        
+        // Cari berdasarkan Nama, Username, atau Role
+        if (name.includes(filter) || user.includes(filter) || role.includes(filter)) {
+            card.style.display = 'flex'; // maintain the flex display
+        } else {
+            card.style.display = 'none';
+        }
+    });
+});
+</script>
+
+<div id="detailModal" class="modal">
+    <div class="modal-content modal-md">
         <div class="modal-header">
-            <h3><i class="fas fa-address-book"></i> Detail Identitas Anggota</h3>
-            <span class="close-btn" onclick="closeModal('detailModal')">&times;</span>
+            <h3>Profil Lengkap Anggota</h3>
+            <span class="close" onclick="document.getElementById('detailModal').style.display='none'">&times;</span>
         </div>
-        <div class="modal-body">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <img id="detail-foto" src="" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--light-blue); display: none; margin: 0 auto;">
-                <h3 id="detail-nama" style="margin: 10px 0 4px 0; color: var(--text-dark);">Nama</h3>
-                <span id="detail-role" class="badge-role">ROLE</span>
-            </div>
-            
-            <table class="detail-table">
-                <tr><td><i class="fas fa-id-badge"></i> Username</td><td id="detail-username">-</td></tr>
-                <tr><td><i class="fas fa-signature"></i> Panggilan</td><td id="detail-panggilan">-</td></tr>
-                <tr><td><i class="fas fa-birthday-cake"></i> Tgl Lahir</td><td id="detail-tgl-lahir">-</td></tr>
-                <tr><td><i class="fas fa-envelope"></i> Email</td><td id="detail-email">-</td></tr>
-                <tr><td><i class="fas fa-mobile-alt"></i> No. HP</td><td id="detail-hp">-</td></tr>
-                <tr><td><i class="fas fa-map-marker-alt"></i> Alamat</td><td id="detail-alamat">-</td></tr>
-                <tr><th colspan="2" style="background: var(--bg-gray); text-align: left; padding-top: 16px;">Data Orang Tua</th></tr>
-                <tr><td><i class="fas fa-user-friends"></i> Nama Ortu</td><td id="detail-ortu">-</td></tr>
-                <tr><td><i class="fas fa-phone-alt"></i> No. HP Ortu</td><td id="detail-hp-ortu">-</td></tr>
-            </table>
+        <div class="modal-body" id="detailBody" style="line-height: 1.8;">
         </div>
     </div>
 </div>
 
-<div id="editModal" class="modal-overlay">
-    <div class="modal-content">
+<div id="editRoleModal" class="modal">
+    <div class="modal-content modal-sm">
         <div class="modal-header">
-            <h3><i class="fas fa-user-cog"></i> Atur Pengguna</h3>
-            <span class="close-btn" onclick="closeModal('editModal')">&times;</span>
+            <h3>Ubah Hak Akses</h3>
+            <span class="close" onclick="document.getElementById('editRoleModal').style.display='none'">&times;</span>
         </div>
         <div class="modal-body">
-            <form action="{{ url_for('ubah_role') }}" method="POST" id="edit-form">
-                <input type="hidden" name="username" id="modal-username">
-                <div class="form-group">
-                    <label>Nama Pengguna</label>
-                    <input type="text" id="modal-nama" readonly style="background: var(--bg-gray);">
-                </div>
+            <p id="editRoleName" style="margin-bottom: 16px; font-weight: 600; color: var(--primary-blue);"></p>
+            <form action="{{ url_for('ubah_role') }}" method="POST">
+                <input type="hidden" name="username" id="editRoleUsername">
                 <div class="form-group">
                     <label>Role / Jabatan</label>
-                    <select name="role" id="modal-role" class="table-select-role">
-                        <option value="user">User Biasa</option>
-                        <option value="pelatihan">Pengurus Pelatihan</option>
-                        <option value="penjadwalan">Pengurus Penjadwalan</option>
-                        <option value="bph">BPH</option>
-                        {% if current_role == 'super admin' %}<option value="super admin">Super Admin</option>{% endif %}
+                    <select name="role" id="editRoleSelect" required>
+                        <option value="user">Anggota Biasa (User)</option>
+                        <option value="pelatihan">Divisi Pelatihan</option>
+                        <option value="penjadwalan">Divisi Penjadwalan</option>
+                        <option value="bph">Pengurus Inti (BPH)</option>
+                        {% if current_role == 'super admin' %}
+                        <option value="super admin">Super Admin</option>
+                        {% endif %}
                     </select>
                 </div>
+                
                 {% if current_role == 'super admin' %}
-                <div class="form-group" style="margin-top: 16px;">
-                    <label>Reset Password</label>
-                    <input type="text" name="password" placeholder="Kosongkan jika tidak diubah">
+                <div class="form-group">
+                    <label>Reset Password (Opsional)</label>
+                    <input type="password" name="password" placeholder="Kosongkan jika tidak ingin direset">
                 </div>
                 {% endif %}
-                <button type="submit" class="btn-primary w-100" style="margin-top: 16px; padding: 12px; width: 100%;">Simpan Perubahan</button>
+                
+                <div class="form-actions" style="margin-top: 24px; text-align: right;">
+                    <button type="submit" class="btn-primary">Simpan Perubahan</button>
+                </div>
             </form>
         </div>
     </div>
 </div>
 
 <script>
-    function showDetail(btn) {
-        document.getElementById('detail-nama').innerText = btn.getAttribute('data-nama') || '-';
-        document.getElementById('detail-role').innerText = (btn.getAttribute('data-role') || '-').toUpperCase();
-        document.getElementById('detail-username').innerText = btn.getAttribute('data-username') || '-';
-        document.getElementById('detail-panggilan').innerText = btn.getAttribute('data-panggilan') || '-';
-        document.getElementById('detail-tgl-lahir').innerText = btn.getAttribute('data-tgllahir') || '-';
-        document.getElementById('detail-email').innerText = btn.getAttribute('data-email') || '-';
-        document.getElementById('detail-hp').innerText = btn.getAttribute('data-hp') || '-';
-        document.getElementById('detail-alamat').innerText = btn.getAttribute('data-alamat') || '-';
-        document.getElementById('detail-ortu').innerText = btn.getAttribute('data-ortu') || '-';
-        document.getElementById('detail-hp-ortu').innerText = btn.getAttribute('data-hportu') || '-';
-        
-        var fotoPath = btn.getAttribute('data-foto');
-        var imgEl = document.getElementById('detail-foto');
-        if (fotoPath) {
-            imgEl.src = "/static/" + fotoPath;
-            imgEl.style.display = 'block';
-        } else {
-            imgEl.style.display = 'none';
-        }
-        
-        document.getElementById('detailModal').style.display = "flex";
-    }
+function showDetail(btn) {
+    const data = btn.dataset;
+    let html = `
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; width: 40%; color: #64748b;">Nama Lengkap</td><td style="font-weight: 600;">${data.nama}</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Nama Panggilan</td><td>${data.panggilan || '-'}</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Username</td><td>${data.username}</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Hak Akses</td><td><span style="background: #eef2ff; color: #4338ca; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">${data.role.toUpperCase()}</span></td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Tanggal Lahir</td><td>${data.tgllahir || '-'}</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">No. HP/WA</td><td>${data.nohp || '-'}</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Email</td><td>${data.email || '-'}</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Alamat</td><td>${data.alamat || '-'}</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Nama Orang Tua</td><td>${data.namaortu || '-'}</td></tr>
+            <tr><td style="padding: 8px 0; color: #64748b;">No. HP Orang Tua</td><td>${data.nohportu || '-'}</td></tr>
+        </table>
+    `;
+    document.getElementById('detailBody').innerHTML = html;
+    document.getElementById('detailModal').style.display = 'flex';
+}
 
-    function editAnggota(username, nama, role) {
-        document.getElementById('modal-username').value = username;
-        document.getElementById('modal-nama').value = nama;
-        document.getElementById('modal-role').value = role;
-        document.getElementById('editModal').style.display = "flex";
-    }
-
-    function closeModal(id) { document.getElementById(id).style.display = "none"; }
+function showEditRole(username, currentRole, nama) {
+    document.getElementById('editRoleUsername').value = username;
+    document.getElementById('editRoleSelect').value = currentRole;
+    document.getElementById('editRoleName').innerText = "Anggota: " + nama;
+    document.getElementById('editRoleModal').style.display = 'flex';
+}
 </script>
-
-<style>
-.anggota-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
-.anggota-card { background: var(--white); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; position: relative; display: flex; flex-direction: column;}
-.anggota-header-bg { height: 60px; background: linear-gradient(135deg, var(--primary-blue), var(--light-blue)); }
-.anggota-avatar-container { margin-top: -40px; display: flex; justify-content: center; }
-.anggota-avatar-container img, .avatar-placeholder { width: 80px; height: 80px; border-radius: 50%; border: 4px solid var(--white); object-fit: cover; background: var(--bg-gray); display: flex; align-items: center; justify-content: center; font-size: 32px; color: var(--text-gray); box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 2;}
-.anggota-info { padding: 16px 20px; text-align: center; flex: 1; }
-.anggota-info h3 { font-size: 16px; margin: 0 0 6px 0; color: var(--text-dark); }
-.anggota-info p { font-size: 12px; color: var(--text-gray); margin: 4px 0; }
-.badge-role { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 10px; font-weight: bold; background: var(--light-blue); color: var(--primary-blue);}
-
-.anggota-actions { display: flex; border-top: 1px solid var(--border-color); }
-.anggota-actions button { flex: 1; padding: 12px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: transparent; border-right: 1px solid var(--border-color); transition: 0.2s;}
-.btn-detail { color: var(--primary-blue); } .btn-detail:hover { background: var(--light-blue); }
-.btn-edit { color: #fd7e14; } .btn-edit:hover { background: #fff3cd; }
-.btn-delete { color: #dc3545; border-right: none !important;} .btn-delete:hover { background: #f8d7da; }
-
-.detail-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.detail-table td { padding: 8px 4px; border-bottom: 1px solid var(--border-color); color: var(--text-dark); }
-.detail-table td:first-child { color: var(--text-gray); width: 40%; font-weight: 600; }
-
-.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
-.modal-content { background: var(--white); border-radius: 12px; width: 100%; max-width: 400px; overflow: hidden; animation: slideUp 0.3s;}
-.modal-header { padding: 16px; background: var(--light-blue); display: flex; justify-content: space-between; align-items: center; }
-.modal-body { padding: 20px; max-height: 70vh; overflow-y: auto;}
-.close-btn { font-size: 24px; cursor: pointer; color: var(--text-gray); }
-.form-group label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px; margin-top: 12px;}
-.form-group input, .table-select-role { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; }
-.btn-primary { background: var(--primary-blue); color: white; border: none; border-radius: 8px; cursor: pointer;}
-</style>
 {% endblock %}

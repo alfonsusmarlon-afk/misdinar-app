@@ -65,7 +65,7 @@
                     <input type="text" name="acara" placeholder="Contoh: Misa Arwah" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; outline: none;">
                 </div>
                 <div class="form-group" style="text-align: left; margin-bottom: 16px;">
-                    <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-dark);">Pilih Petugas (Bisa Search)</label>
+                    <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-dark);">Pilih Petugas Khusus</label>
                     <select name="petugas" class="select2-petugas" multiple="multiple" required style="width: 100%;">
                         {% for u in users %}
                         <option value="{{ u.username }}">{{ u.nama }}</option>
@@ -96,7 +96,7 @@
                     <i class="fas fa-list-alt" style="color: #10b981;"></i> Riwayat Daftar Jadwal
                 </h3>
                 
-                <button type="button" onclick="confirmBulkDelete()" style="background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fee2e2'">
+                <button type="button" onclick="confirmBulkDelete()" style="background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; display: flex; align-items: center; gap: 8px;">
                     <i class="fas fa-trash-alt"></i> Hapus Terpilih
                 </button>
             </div>
@@ -141,14 +141,10 @@
                                 </div>
                             </td>
                             <td style="padding: 14px 10px; line-height: 1.5; color: var(--text-gray);">
-                                {% if h.petugas %}
-                                    {{ h.petugas }}
-                                {% else %}
-                                    -
-                                {% endif %}
+                                {{ h.petugas if h.petugas else '-' }}
                             </td>
                             <td style="padding: 14px 10px; text-align: center;">
-                                <button type="button" class="btn-delete-single" data-val="{{ h.jadwal_datetime }}|{{ h.acara }}|{{ h.jenis }}" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 18px; transition: 0.2s;" onmouseover="this.style.color='#b91c1c'" onmouseout="this.style.color='#ef4444'" title="Hapus Jadwal Ini">
+                                <button type="button" class="btn-delete-single" data-val="{{ h.jadwal_datetime }}|{{ h.acara }}|{{ h.jenis }}" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 18px;" title="Hapus Jadwal Ini">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </td>
@@ -267,77 +263,63 @@
 .spreadsheet-table th, .spreadsheet-table td { border: 1px solid #cbd5e1; padding: 0; text-align: center; }
 .header-main { background: var(--primary-blue); color: white; font-size: 14px; padding: 12px !important; text-transform: uppercase; letter-spacing: 0.5px; }
 .header-sub { background: var(--light-blue); color: var(--text-dark); padding: 6px !important; font-size: 14px; }
-
 .acara-input { width: 150px; background: transparent; border: none; text-align: center; font-size: 12px; color: white; outline: none; transition: 0.2s; font-family: inherit;}
 .acara-input::placeholder { color: rgba(255,255,255,0.6); }
 .acara-input:focus { background: white; color: var(--primary-blue); border-radius: 4px; padding: 2px;}
-
 .wkt-input { width: 80px; background: transparent; border: none; border-bottom: 1px dashed var(--text-gray); text-align: center; font-weight: bold; font-size: 14px; color: var(--text-dark); outline: none; font-family: inherit; padding: 4px 2px;}
 .wkt-input:focus { border-bottom: 1px solid var(--primary-blue); background: white; border-radius: 4px;}
-
 .sheet-input { border: none; outline: none; width: 130px; padding: 12px 8px; font-size: 13px; text-align: center; background: transparent; transition: 0.2s; font-family: inherit; color: var(--text-dark); font-weight: 500; }
 .sheet-input:focus { background: #eef2ff; box-shadow: inset 0 0 0 2px var(--primary-blue); }
 .sheet-input::placeholder { color: #cbd5e1; font-weight: normal; }
-
 .btn-primary { background: var(--primary-blue); color: white; transition: 0.3s; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;}
 .btn-primary:hover { transform: translateY(-2px); opacity: 0.9;}
 .btn-outline { padding: 10px 24px; border: 1px solid var(--text-gray); color: var(--text-gray); border-radius: 8px; font-weight: bold; transition: 0.3s; background: transparent; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center;}
 .btn-outline:hover { background: var(--bg-gray); color: var(--text-dark); }
-
 .sticky-footer-action { position: fixed; bottom: 0; left: var(--sidebar-width); right: 0; background: var(--white); padding: 16px 24px; box-shadow: 0 -4px 12px rgba(0,0,0,0.05); display: flex; justify-content: flex-end; gap: 12px; z-index: 90; border-top: 1px solid var(--border-color); transition: left 0.3s;}
-
 @media(max-width: 768px) { .sticky-footer-action { left: 0; } }
 </style>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-<script type="application/json" id="userDataJson">
-{{ users | tojson }}
-</script>
-
 <script>
-// Parse user data dari JSON (menghindari Jinja2 syntax di dalam script)
-const userData = JSON.parse(document.getElementById('userDataJson').textContent);
-const allUsers = userData.map(u => u.nama);
-
-// 1. FUNGSI SELECT ALL CHECKBOX SECARA NATIVE
+// 1. FUNGSI NATIVE JS UNTUK SELECT ALL KOTAK
 function toggleAllCheckboxes(source) {
-    const checkboxes = document.getElementsByName('hapus_items');
-    for(let i=0, n=checkboxes.length; i<n; i++) {
-        checkboxes[i].checked = source.checked;
-    }
+    const checkboxes = document.querySelectorAll('.history-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = source.checked;
+    });
 }
 
 // 2. FUNGSI KONFIRMASI BULK DELETE
 function confirmBulkDelete() {
     let checkedBoxes = document.querySelectorAll('.history-checkbox:checked');
     if (checkedBoxes.length === 0) {
-        alert("Silakan centang minimal satu jadwal yang ingin dihapus dari history.");
+        alert("Silakan centang minimal satu jadwal di kolom tabel sebelah kiri.");
         return false;
     }
-    
     if(confirm("Anda akan menghapus " + checkedBoxes.length + " jadwal terpilih secara permanen. Lanjutkan?")) {
         document.getElementById('bulkDeleteForm').submit();
     }
 }
 
-// 3. FUNGSI DELETE SINGLE ITEM
-function deleteSingleHistory(value) {
-    if(confirm('Apakah Anda yakin ingin menghapus jadwal ini secara permanen?')) {
-        let form = document.getElementById('bulkDeleteForm');
-        document.querySelectorAll('.history-checkbox').forEach(cb => cb.checked = false);
-        
-        let input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'hapus_items';
-        input.value = value;
-        form.appendChild(input);
-        form.submit();
-    }
-}
-
 $(document).ready(function() {
+    // 3. FUNGSI SINGLE DELETE YANG AMAN DARI TANDA BACA
+    $('.btn-delete-single').click(function() {
+        let val = $(this).attr('data-val');
+        if(confirm('Apakah Anda yakin ingin menghapus jadwal ini secara permanen?')) {
+            let form = document.getElementById('bulkDeleteForm');
+            document.querySelectorAll('.history-checkbox').forEach(cb => cb.checked = false);
+            
+            let input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'hapus_items';
+            input.value = val;
+            form.appendChild(input);
+            form.submit();
+        }
+    });
+
     // 4. INISIALISASI PENCARIAN PETUGAS KHUSUS (SELECT2)
     if ($('.select2-petugas').length > 0) {
         $('.select2-petugas').select2({
@@ -347,17 +329,18 @@ $(document).ready(function() {
         });
     }
 
-    // 5. EVENT LISTENER TOMBOL HAPUS HISTORY
-    document.querySelectorAll('.btn-delete-single').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const value = this.getAttribute('data-val');
-            deleteSingleHistory(value);
-        });
-    });
+    // 5. FUNGSI ANTI-DOUBLE NAMA & DINAMIS DROPDOWN
+    // Menggunakan filter aman dari Jinja tojson
+    let allUsers = [];
+    {% if users %}
+        {% for u in users %}
+            allUsers.push({{ u.nama | tojson }});
+        {% endfor %}
+    {% endif %}
 
-    // 6. FUNGSI ANTI-DOUBLE NAMA & DINAMIS DROPDOWN
     const matrixInputs = document.querySelectorAll('.sheet-input');
     matrixInputs.forEach(input => {
+        // Saat kotak Misa di-klik, buatkan dropdown nama yang BELUM dipakai di jam/hari tsb
         input.addEventListener('focus', function() {
             let colId = this.getAttribute('data-col');
             let inputsInSameCol = document.querySelectorAll(`.sheet-input[data-col="${colId}"]`);
@@ -381,6 +364,7 @@ $(document).ready(function() {
             });
         });
         
+        // Cek Keamanan: Jika BPH memaksakan ketik manual nama yang sama
         input.addEventListener('change', function() {
             let val = this.value.trim().toLowerCase();
             if (!val) return;
@@ -396,7 +380,7 @@ $(document).ready(function() {
             });
             
             if (duplicateCount > 1) {
-                alert("⚠️ Nama yang Anda pilih sudah bertugas pada jam dan hari ini.\n\nSistem otomatis menghapusnya untuk mencegah data ganda.");
+                alert("⚠️ Nama yang Anda ketik sudah bertugas pada jam dan hari ini.\n\nSistem otomatis menghapus input Anda untuk mencegah duplikasi data ganda.");
                 this.value = ''; 
             }
         });

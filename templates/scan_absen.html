@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Scan Kehadiran QR - MISDINAR{% endblock %}
+
+{% block content %}
+<div class="page-header" style="text-align: center;">
+    <h2>Scan Kehadiran Otomatis</h2>
+    <p>Arahkan kamera ke QR Code milik anggota untuk mengisi daftar hadir secara instan.</p>
+</div>
+
+<div class="card" style="background: white; padding: 30px; border-radius: 16px; box-shadow: var(--shadow); text-align: center; max-width: 600px; margin: 0 auto;">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    
+    <div id="reader" style="width: 100%; border-radius: 12px; overflow: hidden; border: 4px solid var(--primary-blue);"></div>
+    
+    <div id="resultBox" style="margin-top: 24px; padding: 16px; border-radius: 8px; display: none; font-weight: bold; font-size: 16px;"></div>
+</div>
+
+<script>
+let isScanning = false;
+
+function onScanSuccess(decodedText, decodedResult) {
+    if (isScanning) return; // Mencegah scan berulang kali dalam 1 detik
+    isScanning = true;
+    
+    let box = document.getElementById('resultBox');
+    box.style.display = 'block';
+    box.style.backgroundColor = '#fef3c7';
+    box.style.color = '#d97706';
+    box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses Data Kehadiran...';
+    
+    fetch("{{ url_for('api_absen') }}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: decodedText
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            box.style.backgroundColor = '#dcfce7';
+            box.style.color = '#059669';
+            box.innerHTML = '<i class="fas fa-check-circle"></i> ' + data.message;
+        } else {
+            box.style.backgroundColor = '#fee2e2';
+            box.style.color = '#dc2626';
+            box.innerHTML = '<i class="fas fa-times-circle"></i> ' + data.message;
+        }
+        
+        // Menunggu 3 detik sebelum kamera diizinkan scan QR selanjutnya
+        setTimeout(() => {
+            box.style.display = 'none';
+            isScanning = false;
+        }, 3000);
+    })
+    .catch(err => {
+        box.style.backgroundColor = '#fee2e2';
+        box.style.color = '#dc2626';
+        box.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Gagal terhubung ke server.';
+        setTimeout(() => { isScanning = false; }, 2000);
+    });
+}
+
+function onScanFailure(error) {
+  // Abaikan pesan error gagal scan karena kamera mencari QR tiap 0.1 detik
+}
+
+let html5QrcodeScanner = new Html5QrcodeScanner(
+  "reader",
+  { fps: 10, qrbox: {width: 250, height: 250} },
+  /* verbose= */ false);
+html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+</script>
+{% endblock %}
