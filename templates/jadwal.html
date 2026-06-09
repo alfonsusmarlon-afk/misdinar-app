@@ -6,23 +6,15 @@
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
     <div>
         <h2>Jadwal Pelayanan Misdinar</h2>
-        {% if view_mode == 'private' %}
-        <p>Menampilkan jadwal pelayanan pribadi Anda yang akan datang.</p>
+        {% if is_logged_in %}
+        <p>Menampilkan jadwal pelayanan Misa yang secara spesifik menugaskan Anda.</p>
         {% else %}
-        <p>Jadwal pelayanan seluruh anggota misdinar.</p>
+        <p>Menampilkan seluruh jadwal pelayanan Misa yang sudah dipublikasikan pengurus.</p>
         {% endif %}
     </div>
     <div style="display: flex; gap: 10px;">
-        {% if is_logged_in %}
-            {% if view_mode == 'public' %}
-            <a href="{{ url_for('jadwal', view='private') }}" class="btn-outline"><i class="fas fa-user"></i> Jadwal Saya</a>
-            {% else %}
-            <a href="{{ url_for('jadwal') }}" class="btn-outline"><i class="fas fa-users"></i> Semua Jadwal</a>
-            {% endif %}
-            
-            {% if session.get('role') in ['super admin', 'penjadwalan', 'bph'] %}
-            <a href="{{ url_for('penjadwalan') }}" class="btn-primary"><i class="fas fa-edit"></i> Edit Matriks Jadwal</a>
-            {% endif %}
+        {% if is_logged_in and session.get('role') in ['super admin', 'penjadwalan', 'bph'] %}
+        <a href="{{ url_for('penjadwalan') }}" class="btn-primary" style="background-color: var(--white); color: var(--primary-blue); border: 1px solid var(--primary-blue);"><i class="fas fa-edit"></i> Edit Matriks Jadwal</a>
         {% endif %}
     </div>
 </div>
@@ -32,8 +24,8 @@
     <div class="empty-state">
         <i class="fas fa-calendar-times empty-icon"></i>
         <h3>Belum Ada Jadwal</h3>
-        {% if view_mode == 'private' %}
-        <p>Anda belum memiliki jadwal pelayanan dalam waktu dekat.</p>
+        {% if is_logged_in %}
+        <p>Anda belum memiliki jadwal pelayanan dalam waktu dekat. Selamat beristirahat!</p>
         {% else %}
         <p>Belum ada jadwal pelayanan yang dipublikasikan oleh pengurus.</p>
         {% endif %}
@@ -43,6 +35,7 @@
     <div class="schedule-list">
         {% set grouped_jadwal = {} %}
         
+        <!-- MENGELOMPOKKAN JADWAL BERDASARKAN TANGGAL & WAKTU -->
         {% for j in jadwal %}
             {% set key = j.tanggal ~ '-' ~ j.bulan ~ '-' ~ j.waktu %}
             
@@ -53,6 +46,7 @@
             {% endif %}
         {% endfor %}
 
+        <!-- MENAMPILKAN JADWAL YANG SUDAH DIKELOMPOKKAN -->
         {% for key, group in grouped_jadwal.items() %}
             {% set j = group['data'] %}
             <div class="schedule-card">
@@ -61,14 +55,14 @@
                     <span class="month">{{ j.bulan }}</span>
                 </div>
                 <div class="schedule-info">
-                    <h4>{{ j.hari }}, Pkl. {{ j.waktu }}</h4>
+                    <h4 style="margin-top: 0;">{{ j.hari }}, Pkl. {{ j.waktu }}</h4>
                     <span class="badge badge-primary">{{ j.acara }}</span>
                     
-                    <div class="petugas-list" style="margin-top: 12px;">
-                        <span style="font-size: 12px; color: var(--text-gray); display: block; margin-bottom: 4px;">Bertugas:</span>
+                    <div class="petugas-list" style="margin-top: 14px;">
+                        <span style="font-size: 12px; color: var(--text-gray); display: block; margin-bottom: 8px;">Daftar Petugas:</span>
                         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                             {% for p in group['petugas'] %}
-                                <span class="badge" style="background-color: var(--light-blue); color: var(--primary-blue); font-size: 13px; padding: 6px 12px;"><i class="fas fa-user-circle" style="margin-right: 4px;"></i> {{ p }}</span>
+                                <span class="badge" style="background-color: var(--light-blue); color: var(--primary-blue); font-size: 13px; padding: 6px 12px; border-radius: 6px;"><i class="fas fa-user-circle" style="margin-right: 4px;"></i> {{ p }}</span>
                             {% endfor %}
                         </div>
                     </div>
@@ -160,7 +154,8 @@
 
 .schedule-info h4 {
     color: var(--text-dark);
-    font-size: 16px;
+    font-size: 17px;
+    font-weight: 800;
     margin-bottom: 8px;
 }
 
