@@ -67,7 +67,12 @@
                     
                     {% if view_mode == 'private' %}
                     <div style="margin-top: 16px; border-top: 1px dashed #e2e8f0; padding-top: 12px;">
-                        <button type="button" onclick="showQR('{{ j.id }}', '{{ user_id }}', '{{ j.acara }}', '{{ j.tanggal }} {{ j.bulan }} {{ j.waktu }}')" style="background: #10b981; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; width: 100%; transition: 0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                        <button type="button" class="btn-show-qr" 
+                            data-id="{{ j.id }}" 
+                            data-user="{{ user_id }}" 
+                            data-acara="{{ j.acara }}" 
+                            data-waktu="{{ j.tanggal }} {{ j.bulan }} {{ j.waktu }}" 
+                            style="background: #10b981; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; width: 100%; transition: 0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
                             <i class="fas fa-qrcode"></i> Tampilkan QR Kehadiran
                         </button>
                     </div>
@@ -94,16 +99,26 @@
 </div>
 
 <script>
-function showQR(jadwalId, username, acara, waktu) {
-    let dataObj = {j: jadwalId, u: username};
-    let dataStr = JSON.stringify(dataObj);
-    let qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" + encodeURIComponent(dataStr);
-    
-    document.getElementById('qrImage').src = qrUrl;
-    document.getElementById('qrTitle').innerText = "QR Absen " + acara;
-    document.getElementById('qrDesc').innerText = waktu + "\nArahkan ini ke kamera Pengurus.";
-    document.getElementById('qrModal').style.display = 'flex';
-}
+document.addEventListener('DOMContentLoaded', function() {
+    const qrButtons = document.querySelectorAll('.btn-show-qr');
+    qrButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            let jadwalId = this.getAttribute('data-id');
+            let username = this.getAttribute('data-user');
+            let acara = this.getAttribute('data-acara');
+            let waktu = this.getAttribute('data-waktu');
+
+            let dataObj = {j: jadwalId, u: username};
+            let dataStr = JSON.stringify(dataObj);
+            let qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" + encodeURIComponent(dataStr);
+            
+            document.getElementById('qrImage').src = qrUrl;
+            document.getElementById('qrTitle').innerText = "QR Absen " + acara;
+            document.getElementById('qrDesc').innerText = waktu + "\nArahkan ini ke kamera Pengurus.";
+            document.getElementById('qrModal').style.display = 'flex';
+        });
+    });
+});
 </script>
 {% endif %}
 

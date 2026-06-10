@@ -37,7 +37,7 @@
         </div>
         
         <div class="anggota-actions">
-            <button type="button" class="btn-detail" onclick="showDetail(this)"
+            <button type="button" class="btn-detail"
                 data-username="{{ u.username }}"
                 data-nama="{{ u.nama }}"
                 data-role="{{ u.role }}"
@@ -52,7 +52,7 @@
             </button>
             
             {% if current_role in ['super admin', 'bph'] %}
-            <button type="button" class="btn-edit" onclick="showEditRole('{{ u.username }}', '{{ u.role }}', '{{ u.nama }}')">
+            <button type="button" class="btn-edit" data-username="{{ u.username }}" data-role="{{ u.role }}" data-nama="{{ u.nama }}">
                 <i class="fas fa-user-cog"></i> Akses
             </button>
             
@@ -65,26 +65,6 @@
     </div>
     {% endfor %}
 </div>
-
-<script>
-document.getElementById('searchAnggota').addEventListener('keyup', function() {
-    let filter = this.value.toLowerCase();
-    let cards = document.querySelectorAll('.anggota-card');
-    
-    cards.forEach(card => {
-        let name = card.querySelector('.search-target-name').innerText.toLowerCase();
-        let user = card.querySelector('.search-target-user').innerText.toLowerCase();
-        let role = card.querySelector('.search-target-role').innerText.toLowerCase();
-        
-        // Cari berdasarkan Nama, Username, atau Role
-        if (name.includes(filter) || user.includes(filter) || role.includes(filter)) {
-            card.style.display = 'flex'; // maintain the flex display
-        } else {
-            card.style.display = 'none';
-        }
-    });
-});
-</script>
 
 <div id="detailModal" class="modal">
     <div class="modal-content modal-md">
@@ -136,31 +116,60 @@ document.getElementById('searchAnggota').addEventListener('keyup', function() {
 </div>
 
 <script>
-function showDetail(btn) {
-    const data = btn.dataset;
-    let html = `
-        <table style="width: 100%; border-collapse: collapse;">
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; width: 40%; color: #64748b;">Nama Lengkap</td><td style="font-weight: 600;">${data.nama}</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Nama Panggilan</td><td>${data.panggilan || '-'}</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Username</td><td>${data.username}</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Hak Akses</td><td><span style="background: #eef2ff; color: #4338ca; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">${data.role.toUpperCase()}</span></td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Tanggal Lahir</td><td>${data.tgllahir || '-'}</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">No. HP/WA</td><td>${data.nohp || '-'}</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Email</td><td>${data.email || '-'}</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Alamat</td><td>${data.alamat || '-'}</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Nama Orang Tua</td><td>${data.namaortu || '-'}</td></tr>
-            <tr><td style="padding: 8px 0; color: #64748b;">No. HP Orang Tua</td><td>${data.nohportu || '-'}</td></tr>
-        </table>
-    `;
-    document.getElementById('detailBody').innerHTML = html;
-    document.getElementById('detailModal').style.display = 'flex';
-}
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Fitur Pencarian
+    const searchInput = document.getElementById('searchAnggota');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+            let filter = this.value.toLowerCase();
+            let cards = document.querySelectorAll('.anggota-card');
+            
+            cards.forEach(card => {
+                let name = card.querySelector('.search-target-name').innerText.toLowerCase();
+                let user = card.querySelector('.search-target-user').innerText.toLowerCase();
+                let role = card.querySelector('.search-target-role').innerText.toLowerCase();
+                
+                if (name.includes(filter) || user.includes(filter) || role.includes(filter)) {
+                    card.style.display = 'flex'; 
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    }
 
-function showEditRole(username, currentRole, nama) {
-    document.getElementById('editRoleUsername').value = username;
-    document.getElementById('editRoleSelect').value = currentRole;
-    document.getElementById('editRoleName').innerText = "Anggota: " + nama;
-    document.getElementById('editRoleModal').style.display = 'flex';
-}
+    // 2. Tampil Detail
+    document.querySelectorAll('.btn-detail').forEach(btn => {
+        btn.addEventListener('click', function() {
+            let data = this.dataset;
+            let html = `
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; width: 40%; color: #64748b;">Nama Lengkap</td><td style="font-weight: 600;">${data.nama}</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Nama Panggilan</td><td>${data.panggilan || '-'}</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Username</td><td>${data.username}</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Hak Akses</td><td><span style="background: #eef2ff; color: #4338ca; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">${data.role.toUpperCase()}</span></td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Tanggal Lahir</td><td>${data.tgllahir || '-'}</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">No. HP/WA</td><td>${data.nohp || '-'}</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Email</td><td>${data.email || '-'}</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Alamat</td><td>${data.alamat || '-'}</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #64748b;">Nama Orang Tua</td><td>${data.namaortu || '-'}</td></tr>
+                    <tr><td style="padding: 8px 0; color: #64748b;">No. HP Orang Tua</td><td>${data.nohportu || '-'}</td></tr>
+                </table>
+            `;
+            document.getElementById('detailBody').innerHTML = html;
+            document.getElementById('detailModal').style.display = 'flex';
+        });
+    });
+
+    // 3. Edit Akses Role
+    document.querySelectorAll('.btn-edit').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('editRoleUsername').value = this.dataset.username;
+            document.getElementById('editRoleSelect').value = this.dataset.role;
+            document.getElementById('editRoleName').innerText = "Anggota: " + this.dataset.nama;
+            document.getElementById('editRoleModal').style.display = 'flex';
+        });
+    });
+});
 </script>
 {% endblock %}

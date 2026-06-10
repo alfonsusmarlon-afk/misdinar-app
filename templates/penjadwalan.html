@@ -4,6 +4,8 @@
 
 {% block content %}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
     <div>
@@ -13,149 +15,146 @@
 </div>
 
 {% if not matrix %}
-<div class="setup-container" style="display: flex; flex-direction: column; align-items: center; gap: 40px; padding: 20px 0;">
+<div class="setup-container">
     
-    <div style="display: flex; gap: 30px; width: 100%; max-width: 1200px; justify-content: center; flex-wrap: wrap;">
-        <div class="setup-card" style="flex: 1; min-width: 350px; background: var(--white); padding: 40px; border-radius: 16px; box-shadow: var(--shadow); text-align: center; border-top: 5px solid var(--primary-blue);">
-            <div class="icon-header" style="width: 80px; height: 80px; background: var(--light-blue); color: var(--primary-blue); font-size: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
+    <div class="setup-grid">
+        <div class="setup-card card-rutin">
+            <div class="icon-header icon-rutin">
                 <i class="fas fa-table"></i>
             </div>
-            <h3 style="color: var(--text-dark); margin-bottom: 8px; font-size: 22px;">Buat / Edit Jadwal Rutin</h3>
-            <p style="color: var(--text-gray); font-size: 14px; margin-bottom: 30px;">Pilih rentang tanggal untuk mulai menyusun jadwal di tabel.</p>
+            <h3>Buat / Edit Jadwal Rutin</h3>
+            <p>Pilih rentang tanggal untuk mulai menyusun jadwal di tabel.</p>
             
             <form action="{{ url_for('penjadwalan') }}" method="POST">
                 <input type="hidden" name="action" value="buat_matriks">
-                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; text-align: left;">
+                <div class="form-row">
                     <div class="form-group">
-                        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-dark);">Mulai Tanggal</label>
-                        <input type="date" name="start_date" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; outline: none; font-family: inherit;">
+                        <label>Mulai Tanggal</label>
+                        <input type="date" name="start_date" required>
                     </div>
                     <div class="form-group">
-                        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-dark);">Sampai Tanggal</label>
-                        <input type="date" name="end_date" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; outline: none; font-family: inherit;">
+                        <label>Sampai Tanggal</label>
+                        <input type="date" name="end_date" required>
                     </div>
                 </div>
-                <button type="submit" class="btn-primary w-100" style="width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--primary-blue); color: white; transition: 0.3s;">
+                <button type="submit" class="btn-primary w-100 btn-rutin">
                     <i class="fas fa-edit"></i> Buka Editor Web
                 </button>
             </form>
         </div>
 
-        <div class="setup-card" style="flex: 1; min-width: 350px; background: var(--white); padding: 40px; border-radius: 16px; box-shadow: var(--shadow); text-align: center; border-top: 5px solid #db2777;">
-            <div class="icon-header" style="width: 80px; height: 80px; background: #fce7f3; color: #db2777; font-size: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
+        <div class="setup-card card-khusus">
+            <div class="icon-header icon-khusus">
                 <i class="fas fa-plus-circle"></i>
             </div>
-            <h3 style="color: var(--text-dark); margin-bottom: 8px; font-size: 22px;">Tambah Jadwal Khusus</h3>
-            <p style="color: var(--text-gray); font-size: 14px; margin-bottom: 30px;">Tambahkan Misa Manten, Misa Arwah, tanpa merusak tabel rutin.</p>
+            <h3>Tambah Jadwal Khusus</h3>
+            <p>Tambahkan Misa Manten, Misa Arwah, tanpa merusak tabel rutin.</p>
             
             <form action="{{ url_for('penjadwalan') }}" method="POST">
                 <input type="hidden" name="action" value="tambah_khusus">
-                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; text-align: left;">
+                <div class="form-row">
                     <div class="form-group">
-                        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-dark);">Tanggal</label>
-                        <input type="date" name="tanggal" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; outline: none; font-family: inherit;">
+                        <label>Tanggal</label>
+                        <input type="date" name="tanggal" required>
                     </div>
                     <div class="form-group">
-                        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-dark);">Waktu (Jam)</label>
-                        <input type="time" name="waktu" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; outline: none; font-family: inherit;">
+                        <label>Waktu (Jam)</label>
+                        <input type="time" name="waktu" required>
                     </div>
                 </div>
-                <div class="form-group" style="text-align: left; margin-bottom: 16px;">
-                    <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-dark);">Nama Acara</label>
-                    <input type="text" name="acara" placeholder="Contoh: Misa Arwah" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; outline: none;">
+                <div class="form-group">
+                    <label>Nama Acara</label>
+                    <input type="text" name="acara" placeholder="Contoh: Misa Arwah" required>
                 </div>
-                <div class="form-group" style="text-align: left; margin-bottom: 16px;">
-                    <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-dark);">Pilih Petugas Khusus</label>
+                <div class="form-group">
+                    <label>Pilih Petugas (Bisa Search)</label>
                     <select name="petugas" class="select2-petugas" multiple="multiple" required style="width: 100%;">
                         {% for u in users %}
                         <option value="{{ u.username }}">{{ u.nama }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="form-group" style="text-align: left; margin-bottom: 24px;">
-                    <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-dark);">Status Awal</label>
-                    <select name="status" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; outline: none;">
+                <div class="form-group" style="margin-bottom: 24px;">
+                    <label>Status Awal</label>
+                    <select name="status">
                         <option value="Bertugas">Langsung Bertugas (Publik)</option>
                         <option value="Draft">Draft (Tersembunyi)</option>
                     </select>
                 </div>
-                <button type="submit" class="btn-primary w-100" style="width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; background: #db2777; color: white; transition: 0.3s;">
+                <button type="submit" class="btn-primary w-100 btn-khusus">
                     <i class="fas fa-save"></i> Simpan Jadwal Khusus
                 </button>
             </form>
         </div>
     </div>
 
-    <div class="setup-card" style="width: 100%; max-width: 1200px; text-align: left; background: var(--white); padding: 40px; border-radius: 16px; box-shadow: var(--shadow); border-top: 5px solid #10b981;">
-        
+    <div class="setup-card card-history">
         <form action="{{ url_for('penjadwalan') }}" method="POST" id="bulkDeleteForm">
             <input type="hidden" name="action" value="hapus_jadwal_bulk">
             
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; color: var(--text-dark); font-size: 20px;">
-                    <i class="fas fa-list-alt" style="color: #10b981;"></i> Riwayat Daftar Jadwal
-                </h3>
-                
-                <button type="button" onclick="confirmBulkDelete()" style="background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; display: flex; align-items: center; gap: 8px;">
+            <div class="history-header">
+                <h3><i class="fas fa-list-alt"></i> Riwayat Daftar Jadwal</h3>
+                <button type="button" onclick="confirmBulkDelete()" class="btn-bulk-delete">
                     <i class="fas fa-trash-alt"></i> Hapus Terpilih
                 </button>
             </div>
             
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; text-align: left; border-collapse: collapse; white-space: normal; min-width: 800px; font-size: 13px;">
+            <div class="table-responsive">
+                <table class="history-table">
                     <thead>
                         <tr>
-                            <th style="padding: 12px 10px; color: var(--text-gray); border-bottom: 2px solid #e2e8f0; width: 5%; text-align: center;">
-                                <input type="checkbox" onclick="toggleAllCheckboxes(this)" style="width: 16px; height: 16px; cursor: pointer;">
+                            <th class="col-check">
+                                <input type="checkbox" id="selectAllHistory" style="cursor: pointer;">
                             </th>
-                            <th style="padding: 12px 10px; color: var(--text-gray); border-bottom: 2px solid #e2e8f0; width: 25%;">Tgl & Jam</th>
-                            <th style="padding: 12px 10px; color: var(--text-gray); border-bottom: 2px solid #e2e8f0; width: 25%;">Nama Acara</th>
-                            <th style="padding: 12px 10px; color: var(--text-gray); border-bottom: 2px solid #e2e8f0; width: 35%;">Petugas</th>
-                            <th style="padding: 12px 10px; color: var(--text-gray); border-bottom: 2px solid #e2e8f0; width: 10%; text-align: center;">Aksi</th>
+                            <th class="col-date">Tgl & Jam</th>
+                            <th class="col-event">Nama Acara</th>
+                            <th class="col-staff">Petugas</th>
+                            <th class="col-action">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% if history %}
-                        {% for h in history %}
-                        <tr style="border-bottom: 1px solid #f1f5f9;">
-                            <td style="padding: 14px 10px; text-align: center;">
-                                <input type="checkbox" name="hapus_items" class="history-checkbox" value="{{ h.jadwal_datetime }}|{{ h.acara }}|{{ h.jenis }}" style="width: 16px; height: 16px; cursor: pointer;">
-                            </td>
-                            <td style="padding: 14px 10px; font-weight: bold; color: var(--text-dark);">{{ h.waktu_format }}</td>
-                            <td style="padding: 14px 10px;">
-                                <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
-                                    <span style="font-weight: bold; color: var(--primary-blue);">{{ h.acara }}</span>
-                                    <div style="display: flex; gap: 6px;">
-                                        {% if h.jenis == 'Khusus' %}
-                                        <span style="font-size: 10px; background: #fce7f3; color: #db2777; padding: 2px 6px; border-radius: 4px; font-weight: bold;">KHUSUS</span>
-                                        {% else %}
-                                        <span style="font-size: 10px; background: #eef2ff; color: var(--primary-blue); padding: 2px 6px; border-radius: 4px; font-weight: bold;">RUTIN</span>
-                                        {% endif %}
-                                        
-                                        {% if h.status == 'Bertugas' %}
-                                        <span style="font-size: 10px; background: #dcfce7; color: #059669; padding: 2px 6px; border-radius: 4px; font-weight: bold;">PUBLIK</span>
-                                        {% else %}
-                                        <span style="font-size: 10px; background: #f1f5f9; color: #64748b; padding: 2px 6px; border-radius: 4px; font-weight: bold;">DRAFT</span>
-                                        {% endif %}
+                            {% for h in history %}
+                            <tr>
+                                <td class="col-check">
+                                    <input type="checkbox" name="hapus_items" class="history-checkbox" value="{{ h.jadwal_datetime }}|{{ h.acara }}|{{ h.jenis }}" style="cursor: pointer;">
+                                </td>
+                                <td class="col-date fw-bold text-dark">{{ h.waktu_format }}</td>
+                                <td class="col-event">
+                                    <div class="event-details">
+                                        <span class="event-name">{{ h.acara }}</span>
+                                        <div class="event-badges">
+                                            {% if h.jenis == 'Khusus' %}
+                                            <span class="badge badge-khusus">KHUSUS</span>
+                                            {% else %}
+                                            <span class="badge badge-rutin">RUTIN</span>
+                                            {% endif %}
+                                            
+                                            {% if h.status == 'Bertugas' %}
+                                            <span class="badge badge-publik">PUBLIK</span>
+                                            {% else %}
+                                            <span class="badge badge-draft">DRAFT</span>
+                                            {% endif %}
+                                        </div>
                                     </div>
-                                </div>
-                            </td>
-                            <td style="padding: 14px 10px; line-height: 1.5; color: var(--text-gray);">
-                                {{ h.petugas if h.petugas else '-' }}
-                            </td>
-                            <td style="padding: 14px 10px; text-align: center;">
-                                <button type="button" class="btn-delete-single" data-val="{{ h.jadwal_datetime }}|{{ h.acara }}|{{ h.jenis }}" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 18px;" title="Hapus Jadwal Ini">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
+                                </td>
+                                <td class="col-staff text-gray">
+                                    {{ h.petugas if h.petugas else '-' }}
+                                </td>
+                                <td class="col-action">
+                                    <button type="button" class="btn-delete-single" data-val="{{ h.jadwal_datetime }}|{{ h.acara }}|{{ h.jenis }}" title="Hapus Jadwal Ini">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
                         {% else %}
-                        <tr>
-                            <td colspan="5" style="padding: 40px; text-align: center; color: var(--text-gray);">
-                                Tidak ada riwayat jadwal di database.
-                            </td>
-                        </tr>
+                            <tr>
+                                <td colspan="5" class="empty-row">
+                                    <i class="fas fa-folder-open empty-icon"></i>
+                                    Tidak ada riwayat jadwal di database.
+                                </td>
+                            </tr>
                         {% endif %}
                     </tbody>
                 </table>
@@ -223,41 +222,92 @@
         </table>
     </div>
 
-    <datalist id="user_datalist">
-        </datalist>
+    <div id="hiddenUserData" style="display: none;">{% for u in users %}{{ u.nama }}|{% endfor %}</div>
+    
+    <datalist id="user_datalist"></datalist>
 
     <div class="sticky-footer-action">
         <a href="{{ url_for('penjadwalan') }}" class="btn-outline">Tutup Editor</a>
-        <button type="submit" class="btn-primary" style="padding: 0 40px; font-size: 16px;">
+        <button type="submit" class="btn-primary btn-rutin" style="padding: 0 40px; font-size: 16px;">
             <i class="fas fa-save"></i> Simpan Data Jadwal
         </button>
     </div>
 </form>
-
 {% endif %}
 
 <style>
-/* Styling Select2 Agar Sesuai Tema */
-.select2-container--default .select2-selection--multiple {
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    min-height: 44px;
-    padding: 2px 8px;
-}
-.select2-container--default.select2-container--focus .select2-selection--multiple {
-    border-color: var(--primary-blue);
-    outline: 0;
-}
-.select2-container--default .select2-selection--multiple .select2-selection__choice {
-    background-color: var(--light-blue);
-    border: 1px solid var(--primary-blue);
-    color: var(--primary-blue);
-    border-radius: 4px;
-    margin-top: 6px;
-    padding: 2px 6px;
-    font-weight: 600;
-}
+/* 1. LAYOUT GRID UTAMA */
+.setup-container { padding: 10px 0; width: 100%; }
+.setup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 24px; width: 100%; }
+.setup-card { background: var(--white); padding: 30px; border-radius: 16px; box-shadow: var(--shadow); box-sizing: border-box; }
 
+/* 2. VARIASI WARNA KARTU */
+.card-rutin { border-top: 5px solid var(--primary-blue); }
+.card-khusus { border-top: 5px solid #db2777; }
+.card-history { width: 100%; border-top: 5px solid #10b981; }
+
+/* 3. ICON HEADER */
+.icon-header { width: 70px; height: 70px; font-size: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; }
+.icon-rutin { background: var(--light-blue); color: var(--primary-blue); }
+.icon-khusus { background: #fce7f3; color: #db2777; }
+.setup-card h3 { color: var(--text-dark); margin-bottom: 6px; font-size: 20px; text-align: center; }
+.setup-card p { color: var(--text-gray); font-size: 14px; margin-bottom: 24px; text-align: center; }
+
+/* 4. FORM STYLING */
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; text-align: left; }
+.form-group { text-align: left; margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: var(--text-dark); }
+.form-group input, .form-group select { width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; outline: none; font-family: inherit; font-size: 14px; box-sizing: border-box; }
+
+.btn-primary { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; color: white; transition: 0.3s; }
+.btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-rutin { background: var(--primary-blue); }
+.btn-khusus { background: #db2777; }
+
+/* 5. TABLE HISTORY STYLING RAPI */
+.history-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+.history-header h3 { font-size: 18px; margin: 0; color: var(--text-dark); display: flex; align-items: center; gap: 10px; }
+.history-header h3 i { color: #10b981; }
+
+.btn-bulk-delete { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
+.btn-bulk-delete:hover { background: #fecaca; }
+
+.table-responsive { width: 100%; overflow-x: auto; }
+.history-table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 800px; }
+.history-table th { padding: 14px 12px; color: var(--text-gray); border-bottom: 2px solid #e2e8f0; font-weight: 600; text-align: left; }
+.history-table td { padding: 16px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+
+.col-check { width: 5%; text-align: center !important; }
+.col-date { width: 22%; }
+.col-event { width: 28%; }
+.col-staff { width: 35%; line-height: 1.6; }
+.col-action { width: 10%; text-align: center !important; }
+
+.fw-bold { font-weight: 700; }
+.text-dark { color: var(--text-dark); }
+.text-gray { color: var(--text-gray); }
+
+.event-details { display: flex; flex-direction: column; gap: 6px; }
+.event-name { font-weight: 700; color: var(--primary-blue); font-size: 14px; }
+.event-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.badge { font-size: 10px; padding: 3px 8px; border-radius: 6px; font-weight: 800; letter-spacing: 0.5px; }
+.badge-khusus { background: #fce7f3; color: #db2777; }
+.badge-rutin { background: #eef2ff; color: var(--primary-blue); }
+.badge-publik { background: #dcfce7; color: #059669; }
+.badge-draft { background: #f1f5f9; color: #64748b; }
+
+.btn-delete-single { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 18px; transition: 0.2s; padding: 4px; }
+.btn-delete-single:hover { color: #b91c1c; transform: scale(1.1); }
+
+.empty-row { text-align: center; padding: 60px 20px !important; color: var(--text-gray); font-size: 15px; }
+.empty-icon { font-size: 40px; color: #cbd5e1; display: block; margin-bottom: 12px; }
+
+/* 6. SELECT2 FIXING */
+.select2-container--default .select2-selection--multiple { border: 1px solid var(--border-color); border-radius: 8px; min-height: 42px; padding: 2px 6px; }
+.select2-container--default.select2-container--focus .select2-selection--multiple { border-color: #db2777; outline: 0; }
+.select2-container--default .select2-selection--multiple .select2-selection__choice { background-color: #fce7f3; border: 1px solid #db2777; color: #db2777; border-radius: 4px; margin-top: 6px; padding: 2px 6px; font-weight: 600; font-size: 12px; }
+
+/* 7. EDITOR MATRIKS STYLING */
 .spreadsheet-container { width: 100%; overflow-x: auto; background: var(--white); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 100px; padding-bottom: 10px; }
 .spreadsheet-table { border-collapse: collapse; white-space: nowrap; min-width: 100%; }
 .spreadsheet-table th, .spreadsheet-table td { border: 1px solid #cbd5e1; padding: 0; text-align: center; }
@@ -271,57 +321,18 @@
 .sheet-input { border: none; outline: none; width: 130px; padding: 12px 8px; font-size: 13px; text-align: center; background: transparent; transition: 0.2s; font-family: inherit; color: var(--text-dark); font-weight: 500; }
 .sheet-input:focus { background: #eef2ff; box-shadow: inset 0 0 0 2px var(--primary-blue); }
 .sheet-input::placeholder { color: #cbd5e1; font-weight: normal; }
-.btn-primary { background: var(--primary-blue); color: white; transition: 0.3s; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;}
-.btn-primary:hover { transform: translateY(-2px); opacity: 0.9;}
+
 .btn-outline { padding: 10px 24px; border: 1px solid var(--text-gray); color: var(--text-gray); border-radius: 8px; font-weight: bold; transition: 0.3s; background: transparent; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center;}
 .btn-outline:hover { background: var(--bg-gray); color: var(--text-dark); }
 .sticky-footer-action { position: fixed; bottom: 0; left: var(--sidebar-width); right: 0; background: var(--white); padding: 16px 24px; box-shadow: 0 -4px 12px rgba(0,0,0,0.05); display: flex; justify-content: flex-end; gap: 12px; z-index: 90; border-top: 1px solid var(--border-color); transition: left 0.3s;}
 @media(max-width: 768px) { .sticky-footer-action { left: 0; } }
 </style>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
 <script>
-// 1. FUNGSI NATIVE JS UNTUK SELECT ALL KOTAK
-function toggleAllCheckboxes(source) {
-    const checkboxes = document.querySelectorAll('.history-checkbox');
-    checkboxes.forEach(cb => {
-        cb.checked = source.checked;
-    });
-}
-
-// 2. FUNGSI KONFIRMASI BULK DELETE
-function confirmBulkDelete() {
-    let checkedBoxes = document.querySelectorAll('.history-checkbox:checked');
-    if (checkedBoxes.length === 0) {
-        alert("Silakan centang minimal satu jadwal di kolom tabel sebelah kiri.");
-        return false;
-    }
-    if(confirm("Anda akan menghapus " + checkedBoxes.length + " jadwal terpilih secara permanen. Lanjutkan?")) {
-        document.getElementById('bulkDeleteForm').submit();
-    }
-}
-
-$(document).ready(function() {
-    // 3. FUNGSI SINGLE DELETE YANG AMAN DARI TANDA BACA
-    $('.btn-delete-single').click(function() {
-        let val = $(this).attr('data-val');
-        if(confirm('Apakah Anda yakin ingin menghapus jadwal ini secara permanen?')) {
-            let form = document.getElementById('bulkDeleteForm');
-            document.querySelectorAll('.history-checkbox').forEach(cb => cb.checked = false);
-            
-            let input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'hapus_items';
-            input.value = val;
-            form.appendChild(input);
-            form.submit();
-        }
-    });
-
-    // 4. INISIALISASI PENCARIAN PETUGAS KHUSUS (SELECT2)
-    if ($('.select2-petugas').length > 0) {
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // 1. Inisialisasi Select2 (Pencarian Petugas Khusus)
+    if (typeof jQuery !== 'undefined' && $('.select2-petugas').length > 0) {
         $('.select2-petugas').select2({
             placeholder: "🔍 Ketik untuk mencari nama petugas...",
             allowClear: true,
@@ -329,62 +340,102 @@ $(document).ready(function() {
         });
     }
 
-    // 5. FUNGSI ANTI-DOUBLE NAMA & DINAMIS DROPDOWN
-    // Menggunakan filter aman dari Jinja tojson
-    let allUsers = [];
-    {% if users %}
-        {% for u in users %}
-            allUsers.push({{ u.nama | tojson }});
-        {% endfor %}
-    {% endif %}
-
-    const matrixInputs = document.querySelectorAll('.sheet-input');
-    matrixInputs.forEach(input => {
-        // Saat kotak Misa di-klik, buatkan dropdown nama yang BELUM dipakai di jam/hari tsb
-        input.addEventListener('focus', function() {
-            let colId = this.getAttribute('data-col');
-            let inputsInSameCol = document.querySelectorAll(`.sheet-input[data-col="${colId}"]`);
-            
-            let usedNames = [];
-            inputsInSameCol.forEach(inp => {
-                if (inp !== this && inp.value.trim() !== '') {
-                    usedNames.push(inp.value.trim().toLowerCase());
-                }
-            });
-            
-            let datalist = document.getElementById('user_datalist');
-            datalist.innerHTML = ''; 
-            
-            allUsers.forEach(nama => {
-                if (!usedNames.includes(nama.toLowerCase())) {
-                    let opt = document.createElement('option');
-                    opt.value = nama;
-                    datalist.appendChild(opt);
-                }
+    // 2. Select All Checkbox History
+    const selectAllCb = document.getElementById('selectAllHistory');
+    if (selectAllCb) {
+        selectAllCb.addEventListener('change', function() {
+            document.querySelectorAll('.history-checkbox').forEach(cb => {
+                cb.checked = this.checked;
             });
         });
-        
-        // Cek Keamanan: Jika BPH memaksakan ketik manual nama yang sama
-        input.addEventListener('change', function() {
-            let val = this.value.trim().toLowerCase();
-            if (!val) return;
-            
-            let colId = this.getAttribute('data-col');
-            let inputsInSameCol = document.querySelectorAll(`.sheet-input[data-col="${colId}"]`);
-            
-            let duplicateCount = 0;
-            inputsInSameCol.forEach(inp => {
-                if (inp.value.trim().toLowerCase() === val) {
-                    duplicateCount++;
-                }
-            });
-            
-            if (duplicateCount > 1) {
-                alert("⚠️ Nama yang Anda ketik sudah bertugas pada jam dan hari ini.\n\nSistem otomatis menghapus input Anda untuk mencegah duplikasi data ganda.");
-                this.value = ''; 
+    }
+
+    // 3. Tombol Hapus Single di History
+    document.querySelectorAll('.btn-delete-single').forEach(btn => {
+        btn.addEventListener('click', function() {
+            let val = this.getAttribute('data-val');
+            if(confirm('Apakah Anda yakin ingin menghapus jadwal ini secara permanen?')) {
+                let form = document.getElementById('bulkDeleteForm');
+                document.querySelectorAll('.history-checkbox').forEach(cb => cb.checked = false);
+                
+                let input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'hapus_items';
+                input.value = val;
+                form.appendChild(input);
+                form.submit();
             }
         });
     });
+
+    // 4. Fitur Anti-Double Nama & Dropdown Dinamis (Hanya berjalan di Editor Matriks)
+    const hiddenDataEl = document.getElementById('hiddenUserData');
+    if (hiddenDataEl) {
+        // Mengambil daftar nama yang dikirim oleh Python tanpa JSON/Kutip (Aman dari Linter)
+        let rawData = hiddenDataEl.innerText;
+        let allUsers = rawData.split('|').filter(n => n.trim() !== '');
+        
+        const matrixInputs = document.querySelectorAll('.sheet-input');
+        
+        matrixInputs.forEach(input => {
+            // Saat klik, munculkan dropdown dengan nama yang sisa
+            input.addEventListener('focus', function() {
+                let colId = this.getAttribute('data-col');
+                let inputsInSameCol = document.querySelectorAll('.sheet-input[data-col="' + colId + '"]');
+                
+                let usedNames = [];
+                inputsInSameCol.forEach(inp => {
+                    if (inp !== this && inp.value.trim() !== '') {
+                        usedNames.push(inp.value.trim().toLowerCase());
+                    }
+                });
+                
+                let datalist = document.getElementById('user_datalist');
+                datalist.innerHTML = ''; 
+                
+                allUsers.forEach(nama => {
+                    if (!usedNames.includes(nama.toLowerCase())) {
+                        let opt = document.createElement('option');
+                        opt.value = nama;
+                        datalist.appendChild(opt);
+                    }
+                });
+            });
+            
+            // Saat selesai ketik, periksa apakah namanya dobel
+            input.addEventListener('change', function() {
+                let val = this.value.trim().toLowerCase();
+                if (!val) return;
+                
+                let colId = this.getAttribute('data-col');
+                let inputsInSameCol = document.querySelectorAll('.sheet-input[data-col="' + colId + '"]');
+                
+                let duplicateCount = 0;
+                inputsInSameCol.forEach(inp => {
+                    if (inp.value.trim().toLowerCase() === val) {
+                        duplicateCount++;
+                    }
+                });
+                
+                if (duplicateCount > 1) {
+                    alert("⚠️ Nama yang Anda ketik sudah bertugas pada jam dan hari ini.\n\nSistem otomatis menghapus input Anda untuk mencegah duplikasi data ganda.");
+                    this.value = ''; 
+                }
+            });
+        });
+    }
 });
+
+// Fungsi Global untuk Bulk Delete History
+function confirmBulkDelete() {
+    let checkedBoxes = document.querySelectorAll('.history-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        alert("Silakan centang minimal satu jadwal di kolom tabel sebelah kiri untuk dihapus.");
+        return false;
+    }
+    if(confirm("Anda akan menghapus " + checkedBoxes.length + " jadwal terpilih secara permanen. Lanjutkan?")) {
+        document.getElementById('bulkDeleteForm').submit();
+    }
+}
 </script>
 {% endblock %}

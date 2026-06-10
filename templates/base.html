@@ -31,15 +31,17 @@
                 
                 {% if session.get('role') in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
                 <li><a href="{{ url_for('anggota') }}" class="{% if request.endpoint == 'anggota' %}active{% endif %}"><i class="fas fa-users"></i> Anggota</a></li>
+                <li><a href="{{ url_for('scan_absen') }}" class="{% if request.endpoint == 'scan_absen' %}active{% endif %}" style="background-color: #dcfce7; color: #059669; font-weight: bold;"><i class="fas fa-qrcode"></i> Scan Kehadiran</a></li>
                 {% endif %}
 
-                {% if session.get('role') in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-                <li><a href="{{ url_for('scan_absen') }}" class="{% if request.endpoint == 'scan_absen' %}active{% endif %}" style="background-color: #dcfce7; color: #059669; font-weight: bold;"><i class="fas fa-qrcode"></i> Scan Kehadiran</a></li>
+                {% if session.get('role') in ['super admin', 'penjadwalan'] %}
+                <li><a href="{{ url_for('penjadwalan') }}" class="{% if request.endpoint == 'penjadwalan' %}active{% endif %}"><i class="fas fa-edit"></i> Penjadwalan</a></li>
                 {% endif %}
                 
                 {% if session.get('role') in ['super admin', 'bph'] %}
                 <li><a href="{{ url_for('kelola_pendaftaran') }}" class="{% if request.endpoint == 'kelola_pendaftaran' %}active{% endif %}"><i class="fas fa-user-plus"></i> Calon Anggota</a></li>
                 {% endif %}
+
             </ul>
 
             <div class="sidebar-footer">
