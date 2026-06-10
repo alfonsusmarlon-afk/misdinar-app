@@ -9,113 +9,150 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <div class="app-container">
-        
-        <nav class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="logo-icon"><i class="fas fa-church"></i></div>
-                <div class="logo-text">
-                    <h2>MISDINAR</h2>
-                    <p>Informasi & Pelayanan</p>
-                </div>
+
+<!-- Overlay untuk menutup sidebar di mobile -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<div class="app-container">
+
+    <!-- ======= SIDEBAR KIRI ======= -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-icon"><i class="fas fa-church"></i></div>
+            <div class="logo-text">
+                <h2>MISDINAR</h2>
+                <p>Informasi & Pelayanan</p>
             </div>
+        </div>
 
-            <ul class="sidebar-menu">
-                <li><a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}"><i class="fas fa-home"></i> Beranda</a></li>
-                <li><a href="{{ url_for('jadwal') }}" class="{% if request.endpoint == 'jadwal' %}active{% endif %}"><i class="far fa-calendar-alt"></i> Jadwal Pelayanan</a></li>
-                
-                {% if session.get('user_id') %}
-                <li><a href="{{ url_for('kehadiran') }}" class="{% if request.endpoint == 'kehadiran' %}active{% endif %}"><i class="fas fa-clipboard-check"></i> Absen Kehadiran</a></li>
-                <li><a href="{{ url_for('hukuman') }}" class="{% if request.endpoint == 'hukuman' %}active{% endif %}"><i class="fas fa-exclamation-triangle"></i> Sanksi & Teguran</a></li>
-                {% endif %}
-                
-                {% if session.get('role') in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-                <li><a href="{{ url_for('anggota') }}" class="{% if request.endpoint == 'anggota' %}active{% endif %}"><i class="fas fa-users"></i> Anggota</a></li>
-                
-                <li>
-                    <a href="{{ url_for('scan_absen') }}" class="{% if request.endpoint == 'scan_absen' %}active{% endif %}" style="background-color: #f1f5f9; color: #475569; position: relative;">
-                        <i class="fas fa-qrcode"></i> Scan Kehadiran
-                        <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #f59e0b; color: white; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: bold;">DEV</span>
-                    </a>
-                </li>
-                {% endif %}
+        <ul class="sidebar-menu">
+            <li><a href="{{ url_for('index') }}"    class="{% if request.endpoint == 'index'    %}active{% endif %}"><i class="fas fa-home"></i> Beranda</a></li>
+            <li><a href="{{ url_for('jadwal') }}"   class="{% if request.endpoint == 'jadwal'   %}active{% endif %}"><i class="far fa-calendar-alt"></i> Jadwal Pelayanan</a></li>
 
-                {% if session.get('role') in ['super admin', 'bph'] %}
-                <li><a href="{{ url_for('kelola_pendaftaran') }}" class="{% if request.endpoint == 'kelola_pendaftaran' %}active{% endif %}"><i class="fas fa-user-plus"></i> Kelola Pendaftaran</a></li>
-                {% endif %}
+            {% if session.get('user_id') %}
+            <li><a href="{{ url_for('kehadiran') }}" class="{% if request.endpoint == 'kehadiran' %}active{% endif %}"><i class="fas fa-clipboard-check"></i> Absen Kehadiran</a></li>
+            <li><a href="{{ url_for('hukuman') }}"   class="{% if request.endpoint == 'hukuman'   %}active{% endif %}"><i class="fas fa-exclamation-triangle"></i> Sanksi & Teguran</a></li>
+            {% endif %}
 
-                {% if session.get('role') in ['super admin', 'penjadwalan'] %}
-                <li><a href="{{ url_for('penjadwalan') }}" class="{% if request.endpoint == 'penjadwalan' %}active{% endif %}"><i class="fas fa-edit"></i> Penjadwalan</a></li>
-                {% endif %}
+            {% if session.get('role') in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+            <li><a href="{{ url_for('anggota') }}"    class="{% if request.endpoint == 'anggota'    %}active{% endif %}"><i class="fas fa-users"></i> Anggota</a></li>
+            <li>
+                <a href="{{ url_for('scan_absen') }}" class="{% if request.endpoint == 'scan_absen' %}active{% endif %}" style="position: relative;">
+                    <i class="fas fa-qrcode"></i> Scan Kehadiran
+                    <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:#f59e0b;color:white;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:bold;">DEV</span>
+                </a>
+            </li>
+            {% endif %}
 
-                {% if not session.get('user_id') %}
-                <li><a href="{{ url_for('pendaftaran') }}" class="{% if request.endpoint == 'pendaftaran' %}active{% endif %}"><i class="fas fa-edit"></i> Form Pendaftaran</a></li>
-                {% endif %}
+            {% if session.get('role') in ['super admin', 'bph'] %}
+            <li><a href="{{ url_for('kelola_pendaftaran') }}" class="{% if request.endpoint == 'kelola_pendaftaran' %}active{% endif %}"><i class="fas fa-user-plus"></i> Kelola Pendaftaran</a></li>
+            {% endif %}
 
-                <li><a href="{{ url_for('pengumuman') }}" class="{% if request.endpoint == 'pengumuman' %}active{% endif %}"><i class="fas fa-bullhorn"></i> Pengumuman</a></li>
-                <li><a href="{{ url_for('galeri') }}" class="{% if request.endpoint == 'galeri' %}active{% endif %}"><i class="fas fa-images"></i> Galeri</a></li>
-                <li><a href="{{ url_for('dokumen') }}" class="{% if request.endpoint == 'dokumen' %}active{% endif %}"><i class="fas fa-file-alt"></i> Dokumen</a></li>
-                <li><a href="{{ url_for('kontak') }}" class="{% if request.endpoint == 'kontak' %}active{% endif %}"><i class="fas fa-phone-alt"></i> Kontak</a></li>
-                
-                {% if session.get('user_id') %}
-                <li><a href="{{ url_for('pengaturan') }}" class="{% if request.endpoint == 'pengaturan' %}active{% endif %}"><i class="fas fa-cog"></i> Pengaturan</a></li>
-                {% endif %}
-            </ul>
+            {% if session.get('role') in ['super admin', 'penjadwalan'] %}
+            <li><a href="{{ url_for('penjadwalan') }}" class="{% if request.endpoint == 'penjadwalan' %}active{% endif %}"><i class="fas fa-edit"></i> Penjadwalan</a></li>
+            {% endif %}
 
-            <div class="sidebar-footer">
-                {% if session.get('user_id') %}
-                <a href="{{ url_for('logout') }}" class="text-danger"><i class="fas fa-sign-out-alt"></i> Keluar</a>
-                {% endif %}
-            </div>
-        </nav>
+            {% if not session.get('user_id') %}
+            <li><a href="{{ url_for('pendaftaran') }}" class="{% if request.endpoint == 'pendaftaran' %}active{% endif %}"><i class="fas fa-file-alt"></i> Form Pendaftaran</a></li>
+            {% endif %}
 
-        <main class="main-content">
-            <header class="topbar">
-                <button id="sidebar-toggle" class="btn-icon"><i class="fas fa-bars"></i></button>
-                
-                <div class="topbar-right">
-                    {% if session.get('user_id') %}
-                    <div class="user-profile">
-                        <a href="{{ url_for('pengaturan') }}" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px;">
-                            <div class="user-info">
-                                <span class="user-name">{{ session.get('nama_user') }}</span>
-                                <span class="user-role">{{ session.get('role') | title }}</span>
-                            </div>
-                            <div class="avatar">
-                                {% if session.get('foto_profil') %}
-                                <img src="{{ url_for('static', filename=session.get('foto_profil')) }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
-                                {% else %}
-                                <i class="fas fa-user"></i>
-                                {% endif %}
-                            </div>
-                        </a>
-                    </div>
+            <li><a href="{{ url_for('pengumuman') }}" class="{% if request.endpoint == 'pengumuman' %}active{% endif %}"><i class="fas fa-bullhorn"></i> Pengumuman</a></li>
+            <li><a href="{{ url_for('galeri') }}"     class="{% if request.endpoint == 'galeri'     %}active{% endif %}"><i class="fas fa-images"></i> Galeri</a></li>
+            <li><a href="{{ url_for('dokumen') }}"    class="{% if request.endpoint == 'dokumen'    %}active{% endif %}"><i class="fas fa-file-alt"></i> Dokumen</a></li>
+            <li><a href="{{ url_for('kontak') }}"     class="{% if request.endpoint == 'kontak'     %}active{% endif %}"><i class="fas fa-phone-alt"></i> Kontak</a></li>
+
+            {% if session.get('user_id') %}
+            <li><a href="{{ url_for('pengaturan') }}" class="{% if request.endpoint == 'pengaturan' %}active{% endif %}"><i class="fas fa-cog"></i> Pengaturan</a></li>
+            {% endif %}
+        </ul>
+
+        <!-- Footer Sidebar -->
+        <div class="sidebar-footer">
+            {% if session.get('user_id') %}
+            <div class="sidebar-user">
+                <div class="sidebar-avatar">
+                    {% if session.get('foto_profil') %}
+                        <img src="{{ url_for('static', filename=session.get('foto_profil')) }}" alt="Foto">
                     {% else %}
-                    <div class="auth-buttons">
-                        <a href="{{ url_for('login') }}" class="btn-outline">Masuk</a>
-                        <a href="{{ url_for('pendaftaran') }}" class="btn-primary">Daftar Misdinar</a>
-                    </div>
+                        <i class="fas fa-user"></i>
                     {% endif %}
                 </div>
-            </header>
-
-            <div class="content-wrapper">
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ category }}">
-                                {{ message }}
-                                <button class="close-btn" onclick="this.parentElement.style.display='none';">&times;</button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
-
-                {% block content %}{% endblock %}
+                <div class="sidebar-user-info">
+                    <h4>{{ session.get('nama_user') }}</h4>
+                    <span>{{ session.get('role') | title }}</span>
+                </div>
+                <a href="{{ url_for('logout') }}" class="sidebar-logout" title="Keluar">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
             </div>
-        </main>
-    </div>
+            {% else %}
+            <a href="{{ url_for('login') }}" class="login-btn">
+                <i class="fas fa-sign-in-alt"></i> Masuk ke Akun
+            </a>
+            {% endif %}
+        </div>
+    </nav>
 
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <!-- ======= KONTEN UTAMA ======= -->
+    <main class="main-content">
+
+        <!-- Topbar -->
+        <header class="topbar">
+            <!-- Tombol hamburger — memanggil toggleSidebar() -->
+            <button class="mobile-toggle" onclick="toggleSidebar()" aria-label="Buka menu">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <div class="search-bar">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Cari sesuatu...">
+            </div>
+
+            <div class="topbar-right">
+                {% if session.get('user_id') %}
+                <div class="user-profile">
+                    <a href="{{ url_for('pengaturan') }}">
+                        <div style="display:flex;flex-direction:column;align-items:flex-end;">
+                            <span class="user-name">{{ session.get('nama_user') }}</span>
+                            <span class="user-role">{{ session.get('role') | title }}</span>
+                        </div>
+                        <div class="avatar">
+                            {% if session.get('foto_profil') %}
+                                <img src="{{ url_for('static', filename=session.get('foto_profil')) }}" alt="Profile" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                            {% else %}
+                                <i class="fas fa-user"></i>
+                            {% endif %}
+                        </div>
+                    </a>
+                </div>
+                {% else %}
+                <div class="auth-buttons">
+                    <a href="{{ url_for('login') }}"      class="btn-outline">Masuk</a>
+                    <a href="{{ url_for('pendaftaran') }}" class="btn-primary">Daftar</a>
+                </div>
+                {% endif %}
+            </div>
+        </header>
+
+        <!-- Flash Messages -->
+        <div class="content-wrapper">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <span><i class="fas fa-info-circle" style="margin-right:8px;"></i>{{ message }}</span>
+                        <button class="close-btn" onclick="this.parentElement.remove()">&times;</button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+
+    </main>
+</div><!-- /app-container -->
+
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>
