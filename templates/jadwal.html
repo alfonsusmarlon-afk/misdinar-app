@@ -3,519 +3,118 @@
 {% block title %}Jadwal Pelayanan - MISDINAR{% endblock %}
 
 {% block content %}
-
-<!-- ===== PAGE HEADER ===== -->
-<div class="page-header flex-responsive flex-between" style="margin-bottom: 20px;">
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
     <div>
         <h2>Jadwal Pelayanan Misdinar</h2>
-        <p>
-            {% if view_mode == 'private' %}
-                Menampilkan hanya jadwal di mana Anda ditugaskan untuk bertugas.
-            {% else %}
-                Menampilkan seluruh jadwal pelayanan yang sudah dipublikasikan.
-            {% endif %}
-        </p>
-    </div>
-
-    {% if is_logged_in and session.get('role') in ['super admin', 'penjadwalan'] %}
-    <div>
-        <a href="{{ url_for('penjadwalan') }}" class="btn-primary"
-           style="background: var(--white); color: var(--primary-blue); border: 1px solid var(--primary-blue);">
-            <i class="fas fa-edit"></i> Edit Matriks
-        </a>
-    </div>
-    {% endif %}
-</div>
-
-<!-- ===== TOGGLE TAB (hanya tampil jika sudah login) ===== -->
-{% if is_logged_in %}
-<div class="view-tabs">
-    <a href="{{ url_for('jadwal', view='public') }}"
-       class="tab-btn {% if view_mode != 'private' %}tab-active{% endif %}">
-        <i class="fas fa-globe"></i>
-        <span>Semua Jadwal</span>
-        <small>Seluruh anggota</small>
-    </a>
-    <a href="{{ url_for('jadwal', view='private') }}"
-       class="tab-btn {% if view_mode == 'private' %}tab-active{% endif %}">
-        <i class="fas fa-user-check"></i>
-        <span>Jadwal Saya</span>
-        <small>Hanya jadwal bertugas saya</small>
-    </a>
-</div>
-{% endif %}
-
-<!-- ===== KONTEN JADWAL ===== -->
-<div class="schedule-container">
-
-    {% if not jadwal %}
-    <!-- KOSONG -->
-    <div class="empty-state">
-        <i class="fas fa-calendar-times empty-icon"></i>
-        <h3>Belum Ada Jadwal</h3>
-        {% if view_mode == 'private' %}
-            <p>Anda belum memiliki jadwal pelayanan dalam waktu dekat. Selamat beristirahat!</p>
-            <a href="{{ url_for('jadwal', view='public') }}" class="btn-see-all">
-                <i class="fas fa-globe"></i> Lihat Semua Jadwal
-            </a>
+        {% if is_logged_in %}
+        <p>Menampilkan jadwal Misa Anda beserta rekan yang bertugas bersama Anda.</p>
         {% else %}
-            <p>Belum ada jadwal pelayanan yang dipublikasikan oleh pengurus.</p>
+        <p>Menampilkan seluruh jadwal pelayanan Misa yang sudah dipublikasikan pengurus.</p>
         {% endif %}
     </div>
 
+    <div style="display: flex; gap: 10px;">
+        {% if is_logged_in and session.get('role') in ['super admin', 'penjadwalan'] %}
+        <a href="{{ url_for('penjadwalan') }}" class="btn-primary" style="background-color: var(--white); color: var(--primary-blue); border: 1px solid var(--primary-blue);">
+            <i class="fas fa-edit"></i> Edit Matriks Jadwal
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="schedule-container" style="width: 100%;">
+    
+    {% if not jadwal %}
+    <div class="empty-state">
+        <i class="fas fa-calendar-times empty-icon"></i>
+        <h3>Belum Ada Jadwal</h3>
+        {% if is_logged_in %}
+        <p>Anda belum memiliki jadwal pelayanan dalam waktu dekat. Selamat beristirahat!</p>
+        {% else %}
+        <p>Belum ada jadwal pelayanan yang dipublikasikan oleh pengurus.</p>
+        {% endif %}
+    </div>
+    
     {% else %}
-
-    <!-- ===================================================
-         VIEW: PUBLIK — tampil semua jadwal, semua petugas
-         =================================================== -->
-    {% if view_mode != 'private' %}
-
-        {# Kelompokkan berdasarkan tanggal + waktu misa #}
-        {% set grouped = {} %}
+    <div class="schedule-list">
+        {% set grouped_jadwal = {} %}
+        
         {% for j in jadwal %}
-            {% set key = j.jadwal_datetime ~ '|' ~ j.acara %}
-            {% if key not in grouped %}
-                {% set _ = grouped.update({key: {'data': j, 'petugas': [j.nama_pengguna]}}) %}
+            {% set key = j.tanggal ~ '-' ~ j.bulan ~ '-' ~ j.waktu ~ '-' ~ j.acara %}
+            {% if key not in grouped_jadwal %}
+                {% set _ = grouped_jadwal.update({key: {'data': j, 'petugas': [j.nama_pengguna]}}) %}
             {% else %}
-                {% set _ = grouped[key]['petugas'].append(j.nama_pengguna) %}
+                {% if j.nama_pengguna not in grouped_jadwal[key]['petugas'] %}
+                    {% set _ = grouped_jadwal[key]['petugas'].append(j.nama_pengguna) %}
+                {% endif %}
             {% endif %}
         {% endfor %}
 
-        {# Kelompokkan lagi berdasarkan tanggal (date) untuk tampilan per hari #}
-        {% set by_date = {} %}
-        {% for key, group in grouped.items() %}
-            {% set j = group['data'] %}
-            {% set date_key = j.tanggal ~ '-' ~ j.bulan %}
-            {% if date_key not in by_date %}
-                {% set _ = by_date.update({date_key: {'header': j, 'shifts': []}}) %}
-            {% endif %}
-            {% set _ = by_date[date_key]['shifts'].append(group) %}
-        {% endfor %}
-
-        <div class="day-list">
-            {% for date_key, day in by_date.items() %}
-            {% set hdr = day['header'] %}
-            <div class="day-card">
-
-                <!-- Kepala tanggal -->
-                <div class="day-header">
-                    <div class="day-date-box">
-                        <span class="day-num">{{ hdr.tanggal }}</span>
-                        <span class="day-mon">{{ hdr.bulan }}</span>
-                    </div>
-                    <div class="day-title">
-                        <span class="day-name">{{ hdr.hari }}</span>
-                        <span class="day-acara">{{ hdr.acara }}</span>
-                    </div>
-                </div>
-
-                <!-- Daftar shift (misa) dalam hari itu -->
-                <div class="shift-list">
-                    {% for group in day['shifts'] %}
-                    {% set j = group['data'] %}
-                    <div class="shift-row">
-                        <div class="shift-time">
-                            <i class="far fa-clock"></i> Pkl. {{ j.waktu }}
-                        </div>
-                        <div class="shift-petugas">
-                            {% for nama in group['petugas'] %}
-                                {% if nama %}
-                                <span class="petugas-chip">
-                                    <i class="fas fa-user-circle"></i> {{ nama }}
-                                </span>
-                                {% endif %}
-                            {% endfor %}
-                            {% if not group['petugas'] | reject('equalto', '') | list %}
-                                <span style="color: var(--text-gray); font-size: 13px; font-style: italic;">Belum ada petugas</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-
-            </div>
-            {% endfor %}
-        </div>
-
-    {% else %}
-    <!-- ===================================================
-         VIEW: PRIVAT — hanya jadwal user bertugas + QR Code
-         =================================================== -->
-
-        {# Kelompokkan berdasarkan shift (datetime + acara) #}
-        {% set grouped = {} %}
-        {% for j in jadwal %}
-            {% set key = j.jadwal_datetime ~ '|' ~ j.acara %}
-            {% if key not in grouped %}
-                {% set _ = grouped.update({key: {'data': j, 'petugas': [j.nama_pengguna]}}) %}
-            {% else %}
-                {% set _ = grouped[key]['petugas'].append(j.nama_pengguna) %}
-            {% endif %}
-        {% endfor %}
-
-        <div class="schedule-list">
-            {% for key, group in grouped.items() %}
+        {% for key, group in grouped_jadwal.items() %}
             {% set j = group['data'] %}
             <div class="schedule-card">
+                
                 <div class="date-box">
                     <span class="date">{{ j.tanggal }}</span>
                     <span class="month">{{ j.bulan }}</span>
                 </div>
+                
                 <div class="schedule-info">
-                    <h4>{{ j.hari }}, Pkl. {{ j.waktu }}</h4>
+                    <h4 style="margin-top: 0;">{{ j.hari }}, Pkl. {{ j.waktu }}</h4>
                     <span class="badge badge-primary">{{ j.acara }}</span>
-
-                    <div class="petugas-list" style="margin-top: 12px;">
-                        <span class="petugas-label">Petugas:</span>
-                        <div class="petugas-badges" style="margin-top: 6px;">
-                            {% for nama in group['petugas'] %}
-                                {% if nama %}
-                                <span class="badge badge-staff
-                                    {% if nama == session.get('nama_user') %}badge-staff-me{% endif %}">
-                                    <i class="fas fa-user-circle"></i> {{ nama }}
-                                    {% if nama == session.get('nama_user') %}
-                                        <span class="me-tag">Saya</span>
-                                    {% endif %}
+                    
+                    <div class="petugas-list" style="margin-top: 14px;">
+                        <span style="font-size: 12px; color: var(--text-gray); display: block; margin-bottom: 8px;">Daftar Petugas:</span>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            
+                            {% for p in group['petugas'] %}
+                                {% if is_logged_in and p == session.get('nama_user') %}
+                                <span class="badge" style="background-color: #f59e0b; color: white; font-size: 13px; padding: 6px 12px; border-radius: 6px; box-shadow: 0 2px 4px rgba(245,158,11,0.2);">
+                                    <i class="fas fa-star" style="margin-right: 4px;"></i> {{ p }} (Anda)
+                                </span>
+                                {% else %}
+                                <span class="badge" style="background-color: var(--light-blue); color: var(--primary-blue); font-size: 13px; padding: 6px 12px; border-radius: 6px;">
+                                    <i class="fas fa-user-circle" style="margin-right: 4px;"></i> {{ p }}
                                 </span>
                                 {% endif %}
                             {% endfor %}
+                            
                         </div>
-                    </div>
-
-                    <!-- Tombol QR -->
-                    <div class="qr-section">
-                        <button type="button" class="btn-show-qr"
-                            data-id="{{ j.id }}"
-                            data-user="{{ user_id }}"
-                            data-acara="{{ j.acara }}"
-                            data-waktu="{{ j.hari }}, {{ j.tanggal }} {{ j.bulan }} Pkl.{{ j.waktu }}">
-                            <i class="fas fa-qrcode"></i> Tampilkan QR Kehadiran
-                        </button>
                     </div>
                 </div>
             </div>
-            {% endfor %}
-        </div>
-
-    {% endif %}
-    {% endif %}
-
-</div><!-- /schedule-container -->
-
-
-<!-- ===== MODAL QR CODE (hanya untuk view privat) ===== -->
-{% if view_mode == 'private' %}
-<div id="qrModal" class="qr-modal">
-    <div class="qr-modal-content">
-        <h3 id="qrTitle">QR Kehadiran</h3>
-        <p  id="qrDesc">Tunjukkan ke pengurus untuk absen.</p>
-        <div class="qr-image-container">
-            <img id="qrImage" src="" alt="QR Code" />
-        </div>
-        <button class="btn-close-qr" onclick="document.getElementById('qrModal').style.display='none'">
-            <i class="fas fa-times"></i> Tutup QR
-        </button>
+        {% endfor %}
     </div>
+    {% endif %}
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.btn-show-qr').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            var jadwalId = this.getAttribute('data-id');
-            var username = this.getAttribute('data-user');
-            var acara   = this.getAttribute('data-acara');
-            var waktu   = this.getAttribute('data-waktu');
-
-            var dataObj = { j: jadwalId, u: username };
-            var qrUrl   = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='
-                        + encodeURIComponent(JSON.stringify(dataObj));
-
-            document.getElementById('qrImage').src = qrUrl;
-            document.getElementById('qrTitle').innerText = 'QR Absen — ' + acara;
-            document.getElementById('qrDesc').innerText  = waktu + '\nArahkan ke kamera pengurus.';
-            document.getElementById('qrModal').style.display = 'flex';
-        });
-    });
-
-    // Klik luar modal = tutup
-    document.getElementById('qrModal').addEventListener('click', function (e) {
-        if (e.target === this) this.style.display = 'none';
-    });
-});
-</script>
-{% endif %}
-
-
-<!-- ===== STYLING ===== -->
 <style>
-/* ---------- TAB TOGGLE ---------- */
-.view-tabs {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-}
-.tab-btn {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 20px;
-    border-radius: 12px;
-    border: 2px solid var(--border-color);
-    background: var(--white);
-    color: var(--text-gray);
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    text-decoration: none;
-    transition: all 0.2s;
-    flex: 1;
-    min-width: 180px;
-}
-.tab-btn i {
-    font-size: 18px;
-    flex-shrink: 0;
-}
-.tab-btn span  { display: block; line-height: 1.2; }
-.tab-btn small { font-size: 11px; font-weight: 400; color: var(--text-gray); }
-.tab-btn:hover {
-    border-color: var(--primary-blue);
-    color: var(--primary-blue);
-    background: var(--light-blue);
-}
-.tab-active {
-    border-color: var(--primary-blue) !important;
-    background: var(--primary-blue) !important;
-    color: var(--white) !important;
-    box-shadow: 0 4px 14px rgba(30,58,138,0.25);
-}
-.tab-active small { color: rgba(255,255,255,0.75) !important; }
-.tab-active:hover { opacity: 0.92; }
-
-/* ---------- CONTAINER ---------- */
-.schedule-container {
-    background: var(--white);
-    padding: 28px;
-    border-radius: 16px;
-    box-shadow: var(--shadow);
-}
-
-/* ---------- EMPTY STATE ---------- */
+.schedule-container { background: var(--white); padding: 30px; border-radius: 16px; box-shadow: var(--shadow); width: 100%; box-sizing: border-box; }
 .empty-state { text-align: center; padding: 60px 20px; }
-.empty-icon  { font-size: 52px; color: #cbd5e1; margin-bottom: 16px; display: block; }
-.empty-state h3 { font-size: 20px; margin-bottom: 8px; color: var(--text-dark); }
-.empty-state p  { color: var(--text-gray); margin-bottom: 20px; }
-.btn-see-all {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 10px 20px; border-radius: 8px;
-    background: var(--light-blue); color: var(--primary-blue);
-    font-weight: 600; font-size: 14px; text-decoration: none; transition: 0.2s;
-}
-.btn-see-all:hover { background: var(--primary-blue); color: var(--white); }
+.empty-icon { font-size: 48px; color: #cbd5e1; margin-bottom: 16px; }
 
-/* ========================================
-   PUBLIC VIEW — tampilan per hari
-   ======================================== */
-.day-list { display: flex; flex-direction: column; gap: 16px; }
+.schedule-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; width: 100%; }
 
-.day-card {
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    overflow: hidden;
-    transition: box-shadow 0.2s;
-}
-.day-card:hover { box-shadow: 0 6px 18px rgba(30,58,138,0.1); }
+.schedule-card { display: flex; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; transition: 0.3s; background: #fafafa; }
+.schedule-card:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); transform: translateY(-2px); border-color: var(--primary-blue); }
 
-.day-header {
-    background: var(--primary-blue);
-    color: var(--white);
-    padding: 14px 20px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-.day-date-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: rgba(255,255,255,0.15);
-    border-radius: 8px;
-    padding: 8px 14px;
-    min-width: 56px;
-    flex-shrink: 0;
-}
-.day-num { font-size: 24px; font-weight: 800; line-height: 1; }
-.day-mon { font-size: 11px; font-weight: 700; text-transform: uppercase; margin-top: 2px; opacity: 0.85; }
-.day-title { flex: 1; }
-.day-name  { display: block; font-size: 16px; font-weight: 700; }
-.day-acara { display: block; font-size: 12px; opacity: 0.8; margin-top: 2px; }
-
-.shift-list { padding: 0; }
-
-.shift-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--border-color);
-    transition: background 0.15s;
-}
-.shift-row:last-child { border-bottom: none; }
-.shift-row:hover { background: #f8faff; }
-
-.shift-time {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--primary-blue);
-    white-space: nowrap;
-    min-width: 90px;
-    padding-top: 3px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-.shift-petugas {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    flex: 1;
-}
-.petugas-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: var(--light-blue);
-    color: var(--primary-blue);
-    padding: 5px 12px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 600;
-}
-
-/* ========================================
-   PRIVATE VIEW — card per jadwal bertugas
-   ======================================== */
-.schedule-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-}
-.schedule-card {
-    display: flex;
-    flex-direction: column;
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    overflow: hidden;
-    transition: 0.3s;
-    background: #fafafa;
-}
-.schedule-card:hover {
-    box-shadow: 0 10px 20px rgba(30,58,138,0.1);
-    transform: translateY(-2px);
-    border-color: var(--primary-blue);
-}
-.date-box {
-    background: var(--primary-blue); color: var(--white);
-    padding: 20px 24px;
-    display: flex; flex-direction: column;
-    justify-content: center; align-items: center;
-}
-.date-box .date  { font-size: 28px; font-weight: 800; line-height: 1; }
+.date-box { background: var(--primary-blue); color: var(--white); padding: 20px 24px; display: flex; flex-direction: column; justify-content: center; align-items: center; min-width: 90px; }
+.date-box .date { font-size: 28px; font-weight: 800; line-height: 1; }
 .date-box .month { font-size: 14px; font-weight: 600; text-transform: uppercase; margin-top: 4px; }
-.schedule-info {
-    padding: 18px; flex: 1; background: white;
-    display: flex; flex-direction: column;
-}
-.schedule-info h4 {
-    margin: 0 0 8px 0; font-size: 17px; font-weight: 800; color: var(--text-dark);
-}
+
+.schedule-info { padding: 20px; flex: 1; background: white; }
+.schedule-info h4 { color: var(--text-dark); font-size: 17px; font-weight: 800; margin-bottom: 8px; }
+
 .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
 .badge-primary { background: #eef2ff; color: var(--primary-blue); }
-.badge-staff {
-    background: var(--light-blue); color: var(--primary-blue);
-    font-size: 13px; padding: 6px 12px; border-radius: 6px;
-    display: inline-flex; align-items: center; gap: 5px;
-}
-.badge-staff-me {
-    background: var(--primary-blue); color: white;
-    border: 2px solid var(--primary-blue);
-}
-.me-tag {
-    background: rgba(255,255,255,0.25); color: white;
-    font-size: 10px; padding: 1px 6px; border-radius: 4px; font-weight: 700;
-}
-.petugas-label { font-size: 12px; color: var(--text-gray); }
-.petugas-badges { display: flex; flex-wrap: wrap; gap: 8px; }
 
-/* QR Button */
-.qr-section { margin-top: 16px; border-top: 1px dashed #e2e8f0; padding-top: 12px; }
-.btn-show-qr {
-    width: 100%; background: #10b981; color: white;
-    border: none; padding: 11px 14px; border-radius: 8px;
-    cursor: pointer; font-size: 13px; font-weight: 700;
-    transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
-}
-.btn-show-qr:hover { background: #059669; }
+.btn-primary { border: none; cursor: pointer; transition: 0.2s; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; }
+.btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
 
-/* QR Modal */
-.qr-modal {
-    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.6); z-index: 9999;
-    align-items: center; justify-content: center;
-    backdrop-filter: blur(3px);
-}
-.qr-modal-content {
-    background: white; padding: 32px; border-radius: 20px;
-    text-align: center; max-width: 340px; width: 90%;
-    box-shadow: 0 25px 50px rgba(0,0,0,0.25);
-    animation: popIn 0.25s ease;
-}
-@keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-.qr-modal-content h3 { margin: 0 0 6px 0; color: var(--text-dark); font-size: 18px; }
-.qr-modal-content p  { color: var(--text-gray); font-size: 13px; margin-bottom: 20px; white-space: pre-line; }
-.qr-image-container {
-    background: #f8fafc; padding: 14px; border-radius: 12px;
-    display: inline-block; border: 2px dashed var(--border-color);
-}
-.qr-image-container img { width: 200px; height: 200px; display: block; }
-.btn-close-qr {
-    margin-top: 20px; background: #f1f5f9; color: #475569;
-    border: none; padding: 12px 24px; border-radius: 8px;
-    cursor: pointer; font-weight: 700; width: 100%; font-size: 14px;
-    transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
-}
-.btn-close-qr:hover { background: #e2e8f0; }
-
-/* ========================================
-   RESPONSIVE
-   ======================================== */
-@media (max-width: 900px) {
-    .view-tabs { gap: 8px; }
-    .tab-btn   { padding: 10px 16px; min-width: 0; }
-    .schedule-container { padding: 16px; }
-    .shift-row { flex-direction: column; gap: 8px; }
-    .shift-time { min-width: auto; }
-}
-
-@media (max-width: 600px) {
-    .schedule-list { grid-template-columns: 1fr; gap: 12px; }
-    .schedule-card { flex-direction: row; }
-    .date-box { padding: 16px 18px; min-width: 75px; }
-    .date-box .date  { font-size: 24px; }
-    .date-box .month { font-size: 12px; }
-    .schedule-info { padding: 14px; }
-    .tab-btn small { display: none; }
-    .qr-image-container img { width: 160px; height: 160px; }
-}
-
-@media (max-width: 480px) {
-    .schedule-card { flex-direction: column; }
-    .day-header { padding: 12px 16px; }
-    .day-num  { font-size: 20px; }
-    .shift-row { padding: 12px 16px; }
-    .view-tabs { flex-direction: column; }
+@media (max-width: 768px) {
+    .schedule-container { padding: 20px; }
+    .schedule-list { grid-template-columns: 1fr; }
+    .date-box { padding: 15px; min-width: 80px; }
 }
 </style>
-
 {% endblock %}

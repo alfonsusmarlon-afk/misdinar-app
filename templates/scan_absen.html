@@ -1,29 +1,105 @@
 {% extends "base.html" %}
 
-{% block title %}Scan Kehadiran QR - MISDINAR{% endblock %}
+{% block title %}Scan Kehadiran Mandiri - MISDINAR{% endblock %}
 
 {% block content %}
-<div class="setup-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center;">
-    
-    <div style="background: white; padding: 50px 40px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); max-width: 500px; border-top: 6px solid #f59e0b;">
-        <div style="width: 100px; height: 100px; background: #fef3c7; color: #f59e0b; font-size: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px auto;">
-            <i class="fas fa-tools"></i>
-        </div>
-        
-        <h2 style="color: var(--text-dark); margin-bottom: 12px; font-size: 26px;">Dalam Pengembangan</h2>
-        <p style="color: var(--text-gray); font-size: 15px; margin-bottom: 30px; line-height: 1.6;">
-            Fitur <b>Scan Absen QR Code Otomatis</b> saat ini sedang dalam tahap uji coba oleh tim developer untuk memastikan keamanan & kestabilan data kehadiran.
-        </p>
-        
-        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; padding: 20px; border-radius: 12px; margin-bottom: 30px;">
-            <i class="fas fa-qrcode" style="font-size: 32px; color: #94a3b8; margin-bottom: 10px; display: block;"></i>
-            <span style="font-size: 13px; color: #64748b; font-weight: 600;">Coming Soon</span>
-        </div>
-        
-        <a href="{{ url_for('index') }}" class="btn-primary" style="display: inline-block; width: auto; padding: 12px 30px; border-radius: 30px;">
-            <i class="fas fa-arrow-left"></i> Kembali ke Beranda
-        </a>
-    </div>
-
+<div class="page-header" style="text-align: center; margin-bottom: 30px;">
+    <h2>Scan Kehadiran Otomatis</h2>
+    <p>Arahkan kamera ke QR Code milik Anda pada kertas jadwal yang tercetak di Sakristi / Papan Pengumuman.</p>
 </div>
+
+<div class="card" style="background: white; padding: 30px; border-radius: 16px; box-shadow: var(--shadow); text-align: center; max-width: 600px; margin: 0 auto;">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    
+    <div id="reader" style="width: 100%; border-radius: 12px; overflow: hidden; border: 4px solid var(--primary-blue); min-height: 300px; background: #000;"></div>
+    
+    <div id="resultBox" style="margin-top: 24px; padding: 16px; border-radius: 8px; display: none; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);"></div>
+</div>
+
+<script>
+let isScanning = false;
+
+function onScanSuccess(decodedText, decodedResult) {
+    if (isScanning) return; // Mencegah server dibombardir jika HP men-scan berulang di detik yang sama
+    isScanning = true;
+    
+    // Tampilkan Loading UI
+    let box = document.getElementById('resultBox');
+    box.style.display = 'block';
+    box.style.backgroundColor = '#fef3c7';
+    box.style.color = '#d97706';
+    box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sedang memproses kehadiran...';
+    
+    // Validasi apakah benar format JSON dari Misdinar App
+    try {
+        JSON.parse(decodedText);
+        
+        // Kirim API Kehadiran
+        fetch("{{ url_for('api_absen') }}", {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: decodedText
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // Sukses Hijau
+                box.style.backgroundColor = '#dcfce7';
+                box.style.color = '#059669';
+                box.innerHTML = '<i class="fas fa-check-circle"></i> ' + data.message;
+            } else {
+                // Gagal Merah (Misal nyecan QR temannya)
+                box.style.backgroundColor = '#fee2e2';
+                box.style.color = '#dc2626';
+                box.innerHTML = '<i class="fas fa-times-circle"></i> ' + data.message;
+            }
+            
+            // Jeda 3.5 detik sebelum bisa scan berikutnya
+            setTimeout(() => {
+                box.style.display = 'none';
+                isScanning = false;
+            }, 3500);
+        })
+        .catch(err => {
+            box.style.backgroundColor = '#fee2e2';
+            box.style.color = '#dc2626';
+            box.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Gagal terhubung ke server/internet.';
+            setTimeout(() => { box.style.display = 'none'; isScanning = false; }, 3000);
+        });
+        
+    } catch(e) {
+        // Jika menscan QR code sembarangan (bukan jadwal)
+        box.style.backgroundColor = '#fee2e2';
+        box.style.color = '#dc2626';
+        box.innerHTML = '<i class="fas fa-times-circle"></i> QR Code tidak valid / Bukan jadwal Misa.';
+        setTimeout(() => { box.style.display = 'none'; isScanning = false; }, 3000);
+    }
+}
+
+function onScanFailure(error) {
+    // Fungsi ini dipanggil puluhan kali tiap detik oleh library saat mencari QR. Biarkan kosong agar tidak memberatkan browser.
+}
+
+// ==========================================
+// KONFIGURASI SCANNER (PERBAIKAN FOKUS)
+// ==========================================
+let html5QrcodeScanner = new Html5QrcodeScanner(
+  "reader",
+  { 
+      fps: 15, // Ditingkatkan dari 10 ke 15 agar lebih responsif
+      qrbox: function(viewfinderWidth, viewFinderHeight) {
+          // Kotak scan otomatis beradaptasi ukuran 70% dari layar kamera
+          let minEdgeSize = Math.min(viewfinderWidth, viewFinderHeight);
+          let qrboxSize = Math.floor(minEdgeSize * 0.7);
+          return { width: qrboxSize, height: qrboxSize };
+      },
+      videoConstraints: {
+          facingMode: "environment", // Memaksa menggunakan Kamera Belakang HP
+          focusMode: "continuous"    // Memaksa autofokus menyala
+      }
+  },
+  false); // False mematikan console log agar tidak berat
+  
+html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+</script>
 {% endblock %}

@@ -1,192 +1,207 @@
 {% extends "base.html" %}
 
-{% block title %}Absensi Kehadiran - MISDINAR{% endblock %}
+{% block title %}Absensi & Kehadiran - MISDINAR{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h2>Catatan Kehadiran</h2>
-    <p>Rekam jejak partisipasi pelayanan dan latihan anggota</p>
-</div>
-
-{% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-<div class="admin-action-box" id="form-container">
-    <h3 id="form-title"><i class="fas fa-user-check"></i> Tambah Data Kehadiran</h3>
-    
-    <form action="{{ url_for('kehadiran') }}" method="POST" id="absen-form" class="pengumuman-form">
-        <input type="hidden" name="action" id="form-action" value="tambah">
-        <input type="hidden" name="id" id="form-id" value="">
-        
-        <div class="form-group">
-            <label>Pilih Anggota</label>
-            <select name="username" id="input-username" class="table-select-role" required>
-                <option value="">-- Pilih Nama --</option>
-                {% for u in users %}
-                <option value="{{ u.username }}">{{ u.nama }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        
-        <div class="form-group">
-            <label>Tanggal & Kegiatan</label>
-            <div class="date-activity-row">
-                <input type="date" name="tanggal" id="input-tanggal" required>
-                <input type="text" name="kegiatan" id="input-kegiatan" required placeholder="Cth: Misa Pagi / Latihan">
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label>Status Kehadiran</label>
-            <select name="status" id="input-status" class="table-select-role" required>
-                <option value="Hadir">✅ Hadir</option>
-                <option value="Izin">ℹ️ Izin</option>
-                <option value="Sakit">🏥 Sakit</option>
-                <option value="Alpa">❌ Tanpa Keterangan (Alpa)</option>
-            </select>
-        </div>
-
-        <div class="form-group full-width">
-            <label>Keterangan Tambahan (Opsional)</label>
-            <input type="text" name="keterangan" id="input-keterangan" placeholder="Cth: Terlambat 15 menit / Ada acara keluarga">
-        </div>
-        
-        <div class="form-action">
-            <button type="submit" id="btn-submit" class="btn-primary">
-                <i class="fas fa-save"></i> Simpan Absen
-            </button>
-            <button type="button" id="btn-cancel" class="btn-outline" style="display: none;" onclick="cancelEdit()">Batal</button>
-        </div>
-    </form>
-</div>
-{% endif %}
-
-<div class="dokumen-container">
-    {% if kehadiran %}
-        {% for item in kehadiran %}
-        <div class="dokumen-card">
-            <div class="dokumen-icon-box icon-{{ item.status|lower|replace(' ', '-') }}">
-                {% if item.status == 'Hadir' %}<i class="fas fa-check"></i>
-                {% elif item.status == 'Izin' %}<i class="fas fa-info"></i>
-                {% elif item.status == 'Sakit' %}<i class="fas fa-briefcase-medical"></i>
-                {% else %}<i class="fas fa-times"></i>{% endif %}
-            </div>
-            
-            <div class="dokumen-info">
-                <h3 style="margin-bottom: 2px;">{{ item.nama }}</h3>
-                <div class="dokumen-meta" style="margin-bottom: 6px;">
-                    <span style="font-weight: bold; color: var(--text-dark);">{{ item.kegiatan }}</span>
-                    <span><i class="far fa-calendar-alt"></i> {{ item.tanggal }}</span>
-                </div>
-                {% if item.keterangan %}
-                <p style="font-size: 12px; color: var(--text-gray); margin:0;"><i>Catatan: {{ item.keterangan }}</i></p>
-                {% endif %}
-            </div>
-            
-            <div class="dokumen-actions-grid">
-                <span class="badge-scope badge-{{ item.status|lower|replace(' ', '-') }}">
-                    {{ item.status }}
-                </span>
-                
-                {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-                <div style="display:flex; gap:6px; margin-left: 12px;">
-                    
-                    <button type="button" class="management-btn edit-color" 
-                            onclick="editAbsen(this)"
-                            data-id="{{ item.id }}"
-                            data-user="{{ item.username }}"
-                            data-tgl="{{ item.tanggal }}"
-                            data-keg="{{ item.kegiatan }}"
-                            data-status="{{ item.status }}"
-                            data-ket="{{ item.keterangan if item.keterangan else '' }}">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    
-                    <form action="{{ url_for('kehadiran') }}" method="POST" style="display:inline; margin:0;">
-                        <input type="hidden" name="action" value="hapus">
-                        <input type="hidden" name="id" value="{{ item.id }}">
-                        <button type="submit" class="management-btn delete-color" onclick="return confirm('Hapus data absen ini?');"><i class="fas fa-trash-alt"></i></button>
-                    </form>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        {% endfor %}
-    {% else %}
-        <div class="no-data-box">
-            <i class="fas fa-clipboard-list"></i>
-            <h3>Data Kosong</h3>
-            <p>Belum ada catatan kehadiran yang terdaftar.</p>
-        </div>
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+    <div>
+        <h2>Absensi & Rekap Kehadiran</h2>
+        <p>
+            {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+            Kelola data absensi, catat kehadiran manual, atau ubah status izin anggota.
+            {% else %}
+            Pantau riwayat kehadiran Anda dalam melayani Misa dan kegiatan lainnya.
+            {% endif %}
+        </p>
+    </div>
+    {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+    <button class="btn-primary" onclick="openAddModal()" style="border-radius: 8px; padding: 10px 16px; font-weight: bold; border: none; cursor: pointer; color: white; background: var(--primary-blue);">
+        <i class="fas fa-plus"></i> Tambah Manual
+    </button>
     {% endif %}
 </div>
 
-<script>
-    function editAbsen(btn) {
-        document.getElementById('form-action').value = 'edit';
-        document.getElementById('form-id').value = btn.getAttribute('data-id');
-        document.getElementById('input-username').value = btn.getAttribute('data-user');
-        document.getElementById('input-tanggal').value = btn.getAttribute('data-tgl');
-        document.getElementById('input-kegiatan').value = btn.getAttribute('data-keg');
-        document.getElementById('input-status').value = btn.getAttribute('data-status');
-        document.getElementById('input-keterangan').value = btn.getAttribute('data-ket');
-        
-        document.getElementById('form-title').innerHTML = '<i class="fas fa-edit"></i> Edit Kehadiran';
-        document.getElementById('btn-submit').innerHTML = '<i class="fas fa-save"></i> Update Data';
-        document.getElementById('btn-cancel').style.display = 'inline-flex';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+<div class="card" style="background: white; padding: 24px; border-radius: 16px; box-shadow: var(--shadow); overflow-x: auto;">
+    <table style="width: 100%; text-align: left; border-collapse: collapse; min-width: 800px; font-size: 14px;">
+        <thead>
+            <tr style="border-bottom: 2px solid #e2e8f0; color: var(--text-gray);">
+                <th style="padding: 14px 12px; width: 15%;">Tanggal</th>
+                <th style="padding: 14px 12px; width: 20%;">Nama Petugas</th>
+                <th style="padding: 14px 12px; width: 25%;">Kegiatan/Misa</th>
+                <th style="padding: 14px 12px; width: 10%;">Status</th>
+                <th style="padding: 14px 12px; width: 20%;">Keterangan</th>
+                {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+                <th style="padding: 14px 12px; width: 10%; text-align: center;">Aksi</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for k in kehadiran %}
+            <tr style="border-bottom: 1px solid #f1f5f9; transition: 0.2s;">
+                <td style="padding: 16px 12px; font-weight: bold; color: var(--text-dark);">{{ k.tanggal }}</td>
+                <td style="padding: 16px 12px;">{{ k.nama }}</td>
+                <td style="padding: 16px 12px; color: var(--primary-blue); font-weight: 600;">{{ k.kegiatan }}</td>
+                <td style="padding: 16px 12px;">
+                    <span style="display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;
+                        {% if k.status == 'Hadir' %}background: #dcfce7; color: #059669;
+                        {% elif k.status == 'Izin' %}background: #fef3c7; color: #d97706;
+                        {% else %}background: #fee2e2; color: #dc2626;{% endif %}">
+                        {{ k.status | upper }}
+                    </span>
+                </td>
+                <td style="padding: 16px 12px; color: var(--text-gray); font-size: 13px;">{{ k.keterangan if k.keterangan else '-' }}</td>
+                
+                {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+                <td style="padding: 16px 12px; text-align: center;">
+                    <button class="btn-icon" onclick="openEditModal('{{ k.id }}', '{{ k.username }}', '{{ k.tanggal }}', '{{ k.kegiatan }}', '{{ k.status }}', '{{ k.keterangan }}')" style="color: var(--primary-blue); background: none; border: none; cursor: pointer; margin-right: 8px; font-size: 16px;">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    
+                    <form action="{{ url_for('kehadiran') }}" method="POST" style="display: inline;" onsubmit="return confirm('Hapus data kehadiran ini secara permanen?');">
+                        <input type="hidden" name="action" value="hapus">
+                        <input type="hidden" name="id" value="{{ k.id }}">
+                        <button type="submit" class="btn-icon" style="color: #ef4444; background: none; border: none; cursor: pointer; font-size: 16px;">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </form>
+                </td>
+                {% endif %}
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="padding: 60px 20px; text-align: center; color: var(--text-gray);">
+                    <i class="fas fa-clipboard-list" style="font-size: 40px; color: #cbd5e1; display: block; margin-bottom: 12px;"></i>
+                    Belum ada data kehadiran.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
-    function cancelEdit() {
-        document.getElementById('form-action').value = 'tambah';
-        document.getElementById('form-id').value = '';
-        document.getElementById('absen-form').reset();
+{% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+<div id="kehadiranModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+    <div style="background: white; border-radius: 16px; width: 100%; max-width: 450px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; animation: modalPop 0.3s ease-out;">
         
-        document.getElementById('form-title').innerHTML = '<i class="fas fa-user-check"></i> Tambah Data Kehadiran';
-        document.getElementById('btn-submit').innerHTML = '<i class="fas fa-save"></i> Simpan Absen';
-        document.getElementById('btn-cancel').style.display = 'none';
-    }
-</script>
+        <div style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <h3 id="modalTitle" style="margin: 0; color: var(--text-dark); font-size: 18px;"><i class="fas fa-edit" style="color: var(--primary-blue);"></i> Kelola Kehadiran</h3>
+            <button onclick="document.getElementById('kehadiranModal').style.display='none'" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #94a3b8;">&times;</button>
+        </div>
+        
+        <form action="{{ url_for('kehadiran') }}" method="POST" style="padding: 24px;">
+            <input type="hidden" name="action" id="actionField" value="tambah">
+            <input type="hidden" name="id" id="idField">
+            
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Pilih Anggota</label>
+                <select name="username" id="usernameField" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; font-family: inherit;">
+                    {% for u in users %}
+                    <option value="{{ u.username }}">{{ u.nama }}</option>
+                    {% endfor %}
+                </select>
+                <p id="usernameHelp" style="display: none; margin: 6px 0 0 0; font-size: 11px; color: #ef4444;"><i>*Nama tidak dapat diubah di mode edit.</i></p>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Tanggal</label>
+                <input type="date" name="tanggal" id="tanggalField" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Kegiatan / Misa</label>
+                <input type="text" name="kegiatan" id="kegiatanField" placeholder="Contoh: Misa Paskah 08:00" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Status Kehadiran</label>
+                <select name="status" id="statusField" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; font-family: inherit;">
+                    <option value="Hadir">Hadir</option>
+                    <option value="Izin">Izin / Sakit</option>
+                    <option value="Tidak Hadir">Tidak Hadir (Alpa)</option>
+                </select>
+            </div>
+            
+            <div style="margin-bottom: 24px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Keterangan / Alasan</label>
+                <input type="text" name="keterangan" id="keteranganField" placeholder="Alasan izin / telat (opsional)" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
+            </div>
+            
+            <button type="submit" style="background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 14px; transition: 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Simpan Data</button>
+        </form>
+    </div>
+</div>
 
 <style>
-.admin-action-box { background: var(--white); padding: 24px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 32px; border-left: 4px solid var(--primary-green); }
-.admin-action-box h3 { margin-bottom: 20px; color: var(--text-dark); font-size: 18px; display: flex; align-items: center; gap: 8px; }
-.pengumuman-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: end; }
-.full-width { grid-column: 1 / -1; }
-.form-group label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--text-dark); }
-.form-group input { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; }
-.table-select-role { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; background: white; cursor: pointer; }
-.date-activity-row { display: grid; grid-template-columns: minmax(140px, 45%) minmax(0, 1fr); gap: 8px; }
-.form-action { grid-column: 1 / -1; display: flex; gap: 12px; margin-top: 8px; }
-.btn-primary { flex: 1; max-width: 250px; background: var(--primary-green); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-.btn-outline { padding: 0 24px; border: 1px solid #dc3545; color: #dc3545; background: transparent; border-radius: 8px; cursor: pointer; }
-
-.dokumen-container { display: flex; flex-direction: column; gap: 14px; }
-.dokumen-card { background: var(--white); padding: 16px 20px; border-radius: 12px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 16px; }
-.dokumen-icon-box { width: 44px; height: 44px; font-size: 20px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-.dokumen-info { flex: 1; }
-.dokumen-meta { display: flex; gap: 16px; font-size: 12px; color: var(--text-gray); }
-.badge-scope { padding: 4px 12px; border-radius: 6px; font-weight: bold; font-size: 11px; }
-.dokumen-actions-grid { display: flex; align-items: center; justify-content: flex-end; }
-.management-btn { width: 34px; height: 34px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; }
-.edit-color { background: #e2f0e6; color: var(--primary-green); }
-.delete-color { background: #f8d7da; color: #dc3545; }
-.no-data-box { text-align: center; padding: 50px; background: var(--white); border-radius: 12px; }
-.no-data-box i { font-size: 48px; color: var(--border-color); margin-bottom: 12px; }
-
-.icon-hadir { background: #d4edda !important; color: #155724 !important; }
-.icon-izin { background: #d1ecf1 !important; color: #0c5460 !important; }
-.icon-sakit { background: #fff3cd !important; color: #856404 !important; }
-.icon-alpa { background: #f8d7da !important; color: #721c24 !important; }
-
-.badge-hadir { background: #28a745; color: white; }
-.badge-izin { background: #17a2b8; color: white; }
-.badge-sakit { background: #ffc107; color: black; }
-.badge-alpa { background: #dc3545; color: white; }
-
-@media(max-width:768px){
-    .pengumuman-form{grid-template-columns:1fr;}
-    .date-activity-row{grid-template-columns:1fr;}
-    .dokumen-card{flex-direction:column;align-items:flex-start;}
-    .dokumen-actions-grid{width:100%;justify-content:space-between; margin-top:10px;}
+@keyframes modalPop {
+    0% { transform: scale(0.95); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
 }
 </style>
+
+<script>
+function openAddModal() {
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus-circle" style="color: var(--primary-blue);"></i> Tambah Manual';
+    document.getElementById('actionField').value = 'tambah';
+    
+    // Reset isi form
+    document.getElementById('idField').value = '';
+    document.getElementById('kegiatanField').value = '';
+    document.getElementById('keteranganField').value = '';
+    document.getElementById('statusField').value = 'Hadir';
+    
+    // Membuka Kunci Semua Input (Bisa diisi)
+    let userField = document.getElementById('usernameField');
+    userField.style.pointerEvents = 'auto';
+    userField.style.background = 'white';
+    
+    let tglField = document.getElementById('tanggalField');
+    tglField.removeAttribute('readonly');
+    tglField.style.background = 'white';
+    
+    let kegField = document.getElementById('kegiatanField');
+    kegField.removeAttribute('readonly');
+    kegField.style.background = 'white';
+    
+    document.getElementById('usernameHelp').style.display = 'none';
+    
+    document.getElementById('kehadiranModal').style.display = 'flex';
+}
+
+function openEditModal(id, username, tanggal, kegiatan, status, keterangan) {
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit" style="color: var(--primary-blue);"></i> Edit Status';
+    document.getElementById('actionField').value = 'edit';
+    document.getElementById('idField').value = id;
+    
+    // Set Nilai yang sudah ada
+    document.getElementById('usernameField').value = username;
+    document.getElementById('tanggalField').value = tanggal;
+    document.getElementById('kegiatanField').value = kegiatan;
+    document.getElementById('statusField').value = status;
+    document.getElementById('keteranganField').value = (keterangan !== 'None' && keterangan !== '-') ? keterangan : '';
+    
+    // MENGUNCI INPUT NAMA, TGL, KEGIATAN (Hanya Status & Keterangan yang bebas diubah)
+    let userField = document.getElementById('usernameField');
+    userField.style.pointerEvents = 'none';
+    userField.style.background = '#f1f5f9';
+    
+    let tglField = document.getElementById('tanggalField');
+    tglField.setAttribute('readonly', 'true');
+    tglField.style.background = '#f1f5f9';
+    
+    let kegField = document.getElementById('kegiatanField');
+    kegField.setAttribute('readonly', 'true');
+    kegField.style.background = '#f1f5f9';
+    
+    document.getElementById('usernameHelp').style.display = 'block';
+    
+    document.getElementById('kehadiranModal').style.display = 'flex';
+}
+
+window.onclick = function(event) {
+    if (event.target == document.getElementById('kehadiranModal')) {
+        document.getElementById('kehadiranModal').style.display = "none";
+    }
+}
+</script>
+{% endif %}
 {% endblock %}

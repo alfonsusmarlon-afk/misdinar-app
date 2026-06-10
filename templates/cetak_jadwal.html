@@ -5,8 +5,8 @@
 {% block content %}
 <div class="page-header no-print" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
     <div>
-        <h2>Cetak Matriks Jadwal</h2>
-        <p>Pratinjau jadwal dalam format matriks. Tekan <b>Apply ke Web</b> agar jadwal tampil di Dashboard anggota.</p>
+        <h2>Cetak Matriks Jadwal & QR Code</h2>
+        <p>Setiap nama sekarang disertai QR Code HD untuk absen mandiri oleh anggota.</p>
     </div>
     <div style="display: flex; gap: 12px;">
         <form action="{{ url_for('penjadwalan') }}" method="POST" style="margin: 0;" class="no-print">
@@ -17,10 +17,10 @@
         </form>
         
         <button onclick="window.print()" class="btn-outline no-print" style="display: flex; align-items: center; gap: 8px;">
-            <i class="fas fa-print"></i> PDF / Print
+            <i class="fas fa-print"></i> Cetak Dokumen
         </button>
 
-        <form action="{{ url_for('publikasi_jadwal') }}" method="POST" style="margin: 0;" class="no-print" onsubmit="return confirm('Apakah Anda yakin ingin mempublikasikan jadwal ini ke Web Jadwal Pelayanan? Semua anggota akan langsung mendapatkan jadwal ini di dashboard mereka.');">
+        <form action="{{ url_for('publikasi_jadwal') }}" method="POST" style="margin: 0;" class="no-print" onsubmit="return confirm('Mempublikasikan jadwal ini ke Web? Semua anggota akan langsung mendapatkan jadwal ini di dashboard mereka.');">
             <input type="hidden" name="target_start" value="{{ s_str }}">
             <input type="hidden" name="target_end" value="{{ e_str }}">
             <button type="submit" class="btn-primary no-print" style="display: flex; align-items: center; gap: 8px; background-color: #10b981; border: none;">
@@ -60,7 +60,6 @@
 
     {% for week in weeks %}
         
-        <!-- BLOK SENIN - KAMIS -->
         {% if week.senin_kamis and week.max_slots_sk > 0 %}
         <div class="matrix-section" style="margin-bottom: 30px;">
             <table class="matriks-table">
@@ -93,7 +92,12 @@
                                     {% if ptgs[i] == '' %}
                                         <td class="empty-cell"></td>
                                     {% else %}
-                                        <td>{{ ptgs[i] }}</td>
+                                        <td class="name-cell">
+                                            <div class="name-wrapper">
+                                                <span>{{ ptgs[i].nama }}</span>
+                                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=2&data={{ ('{\"j\":' ~ ptgs[i].jadwal_id ~ ',\"u\":\"' ~ ptgs[i].username ~ '\"}') | urlencode }}" class="qr-print" crossorigin="anonymous" />
+                                            </div>
+                                        </td>
                                     {% endif %}
                                 {% endfor %}
                             {% else %}
@@ -107,7 +111,6 @@
         </div>
         {% endif %}
 
-        <!-- BLOK JUMAT - MINGGU -->
         {% if week.jumat_minggu and week.max_slots_jm > 0 %}
         <div class="matrix-section" style="margin-bottom: 30px;">
             <table class="matriks-table">
@@ -140,7 +143,12 @@
                                     {% if ptgs[i] == '' %}
                                         <td class="empty-cell"></td>
                                     {% else %}
-                                        <td>{{ ptgs[i] }}</td>
+                                        <td class="name-cell">
+                                            <div class="name-wrapper">
+                                                <span>{{ ptgs[i].nama }}</span>
+                                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=2&data={{ ('{\"j\":' ~ ptgs[i].jadwal_id ~ ',\"u\":\"' ~ ptgs[i].username ~ '\"}') | urlencode }}" class="qr-print" crossorigin="anonymous" />
+                                            </div>
+                                        </td>
                                     {% endif %}
                                 {% endfor %}
                             {% else %}
@@ -162,48 +170,31 @@
 </div>
 
 <style>
+/* CSS Tambahan: Memperbesar QR sedikit agar mudah dishoot kamera */
+.name-cell { vertical-align: middle !important; padding: 4px 6px !important; }
+.name-wrapper { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; font-size: 11px;}
+.qr-print { width: 45px; height: 45px; object-fit: contain; border-radius: 4px;} /* Ukuran diperbesar sedikit agar mata kamera mudah fokus */
+
 .filter-box { background: var(--white); padding: 20px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 24px; border-left: 4px solid var(--primary-blue);}
-.form-group label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-dark); }
-.form-group input { padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; outline: none; font-family: inherit;}
-.form-group input:focus { border-color: var(--primary-blue); }
-
-.btn-primary { background: var(--primary-blue); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-.btn-primary:hover { transform: translateY(-2px); opacity: 0.9;}
-.btn-outline { padding: 10px 24px; border: 1px solid var(--text-gray); color: var(--text-gray); border-radius: 8px; font-weight: bold; transition: 0.3s; background: transparent; cursor: pointer; height: 100%;}
-.btn-outline:hover { background: var(--bg-gray); color: var(--text-dark); }
-
-.print-container { background: white; padding: 30px; border-radius: 12px; box-shadow: var(--shadow); overflow-x: auto;}
-.print-header h2 { text-align: center; color: var(--text-dark); margin-bottom: 0px; font-size: 22px; font-weight: 800;}
-.periode-text { text-align: center; color: var(--text-gray); font-size: 15px; margin-top: 6px; margin-bottom: 32px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;}
-
-.matriks-table { width: 100%; border-collapse: collapse; min-width: 800px; table-layout: fixed;}
-.matriks-table th, .matriks-table td { border: 1px solid #94a3b8; padding: 10px 6px; text-align: center; font-size: 14px; word-wrap: break-word; }
-.header-day { background-color: var(--primary-blue); color: white; font-weight: bold; text-transform: uppercase; font-size: 14px !important;}
-.header-time { background-color: #e2e8f0; color: var(--text-dark); font-weight: bold; font-size: 14px !important;}
-.matriks-table td { height: 28px; color: var(--text-dark); font-weight: 500;}
-
-/* PRIORITAS TINGGI UNTUK SEL KOSONG DI WEB */
-.matriks-table td.empty-cell { border: none !important; background-color: transparent !important; }
+.form-group label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-dark);}
+.form-group input { padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 14px;}
+.print-container { background: white; padding: 40px; border-radius: 12px; box-shadow: var(--shadow); overflow-x: auto; }
+.print-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid var(--text-dark); padding-bottom: 10px; }
+.print-header h2 { margin: 0 0 5px 0; font-size: 24px; color: var(--text-dark); letter-spacing: 1px;}
+.periode-text { margin: 0; font-size: 14px; color: var(--text-gray); font-weight: normal; }
+.matriks-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;}
+.matriks-table th, .matriks-table td { border: 1px solid #333; padding: 8px; text-align: center; }
+.header-day { background-color: #f1f5f9; font-weight: bold; text-transform: uppercase; padding: 10px !important;}
+.header-time { background-color: #f8fafc; font-weight: bold; }
+.empty-cell { background-color: #fafafa; }
 
 @media print {
-    .sidebar, .topbar, .no-print, .mobile-toggle { display: none !important; }
-    body { background-color: white !important; font-family: 'Arial', sans-serif !important; margin: 0 !important; padding: 0 !important;}
-    .main-content { margin: 0 !important; width: 100% !important; }
-    .content-wrapper { padding: 0 !important; }
-    .print-container { box-shadow: none !important; padding: 0 !important; }
-    
-    .matriks-table { width: 100% !important; min-width: 0 !important; border-collapse: collapse !important; table-layout: fixed !important; margin-bottom: 30px !important;}
-    .matriks-table th, .matriks-table td { border: 1px solid black !important; font-size: 12pt !important; padding: 6px !important; color: black !important; background-color: white !important;}
-    
-    /* PRIORITAS TINGGI UNTUK SEL KOSONG DI KERTAS CETAKAN (ANTI GAGAL) */
-    .matriks-table td.empty-cell { border: none !important; background-color: transparent !important; color: transparent !important; }
-    
-    .header-day { font-weight: bold !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;}
-    .header-time { font-weight: bold !important; border-bottom: 2px solid black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;}
-    
-    .periode-text { color: black !important; font-weight: bold !important;}
-    .matrix-section { page-break-inside: avoid; }
-    @page { size: A4 landscape; margin: 1cm; }
+    body * { visibility: hidden; }
+    .print-container, .print-container * { visibility: visible; }
+    .print-container { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; box-shadow: none; }
+    .no-print { display: none !important; }
+    .page-break { page-break-after: always; }
+    @page { size: landscape; margin: 1cm; }
 }
 </style>
 {% endblock %}

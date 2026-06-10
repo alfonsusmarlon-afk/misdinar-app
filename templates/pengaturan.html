@@ -1,130 +1,102 @@
 {% extends "base.html" %}
-{% block title %}Pengaturan Akun - MISDINAR{% endblock %}
+
+{% block title %}Pengaturan Akun & Sistem - MISDINAR{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h2>Pengaturan Profil</h2>
-    <p>Lengkapi data diri Anda untuk keperluan database administratif misdinar.</p>
+<div class="page-header" style="margin-bottom: 24px;">
+    <h2>Pengaturan & Profil</h2>
+    <p>Kelola data pribadi Anda, ganti password, atau atur sistem keamanan QR Scanner.</p>
 </div>
 
-<div class="settings-container">
-    <form action="{{ url_for('pengaturan') }}" method="POST" class="settings-form" enctype="multipart/form-data">
+<div style="display: flex; flex-wrap: wrap; gap: 24px; width: 100%;">
+
+    <div class="card" style="flex: 1; min-width: 350px; background: white; padding: 30px; border-radius: 16px; box-shadow: var(--shadow); align-self: flex-start; border-top: 5px solid var(--primary-blue);">
+        <h3 style="margin-top: 0; margin-bottom: 20px; color: var(--text-dark); border-bottom: 2px solid #f1f5f9; padding-bottom: 12px;">Profil Saya</h3>
         
-        <div class="profile-photo-section">
-            <div class="photo-preview">
-                {% if user.foto_profil %}
-                    <img src="{{ url_for('static', filename=user.foto_profil) }}" alt="Foto Profil" id="img-preview">
-                {% else %}
-                    <div class="photo-placeholder" id="placeholder-preview"><i class="fas fa-user"></i></div>
-                    <img src="" alt="Foto Profil" id="img-preview" style="display: none;">
-                {% endif %}
+        <form action="{{ url_for('pengaturan') }}" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="form_type" value="profile">
+            
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div style="width: 100px; height: 100px; border-radius: 50%; background: #e2e8f0; margin: 0 auto 12px auto; overflow: hidden; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    {% if user.foto_profil %}
+                        <img src="{{ url_for('static', filename=user.foto_profil) }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
+                    {% else %}
+                        <i class="fas fa-user" style="font-size: 40px; color: #94a3b8;"></i>
+                    {% endif %}
+                </div>
+                <label style="background: var(--light-blue); color: var(--primary-blue); padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s;">
+                    <i class="fas fa-camera"></i> Ganti Foto
+                    <input type="file" name="foto_profil" accept="image/*" style="display: none;">
+                </label>
             </div>
-            <div class="photo-upload-controls">
-                <label for="foto_profil" class="btn-upload"><i class="fas fa-camera"></i> Ubah Foto Profil</label>
-                <input type="file" id="foto_profil" name="foto_profil" accept="image/*" style="display: none;" onchange="previewImage(this)">
-                <p class="photo-hint">Format: JPG, PNG. Maks: 2MB.</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Nama Lengkap</label>
+                    <input type="text" name="nama_lengkap" value="{{ user.nama }}" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; outline: none; font-family: inherit;">
+                </div>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Nama Panggilan</label>
+                    <input type="text" name="nama_panggilan" value="{{ user.nama_panggilan if user.nama_panggilan else '' }}" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; outline: none; font-family: inherit;">
+                </div>
             </div>
-        </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Nomor HP / WhatsApp</label>
+                    <input type="text" name="no_hp" value="{{ user.no_hp if user.no_hp else '' }}" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; outline: none; font-family: inherit;">
+                </div>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Tanggal Lahir</label>
+                    <input type="date" name="tanggal_lahir" value="{{ user.tanggal_lahir if user.tanggal_lahir else '' }}" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; outline: none; font-family: inherit;">
+                </div>
+            </div>
 
-        <hr style="border: 0; border-top: 1px dashed var(--border-color); margin: 24px 0;">
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Email (Opsional)</label>
+                <input type="email" name="email" value="{{ user.email if user.email else '' }}" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; outline: none; font-family: inherit;">
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 24px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Ubah Password</label>
+                <input type="password" name="password_baru" placeholder="Biarkan kosong jika tidak ingin ganti password" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; outline: none; font-family: inherit;">
+            </div>
+            
+            <button type="submit" class="btn-primary" style="width: 100%; background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;">
+                <i class="fas fa-save"></i> Simpan Profil Saya
+            </button>
+        </form>
+    </div>
 
-        <h3 class="section-title"><i class="fas fa-id-card"></i> Data Pribadi</h3>
-        <div class="form-grid">
-            <div class="form-group">
-                <label>Username (ID Login)</label>
-                <input type="text" value="{{ user.username }}" disabled class="disabled-input">
-            </div>
-            <div class="form-group">
-                <label>Nama Lengkap</label>
-                <input type="text" name="nama_lengkap" value="{{ user.nama }}" required>
-            </div>
-            <div class="form-group">
-                <label>Nama Panggilan</label>
-                <input type="text" name="nama_panggilan" value="{{ user.nama_panggilan if user.nama_panggilan else '' }}">
-            </div>
-            <div class="form-group">
-                <label>Tanggal Lahir</label>
-                <input type="date" name="tanggal_lahir" value="{{ user.tanggal_lahir if user.tanggal_lahir else '' }}">
-            </div>
-            <div class="form-group">
-                <label>Alamat Email</label>
-                <input type="email" name="email" value="{{ user.email if user.email else '' }}" placeholder="misal: nama@gmail.com">
-            </div>
-            <div class="form-group">
-                <label>Nomor HP / WhatsApp Pribadi</label>
-                <input type="number" name="no_hp" value="{{ user.no_hp if user.no_hp else '' }}">
-            </div>
-            <div class="form-group full-width">
-                <label>Alamat Domisili / Lingkungan</label>
-                <input type="text" name="alamat" value="{{ user.alamat if user.alamat else '' }}">
-            </div>
-        </div>
-
-        <hr style="border: 0; border-top: 1px dashed var(--border-color); margin: 24px 0;">
-
-        <h3 class="section-title"><i class="fas fa-user-friends"></i> Data Orang Tua / Wali</h3>
-        <div class="form-grid">
-            <div class="form-group">
-                <label>Nama Orang Tua / Wali</label>
-                <input type="text" name="nama_ortu" value="{{ user.nama_ortu if user.nama_ortu else '' }}">
-            </div>
-            <div class="form-group">
-                <label>Nomor HP Orang Tua (Darurat)</label>
-                <input type="number" name="no_hp_ortu" value="{{ user.no_hp_ortu if user.no_hp_ortu else '' }}">
-            </div>
-        </div>
-
-        <hr style="border: 0; border-top: 1px dashed var(--border-color); margin: 24px 0;">
-
-        <h3 class="section-title"><i class="fas fa-lock"></i> Keamanan Akun</h3>
-        <div class="form-group full-width">
-            <label>Ubah Password Baru</label>
-            <input type="password" name="password_baru" placeholder="Ketik password baru jika ingin mengubahnya...">
-            <small style="color: var(--text-gray); font-size: 12px; margin-top: 4px; display: block;">Biarkan kosong jika tidak ingin mereset password.</small>
-        </div>
+    {% if session.get('role') != 'user' %}
+    <div class="card" style="flex: 1; min-width: 350px; background: white; padding: 30px; border-radius: 16px; box-shadow: var(--shadow); align-self: flex-start; border-top: 5px solid #10b981;">
+        <h3 style="margin-top: 0; margin-bottom: 20px; color: var(--text-dark); border-bottom: 2px solid #f1f5f9; padding-bottom: 12px;">
+            <i class="fas fa-cogs" style="color: #10b981;"></i> Pengaturan Keamanan Absen
+        </h3>
         
-        <div class="form-action" style="margin-top: 32px;">
-            <button type="submit" class="btn-primary w-100" style="padding: 16px; font-size: 16px;"><i class="fas fa-save"></i> Simpan Pembaruan Profil</button>
-        </div>
-    </form>
+        <form action="{{ url_for('pengaturan') }}" method="POST">
+            <input type="hidden" name="form_type" value="system_settings">
+            
+            <div class="form-group" style="margin-bottom: 24px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-dark);">
+                    Batas Awal Waktu Scan QR (Menit sebelum Misa)
+                </label>
+                <input type="number" name="scan_window" value="{{ scan_window }}" required min="0" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; outline: none; font-family: inherit; margin-bottom: 12px; font-size: 16px; font-weight: bold;">
+                
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 4px;">
+                    <p style="margin: 0; font-size: 12px; color: #b45309; line-height: 1.6;">
+                        <i class="fas fa-info-circle"></i> <b>Contoh Sistem Bekerja:</b> Jika Anda mengatur <b>60 menit</b>, dan Misa dimulai Pukul <b>10:00</b>, maka QR Code anggota HANYA bisa discan mulai pukul <b>09:00</b> hingga 3 jam ke depan.<br>
+                        Tujuannya agar anggota tidak bisa "absen dari rumah" jauh sebelum Misa dimulai.
+                    </p>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn-primary" style="width: 100%; background: #10b981; color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;">
+                <i class="fas fa-shield-alt"></i> Terapkan Pengaturan
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
 </div>
-
-<script>
-function previewImage(input) {
-    if (input.files && input.files[0]) {
-        var reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('img-preview').src = e.target.result;
-            document.getElementById('img-preview').style.display = 'block';
-            var placeholder = document.getElementById('placeholder-preview');
-            if(placeholder) placeholder.style.display = 'none';
-        }
-        reader.readAsDataURL(input.files[0]);
-    }
-}
-</script>
-
-<style>
-.settings-container { background: var(--white); padding: 32px; border-radius: 12px; box-shadow: var(--shadow); max-width: 800px; margin: 0 auto; border-top: 4px solid var(--primary-blue);}
-.section-title { font-size: 16px; color: var(--primary-blue); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid var(--light-blue); padding-bottom: 8px; display: inline-flex;}
-
-.profile-photo-section { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; }
-.photo-preview { width: 120px; height: 120px; border-radius: 50%; border: 3px solid var(--light-blue); overflow: hidden; background: var(--bg-gray); display: flex; align-items: center; justify-content: center;}
-.photo-preview img { width: 100%; height: 100%; object-fit: cover; }
-.photo-placeholder { font-size: 48px; color: var(--border-color); }
-.btn-upload { background: var(--light-blue); color: var(--primary-blue); padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s; border: 1px solid var(--primary-blue); display: inline-block;}
-.btn-upload:hover { background: var(--primary-blue); color: white; }
-.photo-hint { font-size: 11px; color: var(--text-gray); margin-top: 6px; }
-
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.full-width { grid-column: 1 / -1; }
-.form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-dark); margin-bottom: 8px; }
-.form-group input { width: 100%; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; transition: 0.2s; font-family: inherit;}
-.form-group input:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1); }
-.disabled-input { background: var(--bg-gray); cursor: not-allowed; color: var(--text-gray); font-weight: bold;}
-.btn-primary { background: var(--primary-blue); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s;}
-.btn-primary:hover { background: var(--accent-blue); transform: translateY(-2px); }
-
-@media(max-width: 768px) { .form-grid { grid-template-columns: 1fr; } }
-</style>
 {% endblock %}
