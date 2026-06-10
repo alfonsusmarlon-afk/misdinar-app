@@ -52,14 +52,16 @@
             </div>
         </nav>
 
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
         <main class="main-content">
             <header class="topbar">
-                <button id="sidebar-toggle" class="btn-icon"><i class="fas fa-bars"></i></button>
+                <button id="sidebar-toggle" class="btn-icon" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
                 
                 <div class="topbar-right">
                     {% if session.get('user_id') %}
                     <div class="user-profile">
-                        <a href="{{ url_for('pengaturan') }}" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px;">
+                        <a href="{{ url_for('pengaturan') }}" class="user-profile-link">
                             <div class="user-info">
                                 <span class="user-name">{{ session.get('nama_user') }}</span>
                                 <span class="user-role">{{ session.get('role') | title }}</span>

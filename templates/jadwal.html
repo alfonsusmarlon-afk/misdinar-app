@@ -3,7 +3,7 @@
 {% block title %}Jadwal Pelayanan - MISDINAR{% endblock %}
 
 {% block content %}
-<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+<div class="page-header flex-responsive flex-between">
     <div>
         <h2>Jadwal Pelayanan Misdinar</h2>
         {% if is_logged_in %}
@@ -12,7 +12,7 @@
         <p>Menampilkan seluruh jadwal pelayanan Misa yang sudah dipublikasikan pengurus.</p>
         {% endif %}
     </div>
-    <div style="display: flex; gap: 10px;">
+    <div class="flex-responsive" style="gap: 10px;">
         {% if is_logged_in and session.get('role') in ['super admin', 'penjadwalan'] %}
         <a href="{{ url_for('penjadwalan') }}" class="btn-primary" style="background-color: var(--white); color: var(--primary-blue); border: 1px solid var(--primary-blue);"><i class="fas fa-edit"></i> Edit Matriks Jadwal</a>
         {% endif %}
@@ -53,26 +53,25 @@
                     <span class="month">{{ j.bulan }}</span>
                 </div>
                 <div class="schedule-info">
-                    <h4 style="margin-top: 0;">{{ j.hari }}, Pkl. {{ j.waktu }}</h4>
+                    <h4>{{ j.hari }}, Pkl. {{ j.waktu }}</h4>
                     <span class="badge badge-primary">{{ j.acara }}</span>
                     
-                    <div class="petugas-list" style="margin-top: 14px;">
-                        <span style="font-size: 12px; color: var(--text-gray); display: block; margin-bottom: 8px;">Daftar Petugas:</span>
-                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    <div class="petugas-list">
+                        <span class="petugas-label">Daftar Petugas:</span>
+                        <div class="petugas-badges">
                             {% for p in group['petugas'] %}
-                                <span class="badge" style="background-color: var(--light-blue); color: var(--primary-blue); font-size: 13px; padding: 6px 12px; border-radius: 6px;"><i class="fas fa-user-circle" style="margin-right: 4px;"></i> {{ p }}</span>
+                                <span class="badge badge-staff"><i class="fas fa-user-circle"></i> {{ p }}</span>
                             {% endfor %}
                         </div>
                     </div>
                     
                     {% if view_mode == 'private' %}
-                    <div style="margin-top: 16px; border-top: 1px dashed #e2e8f0; padding-top: 12px;">
+                    <div class="qr-section">
                         <button type="button" class="btn-show-qr" 
                             data-id="{{ j.id }}" 
                             data-user="{{ user_id }}" 
                             data-acara="{{ j.acara }}" 
-                            data-waktu="{{ j.tanggal }} {{ j.bulan }} {{ j.waktu }}" 
-                            style="background: #10b981; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; width: 100%; transition: 0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                            data-waktu="{{ j.tanggal }} {{ j.bulan }} {{ j.waktu }}">
                             <i class="fas fa-qrcode"></i> Tampilkan QR Kehadiran
                         </button>
                     </div>
@@ -85,16 +84,16 @@
 </div>
 
 {% if view_mode == 'private' %}
-<div id="qrModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
-    <div style="background: white; padding: 30px; border-radius: 16px; text-align: center; max-width: 350px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
-        <h3 style="margin-top:0; color: var(--text-dark);" id="qrTitle">QR Kehadiran</h3>
-        <p style="color: var(--text-gray); font-size: 13px; margin-bottom: 20px;" id="qrDesc">Tunjukkan ke pengurus untuk absen.</p>
+<div id="qrModal" class="qr-modal">
+    <div class="qr-modal-content">
+        <h3 id="qrTitle">QR Kehadiran</h3>
+        <p id="qrDesc">Tunjukkan ke pengurus untuk absen.</p>
         
-        <div style="background: #f8fafc; padding: 15px; border-radius: 12px; display: inline-block;">
-            <img id="qrImage" src="" style="width: 200px; height: 200px; display: block;" />
+        <div class="qr-image-container">
+            <img id="qrImage" src="" alt="QR Code" />
         </div>
         
-        <button onclick="document.getElementById('qrModal').style.display='none'" style="margin-top: 24px; background: #e2e8f0; color: #475569; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 15px;">Tutup QR</button>
+        <button class="btn-close-qr" onclick="document.getElementById('qrModal').style.display='none'">Tutup QR</button>
     </div>
 </div>
 
@@ -126,15 +125,84 @@ document.addEventListener('DOMContentLoaded', function() {
 .schedule-container { background: var(--white); padding: 30px; border-radius: 16px; box-shadow: var(--shadow); }
 .empty-state { text-align: center; padding: 60px 20px; }
 .empty-icon { font-size: 48px; color: #cbd5e1; margin-bottom: 16px; }
-.schedule-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
-.schedule-card { display: flex; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; transition: 0.3s; background: #fafafa; }
+.schedule-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.schedule-card { display: flex; flex-direction: column; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; transition: 0.3s; background: #fafafa; }
 .schedule-card:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); transform: translateY(-2px); border-color: var(--primary-blue); }
 .date-box { background: var(--primary-blue); color: var(--white); padding: 20px 24px; display: flex; flex-direction: column; justify-content: center; align-items: center; min-width: 90px; }
 .date-box .date { font-size: 28px; font-weight: 800; line-height: 1; }
 .date-box .month { font-size: 14px; font-weight: 600; text-transform: uppercase; margin-top: 4px; }
-.schedule-info { padding: 20px; flex: 1; background: white; }
-.schedule-info h4 { color: var(--text-dark); font-size: 17px; font-weight: 800; margin-bottom: 8px; }
+.schedule-info { padding: 20px; flex: 1; background: white; display: flex; flex-direction: column; }
+.schedule-info h4 { margin-top: 0; color: var(--text-dark); font-size: 17px; font-weight: 800; margin-bottom: 8px; }
 .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
 .badge-primary { background: #eef2ff; color: var(--primary-blue); }
+.badge-staff { background-color: var(--light-blue); color: var(--primary-blue); font-size: 13px; padding: 6px 12px; border-radius: 6px; }
+.badge-staff i { margin-right: 4px; }
+
+.petugas-list { margin-top: 14px; flex-grow: 1; }
+.petugas-label { font-size: 12px; color: var(--text-gray); display: block; margin-bottom: 8px; }
+.petugas-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.qr-section { margin-top: 16px; border-top: 1px dashed #e2e8f0; padding-top: 12px; }
+.btn-show-qr { background: #10b981; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; width: 100%; transition: 0.2s; }
+.btn-show-qr:hover { background: #059669; }
+
+.qr-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+.qr-modal-content { background: white; padding: 30px; border-radius: 16px; text-align: center; max-width: 350px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+.qr-modal-content h3 { margin-top: 0; color: var(--text-dark); }
+.qr-modal-content p { color: var(--text-gray); font-size: 13px; margin-bottom: 20px; }
+.qr-image-container { background: #f8fafc; padding: 15px; border-radius: 12px; display: inline-block; }
+.qr-image-container img { width: 200px; height: 200px; display: block; }
+.btn-close-qr { margin-top: 24px; background: #e2e8f0; color: #475569; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 15px; }
+.btn-close-qr:hover { background: #cbd5e1; }
+
+/* ============= RESPONSIVE ============= */
+@media (max-width: 1024px) {
+    .schedule-list { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .schedule-container { padding: 24px; }
+}
+
+@media (max-width: 900px) {
+    .schedule-list { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+}
+
+@media (max-width: 600px) {
+    .schedule-container { padding: 16px; }
+    .schedule-list { grid-template-columns: 1fr; gap: 12px; }
+    .schedule-card { flex-direction: row; }
+    .date-box { min-width: 70px; padding: 16px 20px; }
+    .date-box .date { font-size: 24px; }
+    .date-box .month { font-size: 12px; }
+    .schedule-info { padding: 16px; }
+    .schedule-info h4 { font-size: 15px; margin-bottom: 6px; }
+    .badge { font-size: 11px; padding: 3px 8px; }
+    .badge-staff { font-size: 12px; padding: 4px 8px; }
+    .petugas-label { font-size: 11px; margin-bottom: 6px; }
+    .petugas-badges { gap: 6px; }
+    .qr-section { margin-top: 12px; padding-top: 10px; }
+    .btn-show-qr { padding: 8px 12px; font-size: 12px; }
+    .qr-modal-content { padding: 20px; }
+    .qr-modal-content h3 { font-size: 16px; }
+    .qr-modal-content p { font-size: 12px; margin-bottom: 16px; }
+    .qr-image-container { padding: 12px; }
+    .qr-image-container img { width: 150px; height: 150px; }
+    .btn-close-qr { padding: 10px 16px; font-size: 13px; }
+}
+
+@media (max-width: 480px) {
+    .schedule-container { padding: 12px; }
+    .schedule-list { gap: 10px; }
+    .schedule-card { flex-direction: column; }
+    .date-box { min-width: auto; padding: 12px 16px; margin-bottom: 8px; }
+    .date-box .date { font-size: 20px; }
+    .date-box .month { font-size: 11px; }
+    .schedule-info { padding: 12px; }
+    .schedule-info h4 { font-size: 14px; }
+    .petugas-label { font-size: 10px; }
+    .badge { font-size: 10px; }
+    .badge-staff { font-size: 11px; padding: 3px 6px; }
+    .btn-show-qr { padding: 8px 10px; font-size: 11px; }
+    .qr-modal-content { max-width: 90%; padding: 16px; }
+    .qr-image-container img { width: 120px; height: 120px; }
+}
 </style>
 {% endblock %}
