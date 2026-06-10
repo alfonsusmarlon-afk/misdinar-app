@@ -414,3 +414,30 @@ a { text-decoration: none; }
     .page-header h2 { font-size: 16px; }
     .page-header p { font-size: 11px; }
 }
+
+/* ========================================= */
+/* FIX: MEMBUAT KONTEN FULL-WIDTH DI DESKTOP */
+/* ========================================= */
+.content-wrapper {
+    flex: 1;
+    padding: 30px 40px;
+    background: #f8fafc;
+    overflow-y: auto;
+    width: 100%;             /* Paksa konten selebar layar */
+    max-width: 100% !important; /* Hilangkan batasan lebar maksimal */
+    box-sizing: border-box;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    width: 100%;
+}
+
+@media (max-width: 1080px) {
+    .content-wrapper {
+        padding: 20px 15px; /* Padding lebih kecil untuk HP */
+    }
+}

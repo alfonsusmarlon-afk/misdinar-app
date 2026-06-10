@@ -4,10 +4,8 @@
 
 {% block content %}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-<div class="page-header flex-responsive flex-between">
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
     <div>
         <h2>Manajemen & Editor Penjadwalan</h2>
         <p>Ketik jadwal rutin matriks, tambahkan misa khusus, dan kelola riwayat jadwal.</p>
@@ -15,10 +13,11 @@
 </div>
 
 {% if not matrix %}
-<div class="setup-container">
+<div class="setup-container" style="width: 100%; max-width: 100% !important; padding-bottom: 30px;">
     
-    <div class="setup-grid">
-        <div class="setup-card card-rutin">
+    <div class="setup-flex-wrapper" style="display: flex; flex-wrap: wrap; gap: 24px; width: 100%;">
+        
+        <div class="setup-card card-rutin" style="flex: 1; min-width: 350px;">
             <div class="icon-header icon-rutin">
                 <i class="fas fa-table"></i>
             </div>
@@ -43,7 +42,7 @@
             </form>
         </div>
 
-        <div class="setup-card card-khusus">
+        <div class="setup-card card-khusus" style="flex: 1; min-width: 350px;">
             <div class="icon-header icon-khusus">
                 <i class="fas fa-plus-circle"></i>
             </div>
@@ -88,7 +87,7 @@
         </div>
     </div>
 
-    <div class="setup-card card-history">
+    <div class="setup-card card-history" style="width: 100%; max-width: 100% !important; margin-top: 24px;">
         <form action="{{ url_for('penjadwalan') }}" method="POST" id="bulkDeleteForm">
             <input type="hidden" name="action" value="hapus_jadwal_bulk">
             
@@ -99,8 +98,8 @@
                 </button>
             </div>
             
-            <div class="table-responsive">
-                <table class="history-table">
+            <div class="table-responsive" style="width: 100%;">
+                <table class="history-table" style="width: 100%;">
                     <thead>
                         <tr>
                             <th class="col-check">
@@ -168,8 +167,8 @@
     <input type="hidden" name="action" value="simpan_matriks">
     <input type="hidden" name="rendered_dates" value="{{ start }}|{{ end }}">
     
-    <div class="spreadsheet-container">
-        <table class="spreadsheet-table">
+    <div class="spreadsheet-container" style="width: 100%; max-width: 100% !important;">
+        <table class="spreadsheet-table" style="width: 100%;">
             <thead>
                 <tr>
                     {% for m in matrix %}
@@ -236,53 +235,47 @@
 {% endif %}
 
 <style>
-/* 1. LAYOUT GRID UTAMA */
-.setup-container { width: 100%; max-width: 100%; padding-bottom: 40px; }
-.setup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 24px; width: 100%; }
-.setup-card { background: var(--white); padding: 30px; border-radius: 16px; box-shadow: var(--shadow); box-sizing: border-box; width: 100%; }
-
-/* 2. VARIASI WARNA KARTU */
+/* CSS PENDUKUNG (PASTIKAN 100% WIDTH) */
+.setup-card { background: var(--white); padding: 30px; border-radius: 16px; box-shadow: var(--shadow); box-sizing: border-box; }
 .card-rutin { border-top: 5px solid var(--primary-blue); }
 .card-khusus { border-top: 5px solid #db2777; }
 .card-history { border-top: 5px solid #10b981; }
 
-/* 3. ICON HEADER */
 .icon-header { width: 70px; height: 70px; font-size: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; }
 .icon-rutin { background: var(--light-blue); color: var(--primary-blue); }
 .icon-khusus { background: #fce7f3; color: #db2777; }
 .setup-card h3 { color: var(--text-dark); margin-bottom: 6px; font-size: 20px; text-align: center; }
 .setup-card p { color: var(--text-gray); font-size: 14px; margin-bottom: 24px; text-align: center; }
 
-/* 4. FORM STYLING */
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.form-row { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; }
+.form-row .form-group { flex: 1; min-width: 150px; }
 .form-group { text-align: left; margin-bottom: 16px; width: 100%; }
 .form-group label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: var(--text-dark); }
-.form-group input, .form-group select { width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; outline: none; font-family: inherit; font-size: 14px; box-sizing: border-box; }
+.form-group input, .form-group select { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; outline: none; font-family: inherit; font-size: 14px; box-sizing: border-box; }
 
-.btn-primary { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; color: white; transition: 0.3s; }
+.btn-primary { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; color: white; transition: 0.3s; }
 .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
 .btn-rutin { background: var(--primary-blue); }
 .btn-khusus { background: #db2777; }
 .w-100 { width: 100%; }
 
-/* 5. TABLE HISTORY STYLING RAPI */
 .history-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
 .history-header h3 { font-size: 18px; margin: 0; color: var(--text-dark); display: flex; align-items: center; gap: 10px; }
 .history-header h3 i { color: #10b981; }
 
-.btn-bulk-delete { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
+.btn-bulk-delete { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
 .btn-bulk-delete:hover { background: #fecaca; }
 
 .table-responsive { width: 100%; overflow-x: auto; }
-.history-table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 800px; }
+.history-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 800px; }
 .history-table th { padding: 14px 12px; color: var(--text-gray); border-bottom: 2px solid #e2e8f0; font-weight: 600; text-align: left; }
 .history-table td { padding: 16px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
 
 .col-check { width: 40px; text-align: center; }
-.col-date { width: 20%; }
+.col-date { width: 22%; }
 .col-event { width: 25%; }
 .col-staff { width: 40%; line-height: 1.6; }
-.col-action { width: 80px; text-align: center; }
+.col-action { width: 100px; text-align: center; }
 
 .fw-bold { font-weight: 700; }
 .text-dark { color: var(--text-dark); }
@@ -304,7 +297,7 @@
 .empty-icon { font-size: 40px; color: #cbd5e1; display: block; margin-bottom: 12px; }
 
 /* 6. SELECT2 FIXING */
-.select2-container--default .select2-selection--multiple { border: 1px solid var(--border-color) !important; border-radius: 8px !important; min-height: 42px !important; padding: 2px 6px !important; }
+.select2-container--default .select2-selection--multiple { border: 1px solid var(--border-color) !important; border-radius: 8px !important; min-height: 44px !important; padding: 4px 6px !important; }
 .select2-container--default.select2-container--focus .select2-selection--multiple { border-color: #db2777 !important; outline: 0; }
 .select2-container--default .select2-selection--multiple .select2-selection__choice { background-color: #fce7f3 !important; border: 1px solid #db2777 !important; color: #db2777 !important; border-radius: 4px !important; margin-top: 6px !important; padding: 2px 6px !important; font-weight: 600 !important; font-size: 12px !important; }
 
@@ -326,84 +319,15 @@
 .btn-outline { padding: 10px 24px; border: 1px solid var(--text-gray); color: var(--text-gray); border-radius: 8px; font-weight: bold; transition: 0.3s; background: transparent; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center;}
 .btn-outline:hover { background: var(--bg-gray); color: var(--text-dark); }
 .sticky-footer-action { position: fixed; bottom: 0; left: var(--sidebar-width); right: 0; background: var(--white); padding: 16px 24px; box-shadow: 0 -4px 12px rgba(0,0,0,0.05); display: flex; justify-content: flex-end; gap: 12px; z-index: 90; border-top: 1px solid var(--border-color); transition: left 0.3s;}
-
-/* ================ RESPONSIVE MEDIA QUERIES ================ */
-
-/* Tablet Large: 1024px */
-@media (max-width: 1024px) {
-    .setup-grid { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
-    .setup-card { padding: 24px; }
-    .icon-header { width: 60px; height: 60px; font-size: 24px; margin-bottom: 16px; }
-    .setup-card h3 { font-size: 18px; }
-    .setup-card p { font-size: 13px; }
-    .form-row { gap: 12px; margin-bottom: 12px; }
-    .form-group { margin-bottom: 12px; }
-    .form-group label { font-size: 12px; margin-bottom: 4px; }
-    .form-group input, .form-group select { padding: 8px 12px; font-size: 13px; }
-}
-
-/* Tablet: 900px */
-@media (max-width: 900px) {
-    .setup-grid { grid-template-columns: 1fr; }
-    .sticky-footer-action { left: 0; padding: 12px 16px; gap: 10px; }
-    .btn-outline { padding: 8px 16px; font-size: 12px; }
-    .btn-primary { padding: 10px; font-size: 13px; }
-}
-
-/* Mobile+: 600px */
-@media (max-width: 600px) {
-    .setup-card { padding: 20px; }
-    .icon-header { width: 50px; height: 50px; font-size: 20px; margin-bottom: 12px; }
-    .setup-card h3 { font-size: 16px; margin-bottom: 4px; }
-    .setup-card p { font-size: 12px; margin-bottom: 20px; }
-    
-    .form-row { grid-template-columns: 1fr; gap: 10px; margin-bottom: 12px; }
-    .form-group { margin-bottom: 10px; }
-    .form-group label { font-size: 11px; margin-bottom: 3px; }
-    .form-group input, .form-group select { padding: 8px 10px; font-size: 12px; }
-    
-    .history-header { flex-direction: column; align-items: flex-start; gap: 8px; }
-    .history-header h3 { font-size: 16px; }
-    .btn-bulk-delete { width: 100%; justify-content: center; font-size: 12px; padding: 10px; }
-    
-    .history-table { font-size: 12px; min-width: auto; }
-    .history-table th { padding: 10px 8px; font-size: 10px; }
-    .history-table td { padding: 12px 8px; font-size: 11px; }
-    
-    .event-name { font-size: 13px; }
-    .event-badges { gap: 4px; }
-    .badge { font-size: 9px; padding: 2px 6px; }
-    
-    .sticky-footer-action { padding: 12px; flex-direction: column-reverse; }
-    .sticky-footer-action a,
-    .sticky-footer-action button { width: 100%; }
-    .btn-outline { padding: 10px; font-size: 13px; }
-    .btn-primary { padding: 10px; font-size: 13px; }
-}
-
-/* Mobile: 480px */
-@media (max-width: 480px) {
-    .setup-container { padding-bottom: 20px; }
-    .setup-grid { gap: 16px; margin-bottom: 16px; }
-    .setup-card { padding: 16px; }
-    .icon-header { width: 45px; height: 45px; font-size: 18px; }
-    .setup-card h3 { font-size: 15px; }
-    .setup-card p { font-size: 11px; }
-    
-    .form-group label { font-size: 10px; }
-    .form-group input, .form-group select { padding: 6px 8px; font-size: 11px; }
-    
-    .history-table th { font-size: 9px; padding: 6px 4px; }
-    .history-table td { font-size: 10px; padding: 8px 4px; }
-    
-    .sticky-footer-action { bottom: 0; }
-}
+@media(max-width: 768px) { .sticky-footer-action { left: 0; } }
 </style>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    
-    // 1. Inisialisasi Select2 (Pencarian Petugas Khusus)
+    // 1. Inisialisasi Select2
     if (typeof jQuery !== 'undefined' && $('.select2-petugas').length > 0) {
         $('.select2-petugas').select2({
             placeholder: "🔍 Ketik untuk mencari nama petugas...",
@@ -412,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 2. Select All Checkbox History
+    // 2. Select All History
     const selectAllCb = document.getElementById('selectAllHistory');
     if (selectAllCb) {
         selectAllCb.addEventListener('change', function() {
@@ -422,7 +346,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 3. Tombol Hapus Single di History
+    // 3. Delete Single History
     document.querySelectorAll('.btn-delete-single').forEach(btn => {
         btn.addEventListener('click', function() {
             let val = this.getAttribute('data-val');
@@ -440,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 4. Fitur Anti-Double Nama & Dropdown Dinamis (Hanya berjalan di Editor Matriks)
+    // 4. Fitur Anti-Double Nama
     const hiddenDataEl = document.getElementById('hiddenUserData');
     if (hiddenDataEl) {
         let rawData = hiddenDataEl.innerText;
@@ -496,7 +420,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Fungsi Global untuk Bulk Delete History
 function confirmBulkDelete() {
     let checkedBoxes = document.querySelectorAll('.history-checkbox:checked');
     if (checkedBoxes.length === 0) {
