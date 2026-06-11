@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Pengaturan Akun & Sistem - MISDINAR{% endblock %}
+{% block title %}Pengaturan Akun & Profil - MISDINAR{% endblock %}
 
 {% block content %}
 <div class="page-header" style="margin-bottom: 24px;">
     <h2>Pengaturan & Profil</h2>
-    <p>Kelola data pribadi Anda, ganti password, atau atur sistem keamanan QR Scanner.</p>
+    <p>Kelola data pribadi Anda dan perbarui password akun.</p>
 </div>
 
 <div style="display: flex; flex-wrap: wrap; gap: 24px; width: 100%;">
@@ -62,41 +62,11 @@
                 <input type="password" name="password_baru" placeholder="Biarkan kosong jika tidak ingin ganti password" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; outline: none; font-family: inherit;">
             </div>
             
-            <button type="submit" class="btn-primary" style="width: 100%; background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;">
+            <button type="submit" style="width: 100%; background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;">
                 <i class="fas fa-save"></i> Simpan Profil Saya
             </button>
         </form>
     </div>
-
-    {% if session.get('role') != 'user' %}
-    <div class="card" style="flex: 1; min-width: 350px; background: white; padding: 30px; border-radius: 16px; box-shadow: var(--shadow); align-self: flex-start; border-top: 5px solid #10b981;">
-        <h3 style="margin-top: 0; margin-bottom: 20px; color: var(--text-dark); border-bottom: 2px solid #f1f5f9; padding-bottom: 12px;">
-            <i class="fas fa-cogs" style="color: #10b981;"></i> Pengaturan Keamanan Absen
-        </h3>
-        
-        <form action="{{ url_for('pengaturan') }}" method="POST">
-            <input type="hidden" name="form_type" value="system_settings">
-            
-            <div class="form-group" style="margin-bottom: 24px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-dark);">
-                    Batas Awal Waktu Scan QR (Menit sebelum Misa)
-                </label>
-                <input type="number" name="scan_window" value="{{ scan_window }}" required min="0" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; outline: none; font-family: inherit; margin-bottom: 12px; font-size: 16px; font-weight: bold;">
-                
-                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 4px;">
-                    <p style="margin: 0; font-size: 12px; color: #b45309; line-height: 1.6;">
-                        <i class="fas fa-info-circle"></i> <b>Contoh Sistem Bekerja:</b> Jika Anda mengatur <b>60 menit</b>, dan Misa dimulai Pukul <b>10:00</b>, maka QR Code anggota HANYA bisa discan mulai pukul <b>09:00</b> hingga 3 jam ke depan.<br>
-                        Tujuannya agar anggota tidak bisa "absen dari rumah" jauh sebelum Misa dimulai.
-                    </p>
-                </div>
-            </div>
-            
-            <button type="submit" class="btn-primary" style="width: 100%; background: #10b981; color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;">
-                <i class="fas fa-shield-alt"></i> Terapkan Pengaturan
-            </button>
-        </form>
-    </div>
-    {% endif %}
 
 </div>
 {% endblock %}
