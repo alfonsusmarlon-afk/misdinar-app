@@ -6,8 +6,10 @@
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
     <div>
         <h2>Jadwal Pelayanan Misdinar</h2>
-        {% if is_logged_in %}
+        {% if view_mode == 'private' %}
         <p>Menampilkan jadwal Misa Anda beserta rekan yang bertugas bersama Anda.</p>
+        {% elif view_mode == 'admin_all' %}
+        <p>Menampilkan seluruh jadwal pelayanan beserta <b style="color: #059669;">Status Kehadiran</b> anggota saat ini.</p>
         {% else %}
         <p>Menampilkan seluruh jadwal pelayanan Misa yang sudah dipublikasikan pengurus.</p>
         {% endif %}
@@ -22,30 +24,47 @@
     </div>
 </div>
 
+{% if is_logged_in and user_role != 'user' %}
+<div style="display: flex; gap: 10px; margin-bottom: 24px;">
+    <a href="{{ url_for('jadwal', view='public') }}" class="{% if view_mode == 'admin_all' %}btn-primary{% else %}btn-outline{% endif %}" style="padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+        <i class="fas fa-users"></i> Semua Jadwal
+    </a>
+    <a href="{{ url_for('jadwal', view='private') }}" class="{% if view_mode == 'private' %}btn-primary{% else %}btn-outline{% endif %}" style="padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+        <i class="fas fa-user"></i> Jadwal Saya
+    </a>
+</div>
+{% endif %}
+
 <div class="schedule-container" style="width: 100%;">
-    
     {% if not jadwal %}
     <div class="empty-state">
         <i class="fas fa-calendar-times empty-icon"></i>
         <h3>Belum Ada Jadwal</h3>
         {% if is_logged_in %}
-        <p>Anda belum memiliki jadwal pelayanan dalam waktu dekat. Selamat beristirahat!</p>
+        <p>Tidak ada jadwal pelayanan dalam waktu dekat.</p>
         {% else %}
         <p>Belum ada jadwal pelayanan yang dipublikasikan oleh pengurus.</p>
         {% endif %}
     </div>
-    
     {% else %}
     <div class="schedule-list">
         {% set grouped_jadwal = {} %}
         
         {% for j in jadwal %}
             {% set key = j.tanggal ~ '-' ~ j.bulan ~ '-' ~ j.waktu ~ '-' ~ j.acara %}
+            
             {% if key not in grouped_jadwal %}
-                {% set _ = grouped_jadwal.update({key: {'data': j, 'petugas': [j.nama_pengguna]}}) %}
+                {% set _ = grouped_jadwal.update({key: {'data': j, 'petugas': [{'nama': j.nama_pengguna, 'username': j.pengguna, 'status': j.status_kehadiran|default('') }]}}) %}
             {% else %}
-                {% if j.nama_pengguna not in grouped_jadwal[key]['petugas'] %}
-                    {% set _ = grouped_jadwal[key]['petugas'].append(j.nama_pengguna) %}
+                {% set exist = namespace(found=false) %}
+                {% for p in grouped_jadwal[key]['petugas'] %}
+                    {% if p.username == j.pengguna %}
+                        {% set exist.found = true %}
+                    {% endif %}
+                {% endfor %}
+                
+                {% if not exist.found %}
+                    {% set _ = grouped_jadwal[key]['petugas'].append({'nama': j.nama_pengguna, 'username': j.pengguna, 'status': j.status_kehadiran|default('') }) %}
                 {% endif %}
             {% endif %}
         {% endfor %}
@@ -68,14 +87,30 @@
                         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                             
                             {% for p in group['petugas'] %}
-                                {% if is_logged_in and p == session.get('nama_user') %}
-                                <span class="badge" style="background-color: #f59e0b; color: white; font-size: 13px; padding: 6px 12px; border-radius: 6px; box-shadow: 0 2px 4px rgba(245,158,11,0.2);">
-                                    <i class="fas fa-star" style="margin-right: 4px;"></i> {{ p }} (Anda)
-                                </span>
+                                {% if view_mode == 'admin_all' %}
+                                    <div style="display: flex; flex-direction: column; align-items: center; background: #f8fafc; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                        <span style="font-size: 13px; font-weight: bold; color: var(--primary-blue); margin-bottom: 6px;">
+                                            <i class="fas fa-user-circle"></i> {{ p.nama }}
+                                        </span>
+                                        <span style="font-size: 10px; padding: 4px 8px; border-radius: 6px; font-weight: 800; letter-spacing: 0.5px; width: 100%; text-align: center;
+                                            {% if p.status == 'Hadir' %}background: #dcfce7; color: #059669;
+                                            {% elif p.status == 'Izin' %}background: #fef3c7; color: #d97706;
+                                            {% elif p.status == 'Belum Absen' %}background: #e2e8f0; color: #64748b;
+                                            {% else %}background: #fee2e2; color: #dc2626;{% endif %}">
+                                            {{ p.status | upper }}
+                                        </span>
+                                    </div>
+                                    
                                 {% else %}
-                                <span class="badge" style="background-color: var(--light-blue); color: var(--primary-blue); font-size: 13px; padding: 6px 12px; border-radius: 6px;">
-                                    <i class="fas fa-user-circle" style="margin-right: 4px;"></i> {{ p }}
-                                </span>
+                                    {% if is_logged_in and p.username == session.get('user_id') %}
+                                    <span class="badge" style="background-color: #f59e0b; color: white; font-size: 13px; padding: 6px 12px; border-radius: 6px; box-shadow: 0 2px 4px rgba(245,158,11,0.2);">
+                                        <i class="fas fa-star" style="margin-right: 4px;"></i> {{ p.nama }} (Anda)
+                                    </span>
+                                    {% else %}
+                                    <span class="badge" style="background-color: var(--light-blue); color: var(--primary-blue); font-size: 13px; padding: 6px 12px; border-radius: 6px;">
+                                        <i class="fas fa-user-circle" style="margin-right: 4px;"></i> {{ p.nama }}
+                                    </span>
+                                    {% endif %}
                                 {% endif %}
                             {% endfor %}
                             
@@ -92,24 +127,20 @@
 .schedule-container { background: var(--white); padding: 30px; border-radius: 16px; box-shadow: var(--shadow); width: 100%; box-sizing: border-box; }
 .empty-state { text-align: center; padding: 60px 20px; }
 .empty-icon { font-size: 48px; color: #cbd5e1; margin-bottom: 16px; }
-
 .schedule-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; width: 100%; }
-
 .schedule-card { display: flex; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; transition: 0.3s; background: #fafafa; }
 .schedule-card:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); transform: translateY(-2px); border-color: var(--primary-blue); }
-
 .date-box { background: var(--primary-blue); color: var(--white); padding: 20px 24px; display: flex; flex-direction: column; justify-content: center; align-items: center; min-width: 90px; }
 .date-box .date { font-size: 28px; font-weight: 800; line-height: 1; }
 .date-box .month { font-size: 14px; font-weight: 600; text-transform: uppercase; margin-top: 4px; }
-
 .schedule-info { padding: 20px; flex: 1; background: white; }
 .schedule-info h4 { color: var(--text-dark); font-size: 17px; font-weight: 800; margin-bottom: 8px; }
-
 .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
 .badge-primary { background: #eef2ff; color: var(--primary-blue); }
-
 .btn-primary { border: none; cursor: pointer; transition: 0.2s; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; }
 .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-outline { border: 1px solid var(--border-color); background: white; color: var(--text-dark); transition: 0.2s; cursor: pointer;}
+.btn-outline:hover { background: #f1f5f9; }
 
 @media (max-width: 768px) {
     .schedule-container { padding: 20px; }

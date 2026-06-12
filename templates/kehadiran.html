@@ -45,6 +45,7 @@
                     <span style="display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;
                         {% if k.status == 'Hadir' %}background: #dcfce7; color: #059669;
                         {% elif k.status == 'Izin' %}background: #fef3c7; color: #d97706;
+                        {% elif k.status == 'Belum Absen' %}background: #f1f5f9; color: #64748b;
                         {% else %}background: #fee2e2; color: #dc2626;{% endif %}">
                         {{ k.status | upper }}
                     </span>
@@ -57,13 +58,15 @@
                         <i class="fas fa-edit"></i>
                     </button>
                     
-                    <form action="{{ url_for('kehadiran') }}" method="POST" style="display: inline;" onsubmit="return confirm('Hapus data kehadiran ini secara permanen?');">
+                    {% if 'j_' not in k.id|string %}
+                    <form action="{{ url_for('kehadiran') }}" method="POST" style="display: inline;" onsubmit="return confirm('Hapus data kehadiran manual ini secara permanen?');">
                         <input type="hidden" name="action" value="hapus">
                         <input type="hidden" name="id" value="{{ k.id }}">
                         <button type="submit" class="btn-icon" style="color: #ef4444; background: none; border: none; cursor: pointer; font-size: 16px;">
                             <i class="fas fa-trash-alt"></i>
                         </button>
                     </form>
+                    {% endif %}
                 </td>
                 {% endif %}
             </tr>
@@ -91,6 +94,7 @@
         <form action="{{ url_for('kehadiran') }}" method="POST" style="padding: 24px;">
             <input type="hidden" name="action" id="actionField" value="tambah">
             <input type="hidden" name="id" id="idField">
+            <input type="hidden" name="username_hidden" id="hiddenUsername">
             
             <div style="margin-bottom: 16px;">
                 <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Pilih Anggota</label>
@@ -99,7 +103,7 @@
                     <option value="{{ u.username }}">{{ u.nama }}</option>
                     {% endfor %}
                 </select>
-                <p id="usernameHelp" style="display: none; margin: 6px 0 0 0; font-size: 11px; color: #ef4444;"><i>*Nama tidak dapat diubah di mode edit.</i></p>
+                <p id="usernameHelp" style="display: none; margin: 6px 0 0 0; font-size: 11px; color: #ef4444;"><i>*Nama tidak dapat diubah di mode edit (terkunci).</i></p>
             </div>
             
             <div style="margin-bottom: 16px;">
@@ -174,10 +178,16 @@ function openEditModal(id, username, tanggal, kegiatan, status, keterangan) {
     
     // Set Nilai yang sudah ada
     document.getElementById('usernameField').value = username;
+    document.getElementById('hiddenUsername').value = username; // Backup karena select dikunci
     document.getElementById('tanggalField').value = tanggal;
     document.getElementById('kegiatanField').value = kegiatan;
-    document.getElementById('statusField').value = status;
     document.getElementById('keteranganField').value = (keterangan !== 'None' && keterangan !== '-') ? keterangan : '';
+    
+    if(status === 'Belum Absen') {
+        document.getElementById('statusField').value = 'Tidak Hadir';
+    } else {
+        document.getElementById('statusField').value = status;
+    }
     
     // MENGUNCI INPUT NAMA, TGL, KEGIATAN (Hanya Status & Keterangan yang bebas diubah)
     let userField = document.getElementById('usernameField');
