@@ -24,8 +24,10 @@ for folder in [UPLOAD_DOKUMEN, UPLOAD_GALERI, UPLOAD_PROFIL]:
     os.makedirs(folder, exist_ok=True)
 
 def get_db_connection():
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, timeout=20)
     conn.row_factory = sqlite3.Row
+    conn.execute('PRAGMA journal_mode=WAL;')
+    conn.execute('PRAGMA synchronous=NORMAL;')
     return conn
 
 def init_db():
@@ -42,39 +44,62 @@ def init_db():
         if col_name not in existing_columns:
             conn.execute(f'ALTER TABLE users ADD COLUMN {col_name} {col_type}')
 
-    conn.execute('''CREATE TABLE IF NOT EXISTS pengumuman (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, deskripsi TEXT DEFAULT "", waktu_pelaksanaan TEXT NOT NULL, tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL)''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS pengumuman (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, deskripsi TEXT DEFAULT "", tanggal_pelaksanaan TEXT DEFAULT "-", waktu_pelaksanaan TEXT NOT NULL, tempat TEXT DEFAULT "-", tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL, editor_terakhir TEXT, waktu_edit TEXT)''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS dokumen (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, file_path TEXT NOT NULL, tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL, editor_terakhir TEXT, waktu_edit TEXT)''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS galeri (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, foto_path TEXT NOT NULL, tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL, editor_terakhir TEXT, waktu_edit TEXT)''')
+    
+    for table in ['pengumuman', 'dokumen', 'galeri']:
+        cols = [col[1] for col in conn.execute(f'PRAGMA table_info({table})').fetchall()]
+        if 'editor_terakhir' not in cols: conn.execute(f'ALTER TABLE {table} ADD COLUMN editor_terakhir TEXT')
+        if 'waktu_edit' not in cols: conn.execute(f'ALTER TABLE {table} ADD COLUMN waktu_edit TEXT')
+
+    pengumuman_cols = [col[1] for col in conn.execute('PRAGMA table_info(pengumuman)').fetchall()]
+    if 'tempat' not in pengumuman_cols: conn.execute('ALTER TABLE pengumuman ADD COLUMN tempat TEXT DEFAULT "-"')
+    if 'tanggal_pelaksanaan' not in pengumuman_cols: conn.execute('ALTER TABLE pengumuman ADD COLUMN tanggal_pelaksanaan TEXT DEFAULT "-"')
+
     conn.execute('''CREATE TABLE IF NOT EXISTS jadwal (id INTEGER PRIMARY KEY AUTOINCREMENT, jadwal_datetime TIMESTAMP NOT NULL, tanggal TEXT NOT NULL, bulan TEXT NOT NULL, hari TEXT NOT NULL, waktu TEXT NOT NULL, acara TEXT NOT NULL, status TEXT NOT NULL, pengguna TEXT NOT NULL, nama_pengguna TEXT NOT NULL, jenis TEXT DEFAULT "Matriks", FOREIGN KEY(pengguna) REFERENCES users(username))''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS dokumen (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, file_path TEXT NOT NULL, tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL)''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS galeri (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, foto_path TEXT NOT NULL, tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL)''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS kehadiran (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, nama TEXT NOT NULL, tanggal TEXT NOT NULL, kegiatan TEXT NOT NULL, status TEXT NOT NULL, keterangan TEXT)''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS kehadiran (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, nama TEXT NOT NULL, tanggal TEXT NOT NULL, kegiatan TEXT NOT NULL, status TEXT NOT NULL, keterangan TEXT, waktu_scan TEXT)''')
     conn.execute('''CREATE TABLE IF NOT EXISTS hukuman (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, nama TEXT NOT NULL, tanggal TEXT NOT NULL, pelanggaran TEXT NOT NULL, tindakan TEXT NOT NULL, status TEXT NOT NULL)''')
     conn.execute('''CREATE TABLE IF NOT EXISTS form_fields (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT NOT NULL, tipe TEXT NOT NULL, wajib INTEGER DEFAULT 1)''')
     conn.execute('''CREATE TABLE IF NOT EXISTS pendaftaran (id INTEGER PRIMARY KEY AUTOINCREMENT, tanggal TEXT NOT NULL, data_respon TEXT NOT NULL, status TEXT DEFAULT 'Menunggu')''')
-    
+    conn.execute('''CREATE TABLE IF NOT EXISTS notifikasi (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, pesan TEXT NOT NULL, waktu TEXT NOT NULL, status_baca INTEGER DEFAULT 0, link TEXT)''')
+
     conn.execute('''CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)''')
-    if conn.execute('SELECT COUNT(*) FROM settings WHERE key="scan_window_before"').fetchone()[0] == 0:
-        conn.execute('INSERT INTO settings (key, value) VALUES (?, ?)', ('scan_window_before', '60'))
-    if conn.execute('SELECT COUNT(*) FROM settings WHERE key="scan_window_after"').fetchone()[0] == 0:
-        conn.execute('INSERT INTO settings (key, value) VALUES (?, ?)', ('scan_window_after', '180'))
+    
+    default_settings = {
+        'scan_window_before': '60',
+        'scan_window_after': '180',
+        'sanksi_alpa_harian': '10',
+        'sanksi_izin_harian': '0',
+        'sanksi_alpa_mingguan': '15',
+        'sanksi_izin_mingguan': '5',
+        'sanksi_alpa_besar': '30',
+        'sanksi_izin_besar': '10'
+    }
+    for k, v in default_settings.items():
+        if conn.execute('SELECT COUNT(*) FROM settings WHERE key=?', (k,)).fetchone()[0] == 0:
+            conn.execute('INSERT INTO settings (key, value) VALUES (?, ?)', (k, v))
         
     jadwal_columns = [col[1] for col in conn.execute('PRAGMA table_info(jadwal)').fetchall()]
-    if 'scan_before' not in jadwal_columns: conn.execute('ALTER TABLE jadwal ADD COLUMN scan_before INTEGER')
-    if 'scan_after' not in jadwal_columns: conn.execute('ALTER TABLE jadwal ADD COLUMN scan_after INTEGER')
+    try:
+        if 'scan_before' not in jadwal_columns: conn.execute('ALTER TABLE jadwal ADD COLUMN scan_before INTEGER')
+        if 'scan_after' not in jadwal_columns: conn.execute('ALTER TABLE jadwal ADD COLUMN scan_after INTEGER')
+        if 'kategori_misa' not in jadwal_columns: conn.execute('ALTER TABLE jadwal ADD COLUMN kategori_misa TEXT DEFAULT "Harian"')
+    except sqlite3.OperationalError:
+        pass
 
-    # KOLOM WAKTU SCAN UNTUK TABEL KEHADIRAN
     kehadiran_columns = [col[1] for col in conn.execute('PRAGMA table_info(kehadiran)').fetchall()]
-    if 'waktu_scan' not in kehadiran_columns:
-        conn.execute('ALTER TABLE kehadiran ADD COLUMN waktu_scan TEXT')
+    try:
+        if 'waktu_scan' not in kehadiran_columns: conn.execute('ALTER TABLE kehadiran ADD COLUMN waktu_scan TEXT')
+    except sqlite3.OperationalError:
+        pass
 
     if conn.execute('SELECT COUNT(*) FROM form_fields').fetchone()[0] == 0:
-        conn.executemany('INSERT INTO form_fields (label, tipe, wajib) VALUES (?, ?, ?)', [
-            ('Nama Lengkap', 'text', 1), ('Nomor WhatsApp', 'number', 1), ('Alasan Bergabung', 'textarea', 1)
-        ])
+        conn.executemany('INSERT INTO form_fields (label, tipe, wajib) VALUES (?, ?, ?)', [('Nama Lengkap', 'text', 1), ('Nomor WhatsApp', 'number', 1), ('Alasan Bergabung', 'textarea', 1)])
 
     if conn.execute('SELECT COUNT(*) FROM users').fetchone()[0] == 0:
         hashed_pw = generate_password_hash('super123')
-        conn.execute('INSERT INTO users (username, password, nama, role, no_hp, nama_panggilan) VALUES (?, ?, ?, ?, ?, ?)', 
-                     ('superadmin', hashed_pw, 'Super Admin', 'super admin', '081234567890', 'Admin'))
+        conn.execute('INSERT INTO users (username, password, nama, role, no_hp, nama_panggilan) VALUES (?, ?, ?, ?, ?, ?)', ('superadmin', hashed_pw, 'Super Admin', 'super admin', '081234567890', 'Admin'))
     
     conn.commit()
     conn.close()
@@ -88,17 +113,18 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def get_filtered_items(table_name, user_id=None):
+def get_filtered_items(table_name, user_id=None, user_role=None):
     conn = get_db_connection()
     rows = conn.execute(f'SELECT * FROM {table_name} ORDER BY id DESC').fetchall()
     conn.close()
     filtered = []
     for r in rows:
         p = dict(r)
-        target_list = p.get('target', 'semua').split(',')
+        target_list = [t.strip() for t in p.get('target', 'semua').split(',')]
         pembuat = p.get('pembuat', '')
-        if 'semua' in target_list or (user_id and (user_id in target_list or user_id == pembuat)): 
-            filtered.append(p)
+        if 'semua' in target_list or (user_id and pembuat == user_id): filtered.append(p)
+        elif user_id and user_id in target_list: filtered.append(p)
+        elif user_role and user_role in target_list: filtered.append(p)
     return filtered
 
 def get_grouped_users():
@@ -113,25 +139,73 @@ def get_grouped_users():
     return users_by_role
 
 def process_auto_absent(conn):
-    scan_after_row = conn.execute("SELECT value FROM settings WHERE key='scan_window_after'").fetchone()
-    global_after = int(scan_after_row['value']) if scan_after_row else 180
+    settings = dict(conn.execute("SELECT key, value FROM settings").fetchall())
+    global_after = int(settings.get('scan_window_after', 180))
     now = datetime.now()
+    
     past_jadwals = conn.execute("SELECT * FROM jadwal WHERE status='Bertugas' AND nama_pengguna != '' AND jadwal_datetime <= ?", (now.strftime('%Y-%m-%d %H:%M:%S'),)).fetchall()
     
     for j in past_jadwals:
-        dt_obj = datetime.strptime(j['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
-        sa = j['scan_after'] if j['scan_after'] is not None else global_after
+        j_dict = dict(j) 
+        dt_obj = datetime.strptime(j_dict['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
+        sa = j_dict['scan_after'] if j_dict.get('scan_after') is not None else global_after
         waktu_tutup = dt_obj + timedelta(minutes=sa)
         
         if now > waktu_tutup:
-            username, nama = j['pengguna'], j['nama_pengguna']
+            username = j_dict['pengguna']
+            nama = j_dict['nama_pengguna']
             tanggal = dt_obj.strftime('%Y-%m-%d')
-            kegiatan = f"{j['acara']} Pkl {j['waktu']}"
+            kegiatan = f"{j_dict['acara']} Pkl {j_dict['waktu']}"
+            kategori = j_dict.get('kategori_misa') or 'Harian'
+            
             exist = conn.execute("SELECT 1 FROM kehadiran WHERE username=? AND tanggal=? AND kegiatan=?", (username, tanggal, kegiatan)).fetchone()
+            
             if not exist:
                 conn.execute('INSERT INTO kehadiran (username, nama, tanggal, kegiatan, status, keterangan, waktu_scan) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-                             (username, nama, tanggal, kegiatan, 'Tidak Hadir', 'Otomatis oleh Sistem', 'Sistem (Auto)'))
+                             (username, nama, tanggal, kegiatan, 'Tidak Hadir', 'Otomatis oleh Sistem (Melewati Batas Waktu)', 'Sistem (Auto)'))
+                
+                key_sanksi = f"sanksi_alpa_{kategori.lower()}"
+                weight = int(settings.get(key_sanksi, 0))
+                
+                if weight > 0:
+                    pelanggaran = f"Alpa - {kategori}"
+                    tindakan = f"{weight} Kali Berlutut"
+                    exist_hk = conn.execute("SELECT 1 FROM hukuman WHERE username=? AND tanggal=? AND pelanggaran=?", (username, tanggal, pelanggaran)).fetchone()
+                    if not exist_hk:
+                        conn.execute('INSERT INTO hukuman (username, nama, tanggal, pelanggaran, tindakan, status) VALUES (?, ?, ?, ?, ?, ?)',
+                                     (username, nama, tanggal, pelanggaran, tindakan, 'Belum Selesai'))
     conn.commit()
+
+def create_notification(conn, target_str, pesan, link_url):
+    waktu_sekarang = datetime.now().strftime('%d %b %Y, %H:%M')
+    target_list = [t.strip() for t in target_str.split(',')]
+    if 'semua' in target_list:
+        users = conn.execute("SELECT username FROM users").fetchall()
+        for u in users: conn.execute('INSERT INTO notifikasi (username, pesan, waktu, link) VALUES (?, ?, ?, ?)', (u['username'], pesan, waktu_sekarang, link_url))
+    else:
+        users = conn.execute("SELECT username, role FROM users").fetchall()
+        for u in users:
+            if u['username'] in target_list or u['role'] in target_list:
+                conn.execute('INSERT INTO notifikasi (username, pesan, waktu, link) VALUES (?, ?, ?, ?)', (u['username'], pesan, waktu_sekarang, link_url))
+
+@app.context_processor
+def inject_notifications():
+    if 'user_id' in session:
+        conn = get_db_connection()
+        notifs = conn.execute("SELECT * FROM notifikasi WHERE username=? ORDER BY id DESC LIMIT 15", (session['user_id'],)).fetchall()
+        unread_count = conn.execute("SELECT COUNT(*) FROM notifikasi WHERE username=? AND status_baca=0", (session['user_id'],)).fetchone()[0]
+        conn.close()
+        return dict(notifs=notifs, unread_count=unread_count)
+    return dict(notifs=[], unread_count=0)
+
+@app.route('/baca-notif', methods=['POST'])
+@login_required
+def baca_notif():
+    conn = get_db_connection()
+    conn.execute("UPDATE notifikasi SET status_baca=1 WHERE username=?", (session['user_id'],))
+    conn.commit()
+    conn.close()
+    return json.dumps({'success': True})
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -139,7 +213,6 @@ def login():
         username, password = request.form.get('username'), request.form.get('password')
         conn = get_db_connection()
         user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
-        
         if user:
             is_valid = False
             if check_password_hash(user['password'], password): is_valid = True
@@ -147,7 +220,6 @@ def login():
                 is_valid = True
                 conn.execute('UPDATE users SET password = ? WHERE username = ?', (generate_password_hash(password), username))
                 conn.commit()
-                
             if is_valid:
                 session.permanent = True
                 session['user_id'] = user['username']
@@ -156,7 +228,6 @@ def login():
                 session['foto_profil'] = user['foto_profil']
                 conn.close()
                 return redirect(url_for('index'))
-                
         conn.close()
         return render_template('login.html', error='Username atau password salah')
     return render_template('login.html')
@@ -167,7 +238,8 @@ def logout(): session.clear(); return redirect(url_for('index'))
 @app.route('/')
 def index():
     user_id = session.get('user_id')
-    filtered_pengumuman = get_filtered_items('pengumuman', user_id)
+    user_role = session.get('role')
+    filtered_pengumuman = get_filtered_items('pengumuman', user_id, user_role)
     conn = get_db_connection()
     threshold_time = (datetime.now() - timedelta(minutes=30)).strftime('%Y-%m-%d %H:%M:%S')
     quotes = ["Melayani dengan hati, bukan karena ingin dipuji.", "Kasih itu sabar; kasih itu murah hati.", "Lakukan segala pekerjaanmu dalam kasih."]
@@ -188,7 +260,6 @@ def index():
 def jadwal():
     conn = get_db_connection()
     process_auto_absent(conn)
-    
     threshold_time = (datetime.now() - timedelta(minutes=30)).strftime('%Y-%m-%d %H:%M:%S')
     is_logged_in = 'user_id' in session
     user_id = session.get('user_id')
@@ -220,7 +291,6 @@ def jadwal():
                 else: j['status_kehadiran'] = 'Belum Absen'
                 jadwal_data.append(j)
             view_mode = 'admin_all'
-            
         conn.close()
         return render_template('jadwal.html', jadwal=jadwal_data, user_id=user_id, is_logged_in=True, view_mode=view_mode, user_role=user_role)
     else:
@@ -238,18 +308,14 @@ def scan_absen():
 @login_required
 def api_absen():
     current_user = session.get('user_id')
-    
     try:
         data = request.json
-        if not data:
-            return json.dumps({'success': False, 'message': 'Format QR Code tidak dikenali oleh sistem ini.'})
-            
+        if not data: return json.dumps({'success': False, 'message': 'Format QR Code tidak dikenali oleh sistem ini.'})
         conn = get_db_connection()
         now = datetime.now()
         
         if data.get('type') == 'event':
-            dt_val = data.get('dt')
-            ac_val = data.get('ac')
+            dt_val, ac_val = data.get('dt'), data.get('ac')
             username_qr = current_user 
             if not dt_val or not ac_val: return json.dumps({'success': False, 'message': 'Data QR Acara tidak lengkap.'})
             user = conn.execute("SELECT nama FROM users WHERE username=?", (username_qr,)).fetchone()
@@ -258,56 +324,46 @@ def api_absen():
             if not assigned:
                 conn.close()
                 return json.dumps({'success': False, 'message': 'Akses Ditolak: Anda TIDAK ditugaskan pada jadwal Misa ini!'})
-                
+            
+            assigned_dict = dict(assigned)
             dt_obj = datetime.strptime(dt_val, '%Y-%m-%d %H:%M:%S')
             kegiatan = f"{ac_val} Pkl {dt_obj.strftime('%H.%M')}"
-            scan_before = assigned['scan_before']
-            scan_after = assigned['scan_after']
-            
+            scan_before, scan_after = assigned_dict.get('scan_before'), assigned_dict.get('scan_after')
         else:
-            if 'j' not in data or 'u' not in data:
-                return json.dumps({'success': False, 'message': 'Format QR Code Kertas tidak valid.'})
+            if 'j' not in data or 'u' not in data: return json.dumps({'success': False, 'message': 'Format QR Code Kertas tidak valid.'})
             jadwal_id, username_qr = data['j'], data['u']
             if current_user != username_qr:
-                conn.close()
-                return json.dumps({'success': False, 'message': 'Akses Ditolak: Anda hanya boleh men-scan QR Code milik Anda sendiri!'})
-                
+                conn.close(); return json.dumps({'success': False, 'message': 'Akses Ditolak: Anda hanya boleh men-scan QR Code milik Anda sendiri!'})
             jadwal = conn.execute("SELECT * FROM jadwal WHERE id=?", (jadwal_id,)).fetchone()
             user = conn.execute("SELECT nama FROM users WHERE username=?", (username_qr,)).fetchone()
             if not jadwal or not user:
-                conn.close()
-                return json.dumps({'success': False, 'message': 'Jadwal atau Anggota tidak ditemukan.'})
-            if jadwal['pengguna'] != current_user:
-                conn.close()
-                return json.dumps({'success': False, 'message': 'Akses Ditolak: Anda TIDAK ditugaskan pada jadwal Misa ini!'})
-                
-            dt_obj = datetime.strptime(jadwal['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
-            kegiatan = f"{jadwal['acara']} Pkl {jadwal['waktu']}"
-            scan_before = jadwal['scan_before']
-            scan_after = jadwal['scan_after']
+                conn.close(); return json.dumps({'success': False, 'message': 'Jadwal atau Anggota tidak ditemukan.'})
+            
+            jadwal_dict = dict(jadwal)
+            if jadwal_dict['pengguna'] != current_user:
+                conn.close(); return json.dumps({'success': False, 'message': 'Akses Ditolak: Anda TIDAK ditugaskan pada jadwal Misa ini!'})
+            dt_obj = datetime.strptime(jadwal_dict['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
+            kegiatan = f"{jadwal_dict['acara']} Pkl {jadwal_dict['waktu']}"
+            scan_before, scan_after = jadwal_dict.get('scan_before'), jadwal_dict.get('scan_after')
 
         if scan_before is None or scan_after is None:
             scan_before_row = conn.execute("SELECT value FROM settings WHERE key='scan_window_before'").fetchone()
             scan_after_row = conn.execute("SELECT value FROM settings WHERE key='scan_window_after'").fetchone()
-            global_before = int(scan_before_row['value']) if scan_before_row else 60
-            global_after = int(scan_after_row['value']) if scan_after_row else 180
-            scan_before = scan_before if scan_before is not None else global_before
-            scan_after = scan_after if scan_after is not None else global_after
+            scan_before = scan_before if scan_before is not None else (int(scan_before_row['value']) if scan_before_row else 60)
+            scan_after = scan_after if scan_after is not None else (int(scan_after_row['value']) if scan_after_row else 180)
             
         waktu_buka = dt_obj - timedelta(minutes=scan_before)
         waktu_tutup = dt_obj + timedelta(minutes=scan_after)
         
         months_id = {1: 'Juni', 2: 'Februari', 3: 'Maret', 4: 'April', 5: 'Mei', 6: 'Juni', 7: 'Juli', 8: 'Agustus', 9: 'September', 10: 'Oktober', 11: 'November', 12: 'Desember'}
         def format_indo(dt): return f"{dt.day} {months_id[dt.month]} {dt.year} pukul {dt.strftime('%H.%M')}"
-        waktu_buka_str = format_indo(waktu_buka)
-        waktu_tutup_str = format_indo(waktu_tutup)
         
         if now < waktu_buka:
             conn.close()
-            return json.dumps({'success': False, 'message': f'Belum waktunya! Absen dibuka pada tanggal {waktu_buka_str} dan ditutup tanggal {waktu_tutup_str}.'})
+            return json.dumps({'success': False, 'message': f'Belum waktunya! Absen dibuka pada {format_indo(waktu_buka)} dan ditutup pada {format_indo(waktu_tutup)}.'})
         if now > waktu_tutup:
             conn.close()
-            return json.dumps({'success': False, 'message': f'Terlambat! Absen telah ditutup pada tanggal {waktu_tutup_str}. Status Anda otomatis tercatat Tidak Hadir.'})
+            return json.dumps({'success': False, 'message': f'Terlambat! Absen telah ditutup pada {format_indo(waktu_tutup)}. Status Anda otomatis tercatat Tidak Hadir.'})
             
         tanggal_absen = dt_obj.strftime('%Y-%m-%d')
         exist = conn.execute("SELECT * FROM kehadiran WHERE username=? AND tanggal=? AND kegiatan=?", (username_qr, tanggal_absen, kegiatan)).fetchone()
@@ -315,9 +371,7 @@ def api_absen():
             conn.close()
             return json.dumps({'success': True, 'message': f"Info: Kehadiran atas nama {user['nama']} SUDAH TERABSEN sebelumnya!"})
             
-        # TIMESTAMP WAKTU SCAN
         waktu_scan_str = now.strftime('%d %b %Y, Pkl %H:%M:%S')
-        
         conn.execute('INSERT INTO kehadiran (username, nama, tanggal, kegiatan, status, keterangan, waktu_scan) VALUES (?, ?, ?, ?, ?, ?, ?)', 
                      (username_qr, user['nama'], tanggal_absen, kegiatan, 'Hadir', 'Scan QR Berhasil', waktu_scan_str))
         conn.commit(); conn.close()
@@ -335,33 +389,54 @@ def kehadiran():
     if request.method == 'POST' and user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan']:
         action = request.form.get('action')
         item_id = request.form.get('id', '')
-        
         target_username = request.form.get('username') or request.form.get('username_hidden')
+        
         if target_username == user_id and action != 'hapus':
             flash("Keamanan Sistem: Anda tidak diizinkan mengedit status absensi milik Anda sendiri.", "error")
             return redirect(url_for('kehadiran'))
         
-        if action == 'tambah':
-            target = conn.execute("SELECT nama FROM users WHERE username=?", (request.form.get('username'),)).fetchone()
-            nama = target['nama'] if target else request.form.get('username')
-            conn.execute('INSERT INTO kehadiran (username, nama, tanggal, kegiatan, status, keterangan, waktu_scan) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-                         (request.form.get('username'), nama, request.form.get('tanggal'), request.form.get('kegiatan'), request.form.get('status'), request.form.get('keterangan', ''), 'Manual Admin'))
-        
-        elif action == 'edit':
-            if str(item_id).startswith('j_'):
-                username_hidden = request.form.get('username_hidden')
-                target = conn.execute("SELECT nama FROM users WHERE username=?", (username_hidden,)).fetchone()
-                nama = target['nama'] if target else username_hidden
+        if action == 'tambah' or action == 'edit':
+            status_baru = request.form.get('status')
+            keterangan_baru = request.form.get('keterangan', '')
+            
+            if action == 'edit' and str(item_id).startswith('j_') and status_baru in ['Tidak Hadir', 'Izin']:
+                jadwal_id = item_id.split('_')[1]
+                j = conn.execute("SELECT * FROM jadwal WHERE id=?", (jadwal_id,)).fetchone()
+                if j:
+                    j_dict = dict(j)
+                    kategori = j_dict.get('kategori_misa') or 'Harian'
+                    settings = dict(conn.execute("SELECT key, value FROM settings").fetchall())
+                    prefix = 'alpa' if status_baru == 'Tidak Hadir' else 'izin'
+                    key_sanksi = f"sanksi_{prefix}_{kategori.lower()}"
+                    weight = int(settings.get(key_sanksi, 0))
+                    
+                    if weight > 0:
+                        pelanggaran = f"{status_baru} - {kategori}"
+                        tindakan = f"{weight} Kali Berlutut"
+                        nama_target = request.form.get('nama_hidden') or target_username
+                        exist_hk = conn.execute("SELECT 1 FROM hukuman WHERE username=? AND tanggal=? AND pelanggaran=?", (target_username, request.form.get('tanggal'), pelanggaran)).fetchone()
+                        if not exist_hk:
+                            conn.execute('INSERT INTO hukuman (username, nama, tanggal, pelanggaran, tindakan, status) VALUES (?, ?, ?, ?, ?, ?)',
+                                        (target_username, nama_target, request.form.get('tanggal'), pelanggaran, tindakan, 'Belum Selesai'))
+
+            if action == 'tambah':
+                target = conn.execute("SELECT nama FROM users WHERE username=?", (request.form.get('username'),)).fetchone()
+                nama = target['nama'] if target else request.form.get('username')
                 conn.execute('INSERT INTO kehadiran (username, nama, tanggal, kegiatan, status, keterangan, waktu_scan) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-                             (username_hidden, nama, request.form.get('tanggal'), request.form.get('kegiatan'), request.form.get('status'), request.form.get('keterangan', ''), 'Diubah Manual Admin'))
-            else:
-                conn.execute('UPDATE kehadiran SET status=?, keterangan=?, waktu_scan=? WHERE id=?', 
-                             (request.form.get('status'), request.form.get('keterangan', ''), 'Diubah Manual Admin', item_id))
+                             (request.form.get('username'), nama, request.form.get('tanggal'), request.form.get('kegiatan'), status_baru, keterangan_baru, 'Manual Admin'))
+            elif action == 'edit':
+                if str(item_id).startswith('j_'):
+                    username_hidden = request.form.get('username_hidden')
+                    target = conn.execute("SELECT nama FROM users WHERE username=?", (username_hidden,)).fetchone()
+                    nama = target['nama'] if target else username_hidden
+                    conn.execute('INSERT INTO kehadiran (username, nama, tanggal, kegiatan, status, keterangan, waktu_scan) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+                                 (username_hidden, nama, request.form.get('tanggal'), request.form.get('kegiatan'), status_baru, keterangan_baru, 'Diubah Manual Admin'))
+                else:
+                    conn.execute('UPDATE kehadiran SET status=?, keterangan=?, waktu_scan=? WHERE id=?', 
+                                 (status_baru, keterangan_baru, 'Diubah Manual Admin', item_id))
                              
         elif action == 'hapus':
-            if not str(item_id).startswith('j_'):
-                conn.execute('DELETE FROM kehadiran WHERE id=?', (item_id,))
-            
+            if not str(item_id).startswith('j_'): conn.execute('DELETE FROM kehadiran WHERE id=?', (item_id,))
         conn.commit(); return redirect(url_for('kehadiran'))
 
     users_list = conn.execute("SELECT username, nama FROM users WHERE role != 'super admin' ORDER BY nama ASC").fetchall() if user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] else []
@@ -377,10 +452,11 @@ def kehadiran():
     combined = []
 
     for j in jadwals:
-        dt_obj = datetime.strptime(j['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
+        j_dict = dict(j)
+        dt_obj = datetime.strptime(j_dict['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
         tgl = dt_obj.strftime('%Y-%m-%d')
-        keg = f"{j['acara']} Pkl {j['waktu']}"
-        usr = j['pengguna']
+        keg = f"{j_dict['acara']} Pkl {j_dict['waktu']}"
+        usr = j_dict['pengguna']
         key = (usr, tgl, keg)
 
         if key in keh_dict:
@@ -390,14 +466,9 @@ def kehadiran():
             del keh_dict[key]
         else:
             combined.append({
-                'id': f"j_{j['id']}", 
-                'username': usr,
-                'nama': j['nama_pengguna'],
-                'tanggal': tgl,
-                'kegiatan': keg,
-                'status': 'Belum Absen',
-                'keterangan': '-',
-                'waktu_scan': '-'
+                'id': f"j_{j_dict['id']}", 'username': usr, 'nama': j_dict['nama_pengguna'],
+                'tanggal': tgl, 'kegiatan': keg, 'status': 'Belum Absen',
+                'keterangan': '-', 'waktu_scan': '-'
             })
 
     for k in keh_dict.values():
@@ -407,8 +478,39 @@ def kehadiran():
 
     combined = sorted(combined, key=lambda x: (x['tanggal'], x['kegiatan']), reverse=True)
     conn.close()
-    
     return render_template('kehadiran.html', kehadiran=combined, users=users_list, role=user_role)
+
+@app.route('/hukuman', methods=['GET', 'POST'])
+@login_required
+def hukuman():
+    user_id, user_role = session.get('user_id'), session.get('role')
+    conn = get_db_connection()
+    if request.method == 'POST' and user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan']:
+        action = request.form.get('action')
+        if action in ['tambah', 'edit']:
+            target = conn.execute("SELECT nama FROM users WHERE username=?", (request.form.get('username'),)).fetchone()
+            nama = target['nama'] if target else request.form.get('username')
+            if action == 'tambah': conn.execute('INSERT INTO hukuman (username, nama, tanggal, pelanggaran, tindakan, status) VALUES (?, ?, ?, ?, ?, ?)', (request.form.get('username'), nama, request.form.get('tanggal'), request.form.get('pelanggaran'), request.form.get('tindakan'), request.form.get('status')))
+            else: conn.execute('UPDATE hukuman SET username=?, nama=?, tanggal=?, pelanggaran=?, tindakan=?, status=? WHERE id=?', (request.form.get('username'), nama, request.form.get('tanggal'), request.form.get('pelanggaran'), request.form.get('tindakan'), request.form.get('status'), request.form.get('id')))
+        elif action == 'hapus': conn.execute('DELETE FROM hukuman WHERE id=?', (request.form.get('id'),))
+        elif action == 'selesai': conn.execute('UPDATE hukuman SET status="Selesai" WHERE id=?', (request.form.get('id'),))
+        conn.commit(); return redirect(url_for('hukuman'))
+
+    users_list = conn.execute("SELECT username, nama FROM users WHERE role != 'super admin' ORDER BY nama ASC").fetchall() if user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] else []
+    
+    if user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan']: data_hukuman = conn.execute('SELECT * FROM hukuman ORDER BY id DESC').fetchall()
+    else: data_hukuman = conn.execute('SELECT * FROM hukuman WHERE username=? ORDER BY id DESC', (user_id,)).fetchall()
+    
+    tunggakan_dict = {}
+    for h in data_hukuman:
+        if h['status'] != 'Selesai' and 'Kali Berlutut' in h['tindakan']:
+            try:
+                amount = int(h['tindakan'].split()[0])
+                tunggakan_dict[h['username']] = tunggakan_dict.get(h['username'], 0) + amount
+            except: pass
+            
+    conn.close()
+    return render_template('hukuman.html', hukuman=data_hukuman, users=users_list, role=user_role, tunggakan=tunggakan_dict, current_user=user_id)
 
 @app.route('/pengaturan', methods=['GET', 'POST'])
 @login_required
@@ -416,34 +518,36 @@ def pengaturan():
     user_id = session.get('user_id')
     conn = get_db_connection()
     if request.method == 'POST':
-        nama_lengkap, nama_panggilan = request.form.get('nama_lengkap'), request.form.get('nama_panggilan')
-        email, tanggal_lahir = request.form.get('email'), request.form.get('tanggal_lahir')
-        no_hp, nama_ortu = request.form.get('no_hp'), request.form.get('nama_ortu')
-        no_hp_ortu, alamat = request.form.get('no_hp_ortu'), request.form.get('alamat')
-        password_baru = request.form.get('password_baru')
-        
-        foto_profil_path = None
-        foto_file = request.files.get('foto_profil')
-        if foto_file and foto_file.filename != '':
-            old_data = conn.execute('SELECT foto_profil FROM users WHERE username=?', (user_id,)).fetchone()
-            if old_data and old_data['foto_profil']:
-                old_path = os.path.join('static', old_data['foto_profil'])
-                if os.path.exists(old_path): os.remove(old_path)
-            filename = secure_filename(f"{user_id}_{int(datetime.now().timestamp())}_{foto_file.filename}")
-            foto_file.save(os.path.join(UPLOAD_PROFIL, filename))
-            foto_profil_path = f"uploads/profil/{filename}"
-            session['foto_profil'] = foto_profil_path
+        form_type = request.form.get('form_type')
+        if form_type == 'profile':
+            nama_lengkap, nama_panggilan = request.form.get('nama_lengkap'), request.form.get('nama_panggilan')
+            email, tanggal_lahir = request.form.get('email'), request.form.get('tanggal_lahir')
+            no_hp, nama_ortu = request.form.get('no_hp'), request.form.get('nama_ortu')
+            no_hp_ortu, alamat = request.form.get('no_hp_ortu'), request.form.get('alamat')
+            password_baru = request.form.get('password_baru')
+            
+            foto_profil_path = None
+            foto_file = request.files.get('foto_profil')
+            if foto_file and foto_file.filename != '':
+                old_data = conn.execute('SELECT foto_profil FROM users WHERE username=?', (user_id,)).fetchone()
+                if old_data and old_data['foto_profil']:
+                    old_path = os.path.join('static', old_data['foto_profil'])
+                    if os.path.exists(old_path): os.remove(old_path)
+                filename = secure_filename(f"{user_id}_{int(datetime.now().timestamp())}_{foto_file.filename}")
+                foto_file.save(os.path.join(UPLOAD_PROFIL, filename))
+                foto_profil_path = f"uploads/profil/{filename}"
+                session['foto_profil'] = foto_profil_path
 
-        query = 'UPDATE users SET nama=?, nama_panggilan=?, email=?, tanggal_lahir=?, no_hp=?, nama_ortu=?, no_hp_ortu=?, alamat=?'
-        params = [nama_lengkap, nama_panggilan, email, tanggal_lahir, no_hp, nama_ortu, no_hp_ortu, alamat]
-        if foto_profil_path: query += ', foto_profil=?'; params.append(foto_profil_path)
-        if password_baru and password_baru.strip() != '': query += ', password=?'; params.append(generate_password_hash(password_baru))
-        query += ' WHERE username=?'
-        params.append(user_id)
-        
-        conn.execute(query, params)
-        conn.commit()
-        session['nama_user'] = nama_lengkap
+            query = 'UPDATE users SET nama=?, nama_panggilan=?, email=?, tanggal_lahir=?, no_hp=?, nama_ortu=?, no_hp_ortu=?, alamat=?'
+            params = [nama_lengkap, nama_panggilan, email, tanggal_lahir, no_hp, nama_ortu, no_hp_ortu, alamat]
+            if foto_profil_path: query += ', foto_profil=?'; params.append(foto_profil_path)
+            if password_baru and password_baru.strip() != '': query += ', password=?'; params.append(generate_password_hash(password_baru))
+            query += ' WHERE username=?'
+            params.append(user_id)
+            
+            conn.execute(query, params)
+            conn.commit()
+            session['nama_user'] = nama_lengkap
         
     user_data = conn.execute('SELECT * FROM users WHERE username = ?', (user_id,)).fetchone()
     conn.close()
@@ -541,39 +645,37 @@ def kelola_pendaftaran():
     conn.close()
     return render_template('kelola_pendaftaran.html', fields=fields, pendaftar=pendaftar_list)
 
-@app.route('/hukuman', methods=['GET', 'POST'])
-@login_required
-def hukuman():
-    user_id, user_role = session.get('user_id'), session.get('role')
-    conn = get_db_connection()
-    if request.method == 'POST' and user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan']:
-        action = request.form.get('action')
-        if action in ['tambah', 'edit']:
-            target = conn.execute("SELECT nama FROM users WHERE username=?", (request.form.get('username'),)).fetchone()
-            nama = target['nama'] if target else request.form.get('username')
-            if action == 'tambah': conn.execute('INSERT INTO hukuman (username, nama, tanggal, pelanggaran, tindakan, status) VALUES (?, ?, ?, ?, ?, ?)', (request.form.get('username'), nama, request.form.get('tanggal'), request.form.get('pelanggaran'), request.form.get('tindakan'), request.form.get('status')))
-            else: conn.execute('UPDATE hukuman SET username=?, nama=?, tanggal=?, pelanggaran=?, tindakan=?, status=? WHERE id=?', (request.form.get('username'), nama, request.form.get('tanggal'), request.form.get('pelanggaran'), request.form.get('tindakan'), request.form.get('status'), request.form.get('id')))
-        elif action == 'hapus': conn.execute('DELETE FROM hukuman WHERE id=?', (request.form.get('id'),))
-        conn.commit(); return redirect(url_for('hukuman'))
-
-    users_list = conn.execute("SELECT username, nama FROM users WHERE role != 'super admin' ORDER BY nama ASC").fetchall() if user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] else []
-    data_hukuman = conn.execute('SELECT * FROM hukuman ORDER BY id DESC').fetchall() if user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] else conn.execute('SELECT * FROM hukuman WHERE username=? ORDER BY id DESC', (user_id,)).fetchall()
-    conn.close(); return render_template('hukuman.html', hukuman=data_hukuman, users=users_list, role=user_role)
-
 @app.route('/pengumuman', methods=['GET', 'POST'])
 def pengumuman():
     user_id, user_role = session.get('user_id'), session.get('role')
     if request.method == 'POST' and user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan']:
         action = request.form.get('action')
         conn = get_db_connection()
+        nama_pengurus = session.get('nama_user', 'Admin')
+        now_str = datetime.now().strftime('%d %b %Y, %H:%M')
+        
         if action in ['tambah', 'edit']:
             target_str = 'semua' if 'semua' in request.form.getlist('target') else ','.join(request.form.getlist('target'))
-            if action == 'tambah': conn.execute('INSERT INTO pengumuman (judul, deskripsi, waktu_pelaksanaan, tanggal_dibuat, target, pembuat) VALUES (?, ?, ?, ?, ?, ?)', (request.form.get('judul'), request.form.get('deskripsi', ''), request.form.get('waktu_pelaksanaan'), datetime.now().strftime("%d %b %Y"), target_str, user_id))
-            else: conn.execute('UPDATE pengumuman SET judul=?, deskripsi=?, waktu_pelaksanaan=?, target=? WHERE id=?', (request.form.get('judul'), request.form.get('deskripsi', ''), request.form.get('waktu_pelaksanaan'), target_str, request.form.get('id')))
-        elif action == 'hapus': conn.execute('DELETE FROM pengumuman WHERE id=?', (request.form.get('id'),))
+            judul_info = request.form.get('judul')
+            tgl_pelaksanaan = request.form.get('tanggal_pelaksanaan')
+            wkt_pelaksanaan = request.form.get('waktu_pelaksanaan')
+            tempat = request.form.get('tempat')
+            
+            if action == 'tambah': 
+                conn.execute('INSERT INTO pengumuman (judul, deskripsi, tanggal_pelaksanaan, waktu_pelaksanaan, tempat, tanggal_dibuat, target, pembuat, editor_terakhir, waktu_edit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+                             (judul_info, request.form.get('deskripsi', ''), tgl_pelaksanaan, wkt_pelaksanaan, tempat, datetime.now().strftime("%d %b %Y"), target_str, user_id, nama_pengurus, now_str))
+                create_notification(conn, target_str, f"Ada pengumuman baru: {judul_info}", url_for('pengumuman'))
+            else: 
+                conn.execute('UPDATE pengumuman SET judul=?, deskripsi=?, tanggal_pelaksanaan=?, waktu_pelaksanaan=?, tempat=?, target=?, editor_terakhir=?, waktu_edit=? WHERE id=?', 
+                             (judul_info, request.form.get('deskripsi', ''), tgl_pelaksanaan, wkt_pelaksanaan, tempat, target_str, nama_pengurus, now_str, request.form.get('id')))
+                create_notification(conn, target_str, f"Pengumuman '{judul_info}' baru saja diperbarui.", url_for('pengumuman'))
+                
+        elif action == 'hapus': 
+            conn.execute('DELETE FROM pengumuman WHERE id=?', (request.form.get('id'),))
         conn.commit(); conn.close()
         return redirect(url_for('pengumuman'))
-    return render_template('pengumuman.html', pengumuman=get_filtered_items('pengumuman', user_id), role=user_role, users_by_role=get_grouped_users())
+    
+    return render_template('pengumuman.html', pengumuman=get_filtered_items('pengumuman', user_id, user_role), role=user_role, users_by_role=get_grouped_users())
 
 @app.route('/dokumen', methods=['GET', 'POST'])
 def dokumen():
@@ -581,15 +683,24 @@ def dokumen():
     if request.method == 'POST' and user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan']:
         action = request.form.get('action')
         conn = get_db_connection()
+        nama_pengurus = session.get('nama_user', 'Admin')
+        now_str = datetime.now().strftime('%d %b %Y, %H:%M')
+        
         if action in ['tambah', 'edit']:
             target_str = 'semua' if 'semua' in request.form.getlist('target') else ','.join(request.form.getlist('target'))
             file_paths = []
+            judul_info = request.form.get('judul')
+            
             for idx, file in enumerate(request.files.getlist('file')):
                 if file and file.filename != '':
                     filename = secure_filename(f"{int(datetime.now().timestamp())}_{idx}_{file.filename}")
                     file.save(os.path.join(UPLOAD_DOKUMEN, filename))
                     file_paths.append(f"uploads/dokumen/{filename}")
-            if action == 'tambah': conn.execute('INSERT INTO dokumen (judul, file_path, tanggal_dibuat, target, pembuat) VALUES (?, ?, ?, ?, ?)', (request.form.get('judul'), ','.join(file_paths), datetime.now().strftime("%d %b %Y"), target_str, user_id))
+                    
+            if action == 'tambah': 
+                conn.execute('INSERT INTO dokumen (judul, file_path, tanggal_dibuat, target, pembuat, editor_terakhir, waktu_edit) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+                             (judul_info, ','.join(file_paths), datetime.now().strftime("%d %b %Y"), target_str, user_id, nama_pengurus, now_str))
+                create_notification(conn, target_str, f"Ada dokumen baru yang dibagikan: {judul_info}", url_for('dokumen'))
             else:
                 p_id = request.form.get('id')
                 if file_paths:
@@ -597,8 +708,13 @@ def dokumen():
                     if old_doc and old_doc['file_path']:
                         for p in old_doc['file_path'].split(','):
                             if os.path.exists(os.path.join('static', p)): os.remove(os.path.join('static', p))
-                    conn.execute('UPDATE dokumen SET judul=?, file_path=?, target=? WHERE id=?', (request.form.get('judul'), ','.join(file_paths), target_str, p_id))
-                else: conn.execute('UPDATE dokumen SET judul=?, target=? WHERE id=?', (request.form.get('judul'), target_str, p_id))
+                    conn.execute('UPDATE dokumen SET judul=?, file_path=?, target=?, editor_terakhir=?, waktu_edit=? WHERE id=?', 
+                                 (judul_info, ','.join(file_paths), target_str, nama_pengurus, now_str, p_id))
+                else: 
+                    conn.execute('UPDATE dokumen SET judul=?, target=?, editor_terakhir=?, waktu_edit=? WHERE id=?', 
+                                 (judul_info, target_str, nama_pengurus, now_str, p_id))
+                create_notification(conn, target_str, f"Dokumen '{judul_info}' baru saja diperbarui.", url_for('dokumen'))
+                
         elif action == 'hapus':
             p_id = request.form.get('id')
             old_doc = conn.execute('SELECT file_path FROM dokumen WHERE id=?', (p_id,)).fetchone()
@@ -608,7 +724,8 @@ def dokumen():
             conn.execute('DELETE FROM dokumen WHERE id=?', (p_id,))
         conn.commit(); conn.close()
         return redirect(url_for('dokumen'))
-    return render_template('dokumen.html', dokumen=get_filtered_items('dokumen', user_id), role=user_role, users_by_role=get_grouped_users())
+        
+    return render_template('dokumen.html', dokumen=get_filtered_items('dokumen', user_id, user_role), role=user_role, users_by_role=get_grouped_users())
 
 @app.route('/galeri', methods=['GET', 'POST'])
 def galeri():
@@ -616,15 +733,24 @@ def galeri():
     if request.method == 'POST' and user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan']:
         action = request.form.get('action')
         conn = get_db_connection()
+        nama_pengurus = session.get('nama_user', 'Admin')
+        now_str = datetime.now().strftime('%d %b %Y, %H:%M')
+        
         if action in ['tambah', 'edit']:
             target_str = 'semua' if 'semua' in request.form.getlist('target') else ','.join(request.form.getlist('target'))
             foto_paths = []
+            judul_info = request.form.get('judul')
+            
             for idx, foto in enumerate(request.files.getlist('foto')):
                 if foto and foto.filename != '':
                     filename = secure_filename(f"{int(datetime.now().timestamp())}_{idx}_{foto.filename}")
                     foto.save(os.path.join(UPLOAD_GALERI, filename))
                     foto_paths.append(f"uploads/galeri/{filename}")
-            if action == 'tambah': conn.execute('INSERT INTO galeri (judul, foto_path, tanggal_dibuat, target, pembuat) VALUES (?, ?, ?, ?, ?)', (request.form.get('judul'), ','.join(foto_paths), datetime.now().strftime("%d %b %Y"), target_str, user_id))
+                    
+            if action == 'tambah': 
+                conn.execute('INSERT INTO galeri (judul, foto_path, tanggal_dibuat, target, pembuat, editor_terakhir, waktu_edit) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+                             (judul_info, ','.join(foto_paths), datetime.now().strftime("%d %b %Y"), target_str, user_id, nama_pengurus, now_str))
+                create_notification(conn, target_str, f"Album foto baru telah diupload: {judul_info}", url_for('galeri'))
             else:
                 p_id = request.form.get('id')
                 if foto_paths:
@@ -632,8 +758,13 @@ def galeri():
                     if old_gal and old_gal['foto_path']:
                         for p in old_gal['foto_path'].split(','):
                             if os.path.exists(os.path.join('static', p)): os.remove(os.path.join('static', p))
-                    conn.execute('UPDATE galeri SET judul=?, foto_path=?, target=? WHERE id=?', (request.form.get('judul'), ','.join(foto_paths), target_str, p_id))
-                else: conn.execute('UPDATE galeri SET judul=?, target=? WHERE id=?', (request.form.get('judul'), target_str, p_id))
+                    conn.execute('UPDATE galeri SET judul=?, foto_path=?, target=?, editor_terakhir=?, waktu_edit=? WHERE id=?', 
+                                 (judul_info, ','.join(foto_paths), target_str, nama_pengurus, now_str, p_id))
+                else: 
+                    conn.execute('UPDATE galeri SET judul=?, target=?, editor_terakhir=?, waktu_edit=? WHERE id=?', 
+                                 (judul_info, target_str, nama_pengurus, now_str, p_id))
+                create_notification(conn, target_str, f"Album foto '{judul_info}' telah diperbarui.", url_for('galeri'))
+                
         elif action == 'hapus':
             p_id = request.form.get('id')
             old_gal = conn.execute('SELECT foto_path FROM galeri WHERE id=?', (p_id,)).fetchone()
@@ -643,8 +774,10 @@ def galeri():
             conn.execute('DELETE FROM galeri WHERE id=?', (p_id,))
         conn.commit(); conn.close()
         return redirect(url_for('galeri'))
-    return render_template('galeri.html', galeri=get_filtered_items('galeri', user_id), role=user_role, users_by_role=get_grouped_users())
+        
+    return render_template('galeri.html', galeri=get_filtered_items('galeri', user_id, user_role), role=user_role, users_by_role=get_grouped_users())
 
+# TAMBAHAN RUTE KONTAK (YANG SEMPAT HILANG)
 @app.route('/kontak')
 def kontak():
     conn = get_db_connection()
@@ -665,7 +798,16 @@ def penjadwalan():
     if request.method == 'POST':
         action = request.form.get('action')
         
-        if action == 'update_global_scan_window':
+        if action == 'update_sanksi_settings':
+            keys = ['sanksi_alpa_harian', 'sanksi_izin_harian', 'sanksi_alpa_mingguan', 'sanksi_izin_mingguan', 'sanksi_alpa_besar', 'sanksi_izin_besar']
+            for k in keys:
+                val = request.form.get(k, '0')
+                conn.execute("UPDATE settings SET value=? WHERE key=?", (val, k))
+            conn.commit()
+            flash("Pengaturan Bobot Sanksi Berlutut berhasil diperbarui!", "success")
+            return redirect(url_for('penjadwalan'))
+        
+        elif action == 'update_global_scan_window':
             sb = request.form.get('scan_window_before', '60')
             sa = request.form.get('scan_window_after', '180')
             conn.execute("UPDATE settings SET value=? WHERE key='scan_window_before'", (sb,))
@@ -685,6 +827,65 @@ def penjadwalan():
             conn.execute("UPDATE jadwal SET scan_before=?, scan_after=? WHERE jadwal_datetime=? AND acara=? AND jenis=?", (sb, sa, dt_val, ac_val, jn_val))
             conn.commit()
             flash(f"Pengaturan waktu absensi KHUSUS untuk jadwal {ac_val} berhasil diterapkan!", "success")
+            return redirect(url_for('penjadwalan'))
+            
+        elif action == 'edit_jadwal_group':
+            old_dt = request.form.get('old_dt')
+            old_ac = request.form.get('old_ac')
+            old_jn = request.form.get('old_jn')
+            tgl_str = request.form.get('tanggal')
+            wkt_raw = request.form.get('waktu') 
+            acara = request.form.get('acara')
+            kategori = request.form.get('kategori', 'Besar')
+            petugas_list = request.form.getlist('petugas')
+            
+            if old_dt and old_ac and old_jn and tgl_str and wkt_raw and acara:
+                old_row = conn.execute("SELECT status, scan_before, scan_after FROM jadwal WHERE jadwal_datetime = ? AND acara = ? AND jenis = ? LIMIT 1", (old_dt, old_ac, old_jn)).fetchone()
+                status = old_row['status'] if old_row else 'Bertugas'
+                sb = old_row['scan_before'] if old_row else None
+                sa = old_row['scan_after'] if old_row else None
+                
+                existing_rows = conn.execute("SELECT * FROM jadwal WHERE jadwal_datetime = ? AND acara = ? AND jenis = ?", (old_dt, old_ac, old_jn)).fetchall()
+                existing_map = {}
+                for r in existing_rows:
+                    usr = dict(r).get('pengguna')
+                    if usr not in existing_map: existing_map[usr] = []
+                    existing_map[usr].append(dict(r))
+                
+                wkt = wkt_raw.replace(':', '.')
+                dt = datetime.strptime(tgl_str, '%Y-%m-%d')
+                try: jadwal_dt = datetime.strptime(f"{tgl_str} {wkt_raw}:00", '%Y-%m-%d %H:%M:%S')
+                except: jadwal_dt = dt
+                months_id = {1: 'JAN', 2: 'FEB', 3: 'MAR', 4: 'APR', 5: 'MEI', 6: 'JUNI', 7: 'JULI', 8: 'AGUST', 9: 'SEPT', 10: 'OKT', 11: 'NOV', 12: 'DES'}
+                days_id = {0: 'Senin', 1: 'Selasa', 2: 'Rabu', 3: 'Kamis', 4: 'Jumat', 5: 'Sabtu', 6: 'Minggu'}
+                hari = days_id[dt.weekday()]
+                
+                petugas_list = [p for p in petugas_list if p]
+                unique_petugas = []
+                for p in petugas_list:
+                    if p not in unique_petugas: unique_petugas.append(p)
+                if not unique_petugas: unique_petugas = ['']
+                
+                for p_id in unique_petugas:
+                    username, nama_pengguna = '', ''
+                    if p_id:
+                        user_db = conn.execute("SELECT username, nama FROM users WHERE username = ?", (p_id,)).fetchone()
+                        if user_db: username, nama_pengguna = user_db['username'], user_db['nama']
+                        else: username, nama_pengguna = p_id, p_id
+                    
+                    if username in existing_map and len(existing_map[username]) > 0:
+                        old_r = existing_map[username].pop(0)
+                        conn.execute('UPDATE jadwal SET jadwal_datetime=?, tanggal=?, bulan=?, hari=?, waktu=?, acara=?, kategori_misa=?, nama_pengguna=? WHERE id=?', 
+                                     (jadwal_dt.strftime('%Y-%m-%d %H:%M:%S'), dt.strftime('%d'), months_id[dt.month], hari, wkt, acara, kategori, nama_pengguna, old_r['id']))
+                    else:
+                        conn.execute('INSERT INTO jadwal (jadwal_datetime, tanggal, bulan, hari, waktu, acara, status, pengguna, nama_pengguna, jenis, kategori_misa, scan_before, scan_after) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+                                     (jadwal_dt.strftime('%Y-%m-%d %H:%M:%S'), dt.strftime('%d'), months_id[dt.month], hari, wkt, acara, status, username, nama_pengguna, old_jn, kategori, sb, sa))
+                
+                for u_key, leftover in existing_map.items():
+                    for r in leftover: conn.execute("DELETE FROM jadwal WHERE id=?", (r['id'],))
+                        
+                conn.commit()
+                flash("Jadwal berhasil diperbarui! QR Code otomatis menyesuaikan dengan data terbaru.", "success")
             return redirect(url_for('penjadwalan'))
         
         elif action == 'buat_matriks':
@@ -706,7 +907,6 @@ def penjadwalan():
                     wkt_key = f"{d_str}|{wkt}"
                     if wkt_key not in existing_data: existing_data[wkt_key] = []
                     existing_data[wkt_key].append(r['nama_pengguna'])
-                    
             for d in existing_wkt: existing_wkt[d] = sorted(existing_wkt[d])
             start_dt, end_dt = datetime.strptime(start_str, '%Y-%m-%d'), datetime.strptime(end_str, '%Y-%m-%d')
             days_id = {0: 'Senin', 1: 'Selasa', 2: 'Rabu', 3: 'Kamis', 4: 'Jumat', 5: 'Sabtu', 6: 'Minggu'}
@@ -720,11 +920,7 @@ def penjadwalan():
                     if hari_idx == 5: wkt_list = ['05.30', '17.00']
                     elif hari_idx == 6: wkt_list = ['06.00', '08.00', '10.00', '17.00']
                     else: wkt_list = ['05.30', '18.00']
-                matrix_data.append({
-                    'date_str': d_str, 'hari': days_id[hari_idx],
-                    'tanggal_format': f"{days_id[hari_idx].upper()}, {curr.day} {curr.strftime('%b %Y').upper()}",
-                    'wkt_list': wkt_list
-                })
+                matrix_data.append({'date_str': d_str, 'hari': days_id[hari_idx], 'tanggal_format': f"{days_id[hari_idx].upper()}, {curr.day} {curr.strftime('%b %Y').upper()}", 'wkt_list': wkt_list})
                 curr += timedelta(days=1)
             conn.close()
             return render_template('penjadwalan.html', matrix=matrix_data, users=users_db, user_names=user_names, start=start_str, end=end_str, existing_data=existing_data, acara_data=acara_data)
@@ -749,6 +945,7 @@ def penjadwalan():
                     parts = key.split('|')
                     tgl_str, wkt_idx, hari = parts[1], parts[2], parts[3]
                     wkt = request.form.get(f"wkt|{tgl_str}|{wkt_idx}", "00.00").strip()
+                    kat = request.form.get(f"kat|{tgl_str}|{wkt_idx}", "Harian").strip()
                     acara_tambahan = request.form.get(f"ket|{tgl_str}", "").strip()
                     acara_final = f"Misa {acara_tambahan}" if acara_tambahan else "Misa"
                     acara_final = acara_final.replace('(', '').replace(')', '')
@@ -765,9 +962,9 @@ def penjadwalan():
                                 n_lower = n.lower()
                                 if n_lower not in unique_names_in_shift:
                                     unique_names_in_shift.add(n_lower)
-                                    parsed_data.append({'jadwal_dt': jadwal_dt, 'dt': dt, 'hari': hari, 'wkt': wkt, 'acara': acara_final, 'nama': n})
+                                    parsed_data.append({'jadwal_dt': jadwal_dt, 'dt': dt, 'hari': hari, 'wkt': wkt, 'acara': acara_final, 'kat': kat, 'nama': n})
                                     has_entry = True
-                    if not has_entry: parsed_data.append({'jadwal_dt': jadwal_dt, 'dt': dt, 'hari': hari, 'wkt': wkt, 'acara': acara_final, 'nama': ''})
+                    if not has_entry: parsed_data.append({'jadwal_dt': jadwal_dt, 'dt': dt, 'hari': hari, 'wkt': wkt, 'acara': acara_final, 'kat': kat, 'nama': ''})
             
             for p in parsed_data:
                 username, nama_pengguna = '', ''
@@ -775,8 +972,8 @@ def penjadwalan():
                     user_db = conn.execute("SELECT username, nama FROM users WHERE nama LIKE ? OR nama_panggilan LIKE ? OR username = ?", (f"%{p['nama']}%", f"%{p['nama']}%", p['nama'])).fetchone()
                     username = user_db['username'] if user_db else p['nama']
                     nama_pengguna = user_db['nama'] if user_db else p['nama']
-                conn.execute('INSERT INTO jadwal (jadwal_datetime, tanggal, bulan, hari, waktu, acara, status, pengguna, nama_pengguna, jenis) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "Matriks")', 
-                             (p['jadwal_dt'].strftime('%Y-%m-%d %H:%M:%S'), p['dt'].strftime('%d'), months_id[p['dt'].month], p['hari'], p['wkt'], p['acara'], 'Draft', username, nama_pengguna))
+                conn.execute('INSERT INTO jadwal (jadwal_datetime, tanggal, bulan, hari, waktu, acara, status, pengguna, nama_pengguna, jenis, kategori_misa) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "Matriks", ?)', 
+                             (p['jadwal_dt'].strftime('%Y-%m-%d %H:%M:%S'), p['dt'].strftime('%d'), months_id[p['dt'].month], p['hari'], p['wkt'], p['acara'], 'Draft', username, nama_pengguna, p['kat']))
             conn.commit(); conn.close()
             return redirect(url_for('cetak_jadwal', target_start=s_str, target_end=e_str))
 
@@ -784,6 +981,7 @@ def penjadwalan():
             tgl_str = request.form.get('tanggal')
             wkt_raw = request.form.get('waktu') 
             acara = request.form.get('acara')
+            kategori = request.form.get('kategori', 'Besar')
             petugas_list = request.form.getlist('petugas')
             status = request.form.get('status', 'Bertugas')
             
@@ -808,8 +1006,8 @@ def penjadwalan():
                         user_db = conn.execute("SELECT username, nama FROM users WHERE username = ?", (p_id,)).fetchone()
                         if user_db: username, nama_pengguna = user_db['username'], user_db['nama']
                         else: username, nama_pengguna = p_id, p_id
-                    conn.execute('INSERT INTO jadwal (jadwal_datetime, tanggal, bulan, hari, waktu, acara, status, pengguna, nama_pengguna, jenis) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "Khusus")', 
-                                 (jadwal_dt.strftime('%Y-%m-%d %H:%M:%S'), dt.strftime('%d'), months_id[dt.month], hari, wkt, acara, status, username, nama_pengguna))
+                    conn.execute('INSERT INTO jadwal (jadwal_datetime, tanggal, bulan, hari, waktu, acara, status, pengguna, nama_pengguna, jenis, kategori_misa) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "Khusus", ?)', 
+                                 (jadwal_dt.strftime('%Y-%m-%d %H:%M:%S'), dt.strftime('%d'), months_id[dt.month], hari, wkt, acara, status, username, nama_pengguna, kategori))
                 conn.commit()
                 flash("Jadwal khusus berhasil ditambahkan!", "success")
             return redirect(url_for('penjadwalan'))
@@ -826,14 +1024,13 @@ def penjadwalan():
                 flash(f"{len(hapus_items)} Jadwal berhasil dihapus secara permanen!", "success")
             return redirect(url_for('penjadwalan'))
 
-    scan_before_row = conn.execute("SELECT value FROM settings WHERE key='scan_window_before'").fetchone()
-    scan_after_row = conn.execute("SELECT value FROM settings WHERE key='scan_window_after'").fetchone()
-    global_before = int(scan_before_row['value']) if scan_before_row else 60
-    global_after = int(scan_after_row['value']) if scan_after_row else 180
+    settings_data = dict(conn.execute('SELECT key, value FROM settings').fetchall())
+    global_before = int(settings_data.get('scan_window_before', 60))
+    global_after = int(settings_data.get('scan_window_after', 180))
 
     history_rows = conn.execute('''
-        SELECT jadwal_datetime, hari, waktu, acara, status, jenis, MAX(scan_before) as scan_before, MAX(scan_after) as scan_after,
-        GROUP_CONCAT(NULLIF(nama_pengguna, ''), ', ') as petugas 
+        SELECT jadwal_datetime, hari, waktu, acara, status, jenis, MAX(scan_before) as scan_before, MAX(scan_after) as scan_after, MAX(kategori_misa) as kategori_misa,
+        GROUP_CONCAT(NULLIF(nama_pengguna, ''), ', ') as petugas, GROUP_CONCAT(NULLIF(pengguna, ''), ',') as pengguna_list
         FROM jadwal 
         GROUP BY jadwal_datetime, acara, status, jenis
         ORDER BY jadwal_datetime DESC 
@@ -846,12 +1043,16 @@ def penjadwalan():
         try:
             dt_obj = datetime.strptime(d['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
             d['waktu_format'] = f"{dt_obj.strftime('%d %b %Y')} - {d['waktu']}"
-        except:
+            d['tanggal_raw'] = dt_obj.strftime('%Y-%m-%d')
+            d['waktu_raw'] = dt_obj.strftime('%H:%M')
+        except: 
             d['waktu_format'] = d['jadwal_datetime']
+            d['tanggal_raw'] = ''
+            d['waktu_raw'] = ''
         history.append(d)
 
     conn.close()
-    return render_template('penjadwalan.html', users=users_db, user_names=user_names, history=history, global_before=global_before, global_after=global_after)
+    return render_template('penjadwalan.html', users=users_db, user_names=user_names, history=history, global_before=global_before, global_after=global_after, settings=settings_data)
 
 @app.route('/cetak-jadwal')
 @login_required
@@ -860,8 +1061,7 @@ def cetak_jadwal():
     target_start, target_end = request.args.get('target_start'), request.args.get('target_end')
     conn = get_db_connection()
     if target_start and target_end:
-        start_time = f"{target_start} 00:00:00"
-        end_time = f"{target_end} 23:59:59"
+        start_time, end_time = f"{target_start} 00:00:00", f"{target_end} 23:59:59"
         rows_draft = conn.execute("SELECT * FROM jadwal WHERE status='Draft' AND jadwal_datetime >= ? AND jadwal_datetime <= ? ORDER BY jadwal_datetime ASC", (start_time, end_time)).fetchall()
         if rows_draft: rows = rows_draft
         else: rows = conn.execute("SELECT * FROM jadwal WHERE status='Bertugas' AND jadwal_datetime >= ? AND jadwal_datetime <= ? ORDER BY jadwal_datetime ASC", (start_time, end_time)).fetchall()
@@ -943,8 +1143,7 @@ def publikasi_jadwal():
     target_end = request.form.get('target_end')
     conn = get_db_connection()
     if target_start and target_end:
-        start_time = f"{target_start} 00:00:00"
-        end_time = f"{target_end} 23:59:59"
+        start_time, end_time = f"{target_start} 00:00:00", f"{target_end} 23:59:59"
         conn.execute("DELETE FROM jadwal WHERE status='Bertugas' AND jenis='Matriks' AND jadwal_datetime >= ? AND jadwal_datetime <= ?", (start_time, end_time))
         conn.execute("UPDATE jadwal SET status='Bertugas' WHERE status='Draft' AND jadwal_datetime >= ? AND jadwal_datetime <= ?", (start_time, end_time))
         conn.execute("DELETE FROM jadwal WHERE status='Draft' AND jadwal_datetime >= ? AND jadwal_datetime <= ?", (start_time, end_time))

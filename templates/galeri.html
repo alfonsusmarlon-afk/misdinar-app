@@ -51,6 +51,14 @@
                 <span style="font-size: 10px; background: #f1f5f9; color: #475569; padding: 2px 6px; border-radius: 4px; font-weight: bold;" class="search-target">{{ p.target | upper }}</span>
             </div>
             
+            {% if p.editor_terakhir %}
+            <div style="margin-bottom: 12px;">
+                <span style="font-size: 11px; color: #94a3b8; font-style: italic;">
+                    <i class="fas fa-pencil-alt"></i> Diedit oleh {{ p.editor_terakhir }} ({{ p.waktu_edit }})
+                </span>
+            </div>
+            {% endif %}
+
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 {% if p.foto_path %}
                 {% for f in p.foto_path.split(',') %}
@@ -120,11 +128,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof jQuery !== 'undefined' && $('.select2-multi').length > 0) {
-        $('.select2-multi').select2({ 
-            placeholder: "Ketik untuk mencari nama atau divisi...",
-            width: '100%',
-            dropdownParent: $('#dataModal')
-        });
+        $('.select2-multi').select2({ placeholder: "Pilih siapa yang bisa melihat...", dropdownParent: $('#dataModal') });
     }
     document.getElementById('searchData').addEventListener('keyup', function() {
         let filter = this.value.toLowerCase();

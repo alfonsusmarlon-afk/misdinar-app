@@ -52,7 +52,7 @@ function onScanSuccess(decodedText, decodedResult) {
             setTimeout(() => {
                 box.style.display = 'none';
                 isScanning = false;
-            }, 6000); // Pesan tampil lebih lama agar sempat dibaca anggota
+            }, 5000); 
         })
         .catch(err => {
             box.style.backgroundColor = '#fee2e2';
@@ -71,18 +71,15 @@ function onScanSuccess(decodedText, decodedResult) {
 
 function onScanFailure(error) {}
 
+// OPTIMASI: Menggunakan FPS 10 agar HP low-end tidak lag.
 let html5QrcodeScanner = new Html5QrcodeScanner(
   "reader",
   { 
-      fps: 15,
-      qrbox: function(viewfinderWidth, viewFinderHeight) {
-          let minEdgeSize = Math.min(viewfinderWidth, viewFinderHeight);
-          let qrboxSize = Math.floor(minEdgeSize * 0.7);
-          return { width: qrboxSize, height: qrboxSize };
-      },
+      fps: 10,
+      qrbox: {width: 250, height: 250},
+      aspectRatio: 1.0,
       videoConstraints: {
-          facingMode: "environment",
-          focusMode: "continuous"
+          facingMode: "environment"
       }
   },
   false);

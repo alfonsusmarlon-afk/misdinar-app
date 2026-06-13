@@ -44,6 +44,14 @@
             </div>
         </div>
 
+        {% if p.editor_terakhir %}
+        <div style="margin-bottom: 12px;">
+            <span style="font-size: 11px; color: #94a3b8; font-style: italic;">
+                <i class="fas fa-pencil-alt"></i> Diedit oleh {{ p.editor_terakhir }} ({{ p.waktu_edit }})
+            </span>
+        </div>
+        {% endif %}
+
         <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; display: flex; gap: 8px; justify-content: space-between;">
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 {% if p.file_path %}
@@ -114,11 +122,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof jQuery !== 'undefined' && $('.select2-multi').length > 0) {
-        $('.select2-multi').select2({ 
-            placeholder: "Ketik untuk mencari nama atau divisi...",
-            width: '100%',
-            dropdownParent: $('#dataModal')
-        });
+        $('.select2-multi').select2({ placeholder: "Pilih target penerima file...", dropdownParent: $('#dataModal') });
     }
     document.getElementById('searchData').addEventListener('keyup', function() {
         let filter = this.value.toLowerCase();

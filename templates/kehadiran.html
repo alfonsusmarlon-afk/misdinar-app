@@ -51,7 +51,6 @@
                         {{ k.status | upper }}
                     </span>
                 </td>
-                
                 <td style="padding: 16px 12px;">
                     {% if k.waktu_scan and k.waktu_scan != '-' %}
                         <span style="font-size: 11px; font-weight: 600; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 8px; border-radius: 6px; display: inline-block;">
@@ -61,12 +60,11 @@
                         <span style="font-size: 11px; color: #94a3b8;">-</span>
                     {% endif %}
                 </td>
-                
                 <td style="padding: 16px 12px; color: var(--text-gray); font-size: 13px;">{{ k.keterangan if k.keterangan else '-' }}</td>
                 
                 {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
                 <td style="padding: 16px 12px; text-align: center;">
-                    <button class="btn-icon" onclick="openEditModal('{{ k.id }}', '{{ k.username }}', '{{ k.tanggal }}', '{{ k.kegiatan }}', '{{ k.status }}', '{{ k.keterangan }}')" style="color: var(--primary-blue); background: none; border: none; cursor: pointer; margin-right: 8px; font-size: 16px;">
+                    <button class="btn-icon" onclick="openEditModal('{{ k.id }}', '{{ k.username }}', '{{ k.nama }}', '{{ k.tanggal }}', '{{ k.kegiatan }}', '{{ k.status }}', '{{ k.keterangan }}')" style="color: var(--primary-blue); background: none; border: none; cursor: pointer; margin-right: 8px; font-size: 16px;">
                         <i class="fas fa-edit"></i>
                     </button>
                     
@@ -83,12 +81,7 @@
                 {% endif %}
             </tr>
             {% else %}
-            <tr>
-                <td colspan="7" style="padding: 60px 20px; text-align: center; color: var(--text-gray);">
-                    <i class="fas fa-clipboard-list" style="font-size: 40px; color: #cbd5e1; display: block; margin-bottom: 12px;"></i>
-                    Belum ada data kehadiran.
-                </td>
-            </tr>
+            <tr><td colspan="7" style="padding: 60px 20px; text-align: center; color: var(--text-gray);">Belum ada data kehadiran.</td></tr>
             {% endfor %}
         </tbody>
     </table>
@@ -96,7 +89,7 @@
 
 {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
 <div id="kehadiranModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
-    <div style="background: white; border-radius: 16px; width: 100%; max-width: 450px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; animation: modalPop 0.3s ease-out;">
+    <div style="background: white; border-radius: 16px; width: 100%; max-width: 450px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden;">
         
         <div style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
             <h3 id="modalTitle" style="margin: 0; color: var(--text-dark); font-size: 18px;"><i class="fas fa-edit" style="color: var(--primary-blue);"></i> Kelola Kehadiran</h3>
@@ -107,6 +100,7 @@
             <input type="hidden" name="action" id="actionField" value="tambah">
             <input type="hidden" name="id" id="idField">
             <input type="hidden" name="username_hidden" id="hiddenUsername">
+            <input type="hidden" name="nama_hidden" id="hiddenNama">
             
             <div style="margin-bottom: 16px;">
                 <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Pilih Anggota</label>
@@ -135,6 +129,7 @@
                     <option value="Izin">Izin / Sakit</option>
                     <option value="Tidak Hadir">Tidak Hadir (Alpa)</option>
                 </select>
+                <p id="sanksiWarning" style="display: none; margin: 6px 0 0 0; font-size: 11px; color: #ef4444;"><i>*Jika diubah menjadi Izin/Alpa, sistem akan otomatis menjatuhkan Sanksi Berlutut.</i></p>
             </div>
             
             <div style="margin-bottom: 24px;">
@@ -147,76 +142,64 @@
     </div>
 </div>
 
-<style>
-@keyframes modalPop {
-    0% { transform: scale(0.95); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-}
-</style>
-
 <script>
 function openAddModal() {
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus-circle" style="color: var(--primary-blue);"></i> Tambah Manual';
     document.getElementById('actionField').value = 'tambah';
-    
     document.getElementById('idField').value = '';
     document.getElementById('kegiatanField').value = '';
     document.getElementById('keteranganField').value = '';
     document.getElementById('statusField').value = 'Hadir';
     
     let userField = document.getElementById('usernameField');
-    userField.style.pointerEvents = 'auto';
-    userField.style.background = 'white';
+    userField.style.pointerEvents = 'auto'; userField.style.background = 'white';
     
     let tglField = document.getElementById('tanggalField');
-    tglField.removeAttribute('readonly');
-    tglField.style.background = 'white';
+    tglField.removeAttribute('readonly'); tglField.style.background = 'white';
     
     let kegField = document.getElementById('kegiatanField');
-    kegField.removeAttribute('readonly');
-    kegField.style.background = 'white';
+    kegField.removeAttribute('readonly'); kegField.style.background = 'white';
     
     document.getElementById('usernameHelp').style.display = 'none';
+    document.getElementById('sanksiWarning').style.display = 'none';
     document.getElementById('kehadiranModal').style.display = 'flex';
 }
 
-function openEditModal(id, username, tanggal, kegiatan, status, keterangan) {
+function openEditModal(id, username, nama, tanggal, kegiatan, status, keterangan) {
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit" style="color: var(--primary-blue);"></i> Edit Status';
     document.getElementById('actionField').value = 'edit';
     document.getElementById('idField').value = id;
     
     document.getElementById('usernameField').value = username;
     document.getElementById('hiddenUsername').value = username; 
+    document.getElementById('hiddenNama').value = nama; 
     document.getElementById('tanggalField').value = tanggal;
     document.getElementById('kegiatanField').value = kegiatan;
     document.getElementById('keteranganField').value = (keterangan !== 'None' && keterangan !== '-') ? keterangan : '';
     
-    if(status === 'Belum Absen') {
-        document.getElementById('statusField').value = 'Tidak Hadir';
-    } else {
-        document.getElementById('statusField').value = status;
-    }
+    if(status === 'Belum Absen') { document.getElementById('statusField').value = 'Tidak Hadir'; } 
+    else { document.getElementById('statusField').value = status; }
     
     let userField = document.getElementById('usernameField');
-    userField.style.pointerEvents = 'none';
-    userField.style.background = '#f1f5f9';
+    userField.style.pointerEvents = 'none'; userField.style.background = '#f1f5f9';
     
     let tglField = document.getElementById('tanggalField');
-    tglField.setAttribute('readonly', 'true');
-    tglField.style.background = '#f1f5f9';
+    tglField.setAttribute('readonly', 'true'); tglField.style.background = '#f1f5f9';
     
     let kegField = document.getElementById('kegiatanField');
-    kegField.setAttribute('readonly', 'true');
-    kegField.style.background = '#f1f5f9';
+    kegField.setAttribute('readonly', 'true'); kegField.style.background = '#f1f5f9';
     
     document.getElementById('usernameHelp').style.display = 'block';
+    
+    // Tampilkan Peringatan Hukuman hanya jika mengedit jadwal matriks
+    if(String(id).startsWith('j_')) { document.getElementById('sanksiWarning').style.display = 'block'; }
+    else { document.getElementById('sanksiWarning').style.display = 'none'; }
+    
     document.getElementById('kehadiranModal').style.display = 'flex';
 }
 
 window.onclick = function(event) {
-    if (event.target == document.getElementById('kehadiranModal')) {
-        document.getElementById('kehadiranModal').style.display = "none";
-    }
+    if (event.target == document.getElementById('kehadiranModal')) document.getElementById('kehadiranModal').style.display = "none";
 }
 </script>
 {% endif %}

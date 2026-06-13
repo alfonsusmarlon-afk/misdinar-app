@@ -89,8 +89,16 @@
                         {% for day in week.senin_kamis %}
                             {% if day.misa %}
                                 {% for wkt, ptgs in day.misa.items() %}
-                                    {% if ptgs[i] == '' %}
+                                    {% if i >= ptgs|length %}
                                         <td class="empty-cell"></td>
+                                        
+                                    {% elif ptgs[i].nama == '' %}
+                                        <td class="name-cell">
+                                            <div class="name-wrapper manual-slot">
+                                                <span>.....................................</span>
+                                                </div>
+                                        </td>
+                                        
                                     {% else %}
                                         <td class="name-cell">
                                             <div class="name-wrapper">
@@ -140,8 +148,16 @@
                         {% for day in week.jumat_minggu %}
                             {% if day.misa %}
                                 {% for wkt, ptgs in day.misa.items() %}
-                                    {% if ptgs[i] == '' %}
+                                    {% if i >= ptgs|length %}
                                         <td class="empty-cell"></td>
+                                        
+                                    {% elif ptgs[i].nama == '' %}
+                                        <td class="name-cell">
+                                            <div class="name-wrapper manual-slot">
+                                                <span>.....................................</span>
+                                                </div>
+                                        </td>
+                                        
                                     {% else %}
                                         <td class="name-cell">
                                             <div class="name-wrapper">
@@ -171,9 +187,13 @@
 
 <style>
 /* CSS Tambahan: Memperbesar QR sedikit agar mudah dishoot kamera */
-.name-cell { vertical-align: middle !important; padding: 4px 6px !important; }
+.name-cell { vertical-align: middle !important; padding: 6px 8px !important; border: 1px solid #333 !important; }
 .name-wrapper { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; font-size: 11px;}
-.qr-print { width: 45px; height: 45px; object-fit: contain; border-radius: 4px;} /* Ukuran diperbesar sedikit agar mata kamera mudah fokus */
+.qr-print { width: 45px; height: 45px; object-fit: contain; border-radius: 4px;} 
+
+/* KHUSUS UNTUK SLOT KOSONG ISI MANUAL */
+.manual-slot { justify-content: center; opacity: 0.5;}
+.manual-slot span { letter-spacing: 2px; }
 
 .filter-box { background: var(--white); padding: 20px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 24px; border-left: 4px solid var(--primary-blue);}
 .form-group label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-dark);}
@@ -183,10 +203,14 @@
 .print-header h2 { margin: 0 0 5px 0; font-size: 24px; color: var(--text-dark); letter-spacing: 1px;}
 .periode-text { margin: 0; font-size: 14px; color: var(--text-gray); font-weight: normal; }
 .matriks-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;}
-.matriks-table th, .matriks-table td { border: 1px solid #333; padding: 8px; text-align: center; }
+
+/* Default Th Td untuk header */
+.matriks-table th { border: 1px solid #333; padding: 8px; text-align: center; }
 .header-day { background-color: #f1f5f9; font-weight: bold; text-transform: uppercase; padding: 10px !important;}
 .header-time { background-color: #f8fafc; font-weight: bold; }
-.empty-cell { background-color: #fafafa; }
+
+/* INI ADALAH KUNCI UNTUK MENGHILANGKAN KOTAK KOSONG YANG TIDAK TERPAKAI */
+.empty-cell { background-color: transparent !important; border: none !important; }
 
 @media print {
     body * { visibility: hidden; }
@@ -195,6 +219,11 @@
     .no-print { display: none !important; }
     .page-break { page-break-after: always; }
     @page { size: landscape; margin: 1cm; }
+    
+    /* Mencegah printer secara otomatis menambahkan border kembali */
+    .empty-cell { border: none !important; background-color: transparent !important; }
+    .name-cell { border: 1px solid #000 !important; height: 50px; }
+    .matriks-table th { border: 1px solid #000 !important; }
 }
 </style>
 {% endblock %}
