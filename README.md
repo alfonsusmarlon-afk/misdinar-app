@@ -94,4 +94,4 @@ Fitur yang bisa ditambahkan:
 
 ## Lisensi
 
-Open source - bebas digunakan dan dimodifikasi sesuai kebutuhan.
+Close source - hanya sebagai pengembangan dan jangan digunakan tanpa hak cipta
