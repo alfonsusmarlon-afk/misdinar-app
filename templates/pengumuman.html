@@ -3,352 +3,161 @@
 {% block title %}Pengumuman - MISDINAR{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h2>Papan Pengumuman</h2>
-    <p>Informasi dan pemberitahuan detail terbaru untuk anggota</p>
-</div>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+.search-container { margin-bottom: 24px; position: relative; }
+.search-container input { width: 100%; padding: 12px 16px 12px 42px; border: 1px solid var(--border-color); border-radius: 30px; font-family: inherit; font-size: 14px; outline: none; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02); box-sizing: border-box; }
+.search-container i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-gray); }
+</style>
 
-{% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-<div class="admin-action-box" id="form-container">
-    <h3 id="form-title"><i class="fas fa-plus-circle"></i> Buat Pengumuman Baru</h3>
-    
-    <form action="{{ url_for('pengumuman') }}" method="POST" id="pengumuman-form" class="pengumuman-form">
-        <input type="hidden" name="action" id="form-action" value="tambah">
-        <input type="hidden" name="id" id="form-id" value="">
-        
-        <div class="form-group">
-            <label>Judul Pengumuman</label>
-            <input type="text" name="judul" id="input-judul" required placeholder="Contoh: Rapat Evaluasi Bulanan">
-        </div>
-        
-        <div class="form-group">
-            <label>Pelaksanaan Acara</label>
-            <input type="datetime-local" name="waktu_pelaksanaan" id="input-waktu" required>
-        </div>
-        
-        <div class="form-group">
-            <label>Pilih Target (Hak Akses Baca)</label>
-            <div class="custom-multiselect" id="multi-select">
-                <div class="select-box" onclick="toggleDropdown()" id="select-box">
-                    <span id="select-box-text">Pilih Target Anggota...</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                
-                <div class="dropdown-content" id="targetDropdown">
-                    <div class="group-header select-all-header">
-                        <label>
-                            <input type="checkbox" id="checkAll" value="semua" name="target" onchange="toggleAll(this)"> <strong>Semua / Publik (Broadcast)</strong>
-                        </label>
-                    </div>
-                    {% for div_role, members in users_by_role.items() %}
-                    {% set outer_loop_index = loop.index %}
-                    <div class="group-header">
-                        <label>
-                            <input type="checkbox" class="group-cb" onchange="toggleGroup(this, 'role-{{ outer_loop_index }}')"> <strong>Divisi: {{ div_role | upper }}</strong>
-                        </label>
-                    </div>
-                    <div class="group-items">
-                        {% for member in members %}
-                        <label>
-                            <input type="checkbox" name="target" value="{{ member.username }}" data-name="{{ member.nama }}" class="item-cb role-{{ outer_loop_index }}" onchange="checkItem()"> {{ member.nama }}
-                        </label>
-                        {% endfor %}
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-
-        <div class="form-group full-width">
-            <label>Isi Detail / Deskripsi Pengumuman</label>
-            <textarea name="deskripsi" id="input-deskripsi" rows="3" placeholder="Tulis rincian informasi selengkapnya di sini... (Opsional)"></textarea>
-        </div>
-        
-        <div class="form-action">
-            <button type="submit" id="btn-submit" class="btn-primary">
-                <i class="fas fa-paper-plane"></i> Bagikan Sekarang
-            </button>
-            <button type="button" id="btn-cancel" class="btn-outline" style="display: none;" onclick="cancelEdit()">
-                Batal Edit
-            </button>
-        </div>
-    </form>
-</div>
-{% endif %}
-
-<div class="pengumuman-container">
-    {% if pengumuman %}
-        {% for item in pengumuman %}
-        <div class="pengumuman-card">
-            <div class="pengumuman-icon">
-                <i class="fas fa-bullhorn"></i>
-            </div>
-            
-            <div class="pengumuman-info">
-                <h3>{{ item.judul }}</h3>
-                <div class="pengumuman-meta">
-                    <span class="tanggal" title="Dibuat pada: {{ item.tanggal_dibuat }}">
-                        <i class="far fa-calendar-alt"></i> {{ item.tanggal_dibuat }}
-                    </span>
-                    <span class="tanggal highlight-time">
-                        <i class="far fa-clock"></i> Pelaksanaan: {{ item.waktu_pelaksanaan.replace('T', ' Jam ') }}
-                    </span>
-                    
-                    {% if item.target == 'semua' %}
-                        <span class="badge-internal" style="background: #e2f0e6; color: #1e5a32;"><i class="fas fa-globe"></i> Publik</span>
-                    {% else %}
-                        <span class="badge-internal" style="background: #d4e8f4; color: #1f4a66;"><i class="fas fa-users"></i> Spesifik/Internal</span>
-                    {% endif %}
-                </div>
-                
-                <div id="desc-{{ item.id }}" style="display: none;">{{ item.deskripsi }}</div>
-            </div>
-            
-            <div class="pengumuman-actions">
-                <!-- PERBAIKAN HTML5 DATA ATTRIBUTES (ANTI-ERROR) -->
-                <button type="button" onclick="showDetailModal(this)" class="action-btn btn-info" title="Baca Detail"
-                        data-id="{{ item.id }}"
-                        data-judul="{{ item.judul }}">
-                    <i class="fas fa-eye"></i> Detail
-                </button>
-                
-                {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-                <button type="button" onclick="editPengumuman(this)" class="action-btn btn-edit" title="Edit"
-                        data-id="{{ item.id }}"
-                        data-judul="{{ item.judul }}"
-                        data-waktu="{{ item.waktu_pelaksanaan }}"
-                        data-target="{{ item.target }}">
-                    <i class="fas fa-edit"></i>
-                </button>
-                
-                <form action="{{ url_for('pengumuman') }}" method="POST" style="display:inline; margin:0;">
-                    <input type="hidden" name="action" value="hapus">
-                    <input type="hidden" name="id" value="{{ item.id }}">
-                    <button type="submit" class="action-btn btn-delete" title="Hapus" onclick="return confirm('Hapus pengumuman ini?');">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </form>
-                {% endif %}
-            </div>
-        </div>
-        {% endfor %}
-    {% else %}
-        <div class="no-data">
-            <i class="fas fa-inbox"></i>
-            <h3>Tidak Ada Pengumuman</h3>
-            <p>Belum ada informasi terbaru saat ini.</p>
-        </div>
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+    <div>
+        <h2>Pengumuman & Informasi</h2>
+        <p>Lihat informasi kegiatan, latihan, dan jadwal penting misdinar lainnya.</p>
+    </div>
+    {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+    <button class="btn-primary" onclick="openAddModal()" style="border-radius: 8px; padding: 10px 16px; font-weight: bold; border: none; cursor: pointer; color: white; background: var(--primary-blue);">
+        <i class="fas fa-plus"></i> Tambah Pengumuman
+    </button>
     {% endif %}
 </div>
 
-<div id="detailModal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 id="modal-judul-teks">Judul Pengumuman</h3>
-            <span class="close-btn" onclick="closeModal()">&times;</span>
+<div class="search-container">
+    <i class="fas fa-search"></i>
+    <input type="text" id="searchData" placeholder="Cari judul pengumuman atau target peserta...">
+</div>
+
+<div class="card-grid" id="dataGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+    {% for p in pengumuman %}
+    <div class="card item-card" style="background: white; border-radius: 12px; box-shadow: var(--shadow); border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden;">
+        <div style="background: #f8fafc; padding: 16px 20px; border-bottom: 1px solid #e2e8f0;">
+            <span style="font-size: 12px; color: #64748b; font-weight: bold; text-transform: uppercase;">
+                <i class="far fa-calendar-check" style="margin-right: 4px;"></i> Acara: {{ p.waktu_pelaksanaan }}
+            </span>
+            <h3 class="search-title" style="margin: 8px 0 0 0; color: var(--text-dark); font-size: 18px;">{{ p.judul }}</h3>
         </div>
-        <div class="modal-body">
-            <p id="modal-deskripsi-teks" style="white-space: pre-wrap; color: var(--text-dark); line-height: 1.6; font-size: 14px;"></p>
+        
+        <div style="padding: 20px; flex: 1;">
+            <p style="margin: 0 0 16px 0; color: var(--text-gray); font-size: 14px; line-height: 1.6; white-space: pre-wrap;">{{ p.deskripsi }}</p>
+            <div style="background: #eef2ff; padding: 10px 12px; border-radius: 8px; display: inline-block;">
+                <span style="font-size: 11px; color: var(--primary-blue); font-weight: bold; display: block; margin-bottom: 4px;">🎯 TARGET PESERTA:</span>
+                <span class="search-target" style="font-size: 13px; color: #4338ca; font-weight: 600;">{{ p.target | upper }}</span>
+            </div>
         </div>
+        
+        <div style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11px; color: #94a3b8;"><i class="fas fa-clock"></i> Diposting: {{ p.tanggal_dibuat }}</span>
+            {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+            <div style="display: flex; gap: 8px;">
+                <button onclick="openEditModal('{{ p.id }}', '{{ p.judul|escape }}', '{{ p.waktu_pelaksanaan }}', '{{ p.deskripsi|escape }}', '{{ p.target }}')" style="background: none; border: none; color: var(--primary-blue); cursor: pointer;"><i class="fas fa-edit"></i></button>
+                <form action="{{ url_for('pengumuman') }}" method="POST" style="margin: 0;" onsubmit="return confirm('Hapus pengumuman ini?');">
+                    <input type="hidden" name="action" value="hapus"><input type="hidden" name="id" value="{{ p.id }}">
+                    <button type="submit" style="background: none; border: none; color: #ef4444; cursor: pointer;"><i class="fas fa-trash-alt"></i></button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-gray);">Belum ada pengumuman untuk Anda.</div>
+    {% endfor %}
+</div>
+
+{% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+<div id="dataModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+    <div style="background: white; border-radius: 16px; width: 100%; max-width: 500px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden;">
+        <div style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <h3 id="modalTitle" style="margin: 0; color: var(--text-dark);"><i class="fas fa-bullhorn"></i> Kelola Pengumuman</h3>
+            <button onclick="document.getElementById('dataModal').style.display='none'" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #94a3b8;">&times;</button>
+        </div>
+        
+        <form action="{{ url_for('pengumuman') }}" method="POST" style="padding: 24px;">
+            <input type="hidden" name="action" id="actionField" value="tambah">
+            <input type="hidden" name="id" id="idField">
+            
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Judul Informasi</label>
+                <input type="text" name="judul" id="judulField" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Tanggal / Waktu Acara</label>
+                <input type="text" name="waktu_pelaksanaan" id="waktuField" placeholder="Cth: Sabtu, 12 Ags Pkl 15.00" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Target Peserta</label>
+                <select name="target" id="targetField" class="select2-multi" multiple="multiple" required style="width: 100%;">
+                    <option value="semua">Semua Anggota</option>
+                    <optgroup label="Berdasarkan Divisi/Role">
+                        {% for role, _ in users_by_role.items() %}<option value="{{ role }}">{{ role | upper }}</option>{% endfor %}
+                    </optgroup>
+                    <optgroup label="Individu (Pilih Nama)">
+                        {% for role, users in users_by_role.items() %}{% for u in users %}<option value="{{ u.username }}">{{ u.nama }}</option>{% endfor %}{% endfor %}
+                    </optgroup>
+                </select>
+            </div>
+            
+            <div style="margin-bottom: 24px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Deskripsi / Pesan</label>
+                <textarea name="deskripsi" id="deskripsiField" rows="4" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit; resize: vertical;"></textarea>
+            </div>
+            <button type="submit" style="background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 15px;">Simpan Informasi</button>
+        </form>
     </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-    document.addEventListener('click', function(event) {
-        var isClickInside = document.getElementById('multi-select') ? document.getElementById('multi-select').contains(event.target) : false;
-        if (!isClickInside && document.getElementById('targetDropdown')) {
-            document.getElementById('targetDropdown').classList.remove('show');
-        }
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof jQuery !== 'undefined' && $('.select2-multi').length > 0) {
+        $('.select2-multi').select2({ 
+            placeholder: "Ketik untuk mencari nama atau divisi...",
+            width: '100%',
+            dropdownParent: $('#dataModal') // Memastikan dropdown muncul di depan modal
+        });
+    }
+    
+    // Fitur Search Live
+    document.getElementById('searchData').addEventListener('keyup', function() {
+        let filter = this.value.toLowerCase();
+        let cards = document.querySelectorAll('.item-card');
+        cards.forEach(card => {
+            let title = card.querySelector('.search-title').innerText.toLowerCase();
+            let target = card.querySelector('.search-target').innerText.toLowerCase();
+            if (title.includes(filter) || target.includes(filter)) card.style.display = 'flex';
+            else card.style.display = 'none';
+        });
     });
+});
 
-    window.onclick = function(event) {
-        var modal = document.getElementById('detailModal');
-        if (event.target == modal) {
-            closeModal();
-        }
-    }
+function openAddModal() {
+    document.getElementById('actionField').value = 'tambah';
+    document.getElementById('idField').value = '';
+    document.getElementById('judulField').value = '';
+    document.getElementById('waktuField').value = '';
+    document.getElementById('deskripsiField').value = '';
+    $('.select2-multi').val(null).trigger('change');
+    document.getElementById('dataModal').style.display = 'flex';
+}
 
-    function toggleDropdown() { document.getElementById('targetDropdown').classList.toggle('show'); }
-
-    function updateSelectBoxText() {
-        const checked = document.querySelectorAll('.item-cb:checked');
-        const boxText = document.getElementById('select-box-text');
-        if (document.getElementById('checkAll').checked) boxText.innerHTML = "<b>Semua Terpilih</b>";
-        else if (checked.length === 0) boxText.innerText = "Pilih Target Anggota...";
-        else if (checked.length <= 3) boxText.innerHTML = "<b>" + Array.from(checked).map(cb => cb.dataset.name).join(', ') + "</b>";
-        else boxText.innerHTML = "<b>" + checked.length + " Orang Terpilih</b>";
-    }
-
-    function toggleAll(source) {
-        document.querySelectorAll('#targetDropdown input[type="checkbox"]').forEach(cb => cb.checked = source.checked);
-        updateSelectBoxText();
-    }
-
-    function toggleGroup(source, groupClass) {
-        document.querySelectorAll('.' + groupClass).forEach(cb => cb.checked = source.checked);
-        document.getElementById('checkAll').checked = false;
-        updateSelectBoxText();
-    }
-
-    function checkItem() {
-        document.getElementById('checkAll').checked = false;
-        updateSelectBoxText();
-    }
-
-    function showDetailModal(btn) {
-        var id = btn.getAttribute('data-id');
-        var judul = btn.getAttribute('data-judul');
-        var deskripsi = document.getElementById('desc-' + id).innerText;
-        
-        document.getElementById('modal-judul-teks').innerText = judul;
-        
-        if (deskripsi.trim() === '') {
-            document.getElementById('modal-deskripsi-teks').innerHTML = "<i>Tidak ada rincian tambahan untuk pengumuman ini.</i>";
-        } else {
-            document.getElementById('modal-deskripsi-teks').innerText = deskripsi;
-        }
-        
-        document.getElementById('detailModal').style.display = "flex";
-    }
-
-    function closeModal() {
-        document.getElementById('detailModal').style.display = "none";
-    }
-
-    function editPengumuman(btn) {
-        var id = btn.getAttribute('data-id');
-        var target_string = btn.getAttribute('data-target');
-        
-        document.getElementById('form-action').value = 'edit';
-        document.getElementById('form-id').value = id;
-        document.getElementById('input-judul').value = btn.getAttribute('data-judul');
-        document.getElementById('input-waktu').value = btn.getAttribute('data-waktu');
-        document.getElementById('input-deskripsi').value = document.getElementById('desc-' + id).innerText;
-        
-        document.querySelectorAll('#targetDropdown input[type="checkbox"]').forEach(cb => cb.checked = false);
-        if(target_string === 'semua') {
-            document.getElementById('checkAll').checked = true;
-            toggleAll(document.getElementById('checkAll'));
-        } else {
-            target_string.split(',').forEach(t => {
-                const cb = document.querySelector(`input.item-cb[value="${t}"]`);
-                if(cb) cb.checked = true;
-            });
-            updateSelectBoxText();
-        }
-        
-        document.getElementById('form-title').innerHTML = '<i class="fas fa-edit"></i> Edit Pengumuman';
-        document.getElementById('btn-submit').innerHTML = '<i class="fas fa-save"></i> Simpan Perubahan';
-        document.getElementById('btn-cancel').style.display = 'inline-flex';
-        
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function cancelEdit() {
-        document.getElementById('form-action').value = 'tambah';
-        document.getElementById('form-id').value = '';
-        document.getElementById('pengumuman-form').reset();
-        
-        document.querySelectorAll('#targetDropdown input[type="checkbox"]').forEach(cb => cb.checked = false);
-        updateSelectBoxText();
-        
-        document.getElementById('form-title').innerHTML = '<i class="fas fa-plus-circle"></i> Buat Pengumuman Baru';
-        document.getElementById('btn-submit').innerHTML = '<i class="fas fa-paper-plane"></i> Bagikan Sekarang';
-        document.getElementById('btn-cancel').style.display = 'none';
-    }
+function openEditModal(id, judul, waktu, deskripsi, target) {
+    document.getElementById('actionField').value = 'edit';
+    document.getElementById('idField').value = id;
+    document.getElementById('judulField').value = judul;
+    document.getElementById('waktuField').value = waktu;
+    document.getElementById('deskripsiField').value = deskripsi;
+    
+    let targetArr = target.split(',');
+    $('.select2-multi').val(targetArr).trigger('change');
+    document.getElementById('dataModal').style.display = 'flex';
+}
+window.onclick = function(event) { if (event.target == document.getElementById('dataModal')) { document.getElementById('dataModal').style.display = "none"; } }
 </script>
-
 <style>
-.admin-action-box { background: var(--white); padding: 24px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 32px; border-left: 4px solid var(--primary-green); }
-.admin-action-box h3 { margin-bottom: 20px; color: var(--text-dark); font-size: 18px; display: flex; align-items: center; gap: 8px; }
-
-.pengumuman-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: end; }
-.full-width { grid-column: 1 / -1; } 
-
-.form-group label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--text-dark); }
-.form-group input, .form-group textarea { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; font-family: inherit; outline: none; transition: 0.3s; }
-.form-group textarea { resize: vertical; min-height: 80px; }
-.form-group input:focus, .form-group textarea:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45, 95, 63, 0.1); }
-
-.custom-multiselect { position: relative; width: 100%; user-select: none; }
-.select-box { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background-color: var(--white); cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.3s; }
-.dropdown-content { display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--white); border: 1px solid var(--primary-green); border-radius: 8px; margin-top: 4px; max-height: 250px; overflow-y: auto; z-index: 100; box-shadow: var(--shadow-hover); padding: 10px; }
-.dropdown-content.show { display: block; }
-.select-all-header { background: #d4edda; border-radius: 6px; border: 1px solid #c3e6cb; }
-.group-header { padding: 8px 10px; background: var(--bg-gray); margin-top: 10px; border-radius: 4px; }
-.group-items { padding-left: 28px; display: flex; flex-direction: column; margin-top: 6px; gap: 6px;}
-
-.form-action { grid-column: 1 / -1; display: flex; gap: 12px; margin-top: 8px;}
-.form-action button { height: 45px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s;}
-.btn-primary { flex: 1; max-width: 250px; background: var(--primary-green); color: white; border: none; }
-.btn-primary:hover { background: var(--accent-green); }
-.btn-outline { padding: 0 24px; border: 1px solid #dc3545; color: #dc3545; background: transparent; }
-.btn-outline:hover { background: #dc3545; color: var(--white); }
-
-.pengumuman-container { display: flex; flex-direction: column; gap: 16px; }
-.pengumuman-card { background: var(--white); padding: 20px; border-radius: 12px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 20px; position: relative; }
-.pengumuman-icon { width: 45px; height: 45px; background: var(--light-green); color: var(--primary-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-.pengumuman-info { flex: 1; min-width: 0; }
-.pengumuman-info h3 { margin-bottom: 8px; font-size: 16px; color: var(--text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-.pengumuman-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.pengumuman-meta .tanggal { font-size: 12px; color: var(--text-gray); display: flex; align-items: center; gap: 4px; }
-.highlight-time { color: var(--primary-green) !important; font-weight: 600; }
-.badge-internal { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
-
-.pengumuman-actions { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap;}
-.action-btn { height: 36px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; transition: 0.3s; padding: 0 12px; gap: 6px;}
-.btn-info { background: #e0f3ff; color: #0d6efd; } .btn-info:hover { background: #0d6efd; color: white;}
-.btn-edit { background: #e2f0e6; color: var(--primary-green); padding: 0 12px;} .btn-edit:hover { background: var(--primary-green); color: white;}
-.btn-delete { background: #f8d7da; color: #dc3545; padding: 0 12px;} .btn-delete:hover { background: #dc3545; color: white;}
-
-.no-data { text-align: center; padding: 60px 20px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow); }
-
-.modal-overlay {
-    display: none; 
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    z-index: 1000;
-    align-items: center; justify-content: center;
-    padding: 20px;
-    animation: fadeIn 0.2s ease-in-out;
-}
-.modal-content {
-    background-color: var(--white);
-    border-radius: 12px;
-    width: 100%;
-    max-width: 500px;
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    animation: slideUp 0.3s ease-out;
-}
-.modal-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: var(--light-green);
-    border-radius: 12px 12px 0 0;
-}
-.modal-header h3 { margin: 0; font-size: 16px; color: var(--primary-green); }
-.close-btn { font-size: 24px; font-weight: bold; color: var(--text-gray); cursor: pointer; transition: 0.2s; line-height: 1;}
-.close-btn:hover { color: #dc3545; }
-.modal-body { padding: 20px; overflow-y: auto; }
-
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideUp { from { transform: translateY(30px); opacity: 0;} to { transform: translateY(0); opacity: 1;} }
-
-@media (max-width: 768px) {
-    .pengumuman-form { grid-template-columns: 1fr; gap: 12px; }
-    .form-action { flex-direction: column; width: 100%; }
-    .form-action button, .btn-primary { max-width: 100%; width: 100%; }
-    .pengumuman-card { flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px;}
-    .pengumuman-info h3 { white-space: normal; } 
-    .pengumuman-actions { width: 100%; justify-content: flex-start; margin-left: 0; border-top: 1px dashed var(--border-color); padding-top: 12px; margin-top: 4px; }
-    .action-btn { flex: 1; justify-content: center; height: 40px; }
-    .modal-content { max-height: 90vh; }
-}
+.select2-container--default .select2-selection--multiple { border: 1px solid var(--border-color); border-radius: 8px; min-height: 44px; padding: 4px; }
+.select2-container--default.select2-container--focus .select2-selection--multiple { border-color: var(--primary-blue); }
 </style>
+{% endif %}
 {% endblock %}

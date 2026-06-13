@@ -3,7 +3,7 @@
 {% block title %}Absensi & Kehadiran - MISDINAR{% endblock %}
 
 {% block content %}
-<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
     <div>
         <h2>Absensi & Rekap Kehadiran</h2>
         <p>
@@ -22,14 +22,15 @@
 </div>
 
 <div class="card" style="background: white; padding: 24px; border-radius: 16px; box-shadow: var(--shadow); overflow-x: auto;">
-    <table style="width: 100%; text-align: left; border-collapse: collapse; min-width: 800px; font-size: 14px;">
+    <table style="width: 100%; text-align: left; border-collapse: collapse; min-width: 900px; font-size: 14px;">
         <thead>
             <tr style="border-bottom: 2px solid #e2e8f0; color: var(--text-gray);">
-                <th style="padding: 14px 12px; width: 15%;">Tanggal</th>
-                <th style="padding: 14px 12px; width: 20%;">Nama Petugas</th>
-                <th style="padding: 14px 12px; width: 25%;">Kegiatan/Misa</th>
+                <th style="padding: 14px 12px; width: 12%;">Tanggal</th>
+                <th style="padding: 14px 12px; width: 18%;">Nama Petugas</th>
+                <th style="padding: 14px 12px; width: 20%;">Kegiatan/Misa</th>
                 <th style="padding: 14px 12px; width: 10%;">Status</th>
-                <th style="padding: 14px 12px; width: 20%;">Keterangan</th>
+                <th style="padding: 14px 12px; width: 15%;">Waktu Absen</th>
+                <th style="padding: 14px 12px; width: 15%;">Keterangan</th>
                 {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
                 <th style="padding: 14px 12px; width: 10%; text-align: center;">Aksi</th>
                 {% endif %}
@@ -50,6 +51,17 @@
                         {{ k.status | upper }}
                     </span>
                 </td>
+                
+                <td style="padding: 16px 12px;">
+                    {% if k.waktu_scan and k.waktu_scan != '-' %}
+                        <span style="font-size: 11px; font-weight: 600; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 8px; border-radius: 6px; display: inline-block;">
+                            <i class="far fa-clock" style="color: #64748b; margin-right: 4px;"></i> {{ k.waktu_scan }}
+                        </span>
+                    {% else %}
+                        <span style="font-size: 11px; color: #94a3b8;">-</span>
+                    {% endif %}
+                </td>
+                
                 <td style="padding: 16px 12px; color: var(--text-gray); font-size: 13px;">{{ k.keterangan if k.keterangan else '-' }}</td>
                 
                 {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
@@ -72,7 +84,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="6" style="padding: 60px 20px; text-align: center; color: var(--text-gray);">
+                <td colspan="7" style="padding: 60px 20px; text-align: center; color: var(--text-gray);">
                     <i class="fas fa-clipboard-list" style="font-size: 40px; color: #cbd5e1; display: block; margin-bottom: 12px;"></i>
                     Belum ada data kehadiran.
                 </td>
@@ -130,7 +142,7 @@
                 <input type="text" name="keterangan" id="keteranganField" placeholder="Alasan izin / telat (opsional)" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
             </div>
             
-            <button type="submit" style="background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 14px; transition: 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Simpan Data</button>
+            <button type="submit" style="background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 14px; transition: 0.2s;">Simpan Data</button>
         </form>
     </div>
 </div>
@@ -147,13 +159,11 @@ function openAddModal() {
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus-circle" style="color: var(--primary-blue);"></i> Tambah Manual';
     document.getElementById('actionField').value = 'tambah';
     
-    // Reset isi form
     document.getElementById('idField').value = '';
     document.getElementById('kegiatanField').value = '';
     document.getElementById('keteranganField').value = '';
     document.getElementById('statusField').value = 'Hadir';
     
-    // Membuka Kunci Semua Input (Bisa diisi)
     let userField = document.getElementById('usernameField');
     userField.style.pointerEvents = 'auto';
     userField.style.background = 'white';
@@ -167,7 +177,6 @@ function openAddModal() {
     kegField.style.background = 'white';
     
     document.getElementById('usernameHelp').style.display = 'none';
-    
     document.getElementById('kehadiranModal').style.display = 'flex';
 }
 
@@ -176,9 +185,8 @@ function openEditModal(id, username, tanggal, kegiatan, status, keterangan) {
     document.getElementById('actionField').value = 'edit';
     document.getElementById('idField').value = id;
     
-    // Set Nilai yang sudah ada
     document.getElementById('usernameField').value = username;
-    document.getElementById('hiddenUsername').value = username; // Backup karena select dikunci
+    document.getElementById('hiddenUsername').value = username; 
     document.getElementById('tanggalField').value = tanggal;
     document.getElementById('kegiatanField').value = kegiatan;
     document.getElementById('keteranganField').value = (keterangan !== 'None' && keterangan !== '-') ? keterangan : '';
@@ -189,7 +197,6 @@ function openEditModal(id, username, tanggal, kegiatan, status, keterangan) {
         document.getElementById('statusField').value = status;
     }
     
-    // MENGUNCI INPUT NAMA, TGL, KEGIATAN (Hanya Status & Keterangan yang bebas diubah)
     let userField = document.getElementById('usernameField');
     userField.style.pointerEvents = 'none';
     userField.style.background = '#f1f5f9';
@@ -203,7 +210,6 @@ function openEditModal(id, username, tanggal, kegiatan, status, keterangan) {
     kegField.style.background = '#f1f5f9';
     
     document.getElementById('usernameHelp').style.display = 'block';
-    
     document.getElementById('kehadiranModal').style.display = 'flex';
 }
 

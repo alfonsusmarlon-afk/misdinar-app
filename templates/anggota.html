@@ -12,14 +12,14 @@
     <div style="flex: 1; min-width: 250px; max-width: 350px;">
         <div style="position: relative;">
             <i class="fas fa-search" style="position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-gray);"></i>
-            <input type="text" id="searchAnggota" placeholder="Cari nama atau username..." style="width: 100%; padding: 14px 16px 14px 46px; border: 1px solid var(--border-color); border-radius: 30px; font-family: inherit; font-size: 14px; outline: none; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.02); box-sizing: border-box;">
+            <input type="text" id="searchAnggota" placeholder="Cari nama, email, hp..." style="width: 100%; padding: 14px 16px 14px 46px; border: 1px solid var(--border-color); border-radius: 30px; font-family: inherit; font-size: 14px; outline: none; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.02); box-sizing: border-box;">
         </div>
     </div>
 </div>
 
 <div class="anggota-grid" id="anggotaGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; width: 100%;">
     {% for u in users %}
-    <div class="anggota-card" style="background: var(--white); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.04); position: relative; border: 1px solid var(--border-color); display: flex; flex-direction: column;">
+    <div class="anggota-card" style="background: var(--white); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.04); position: relative; border: 1px solid var(--border-color); display: flex; flex-direction: column; transition: 0.3s;">
         <div style="background: linear-gradient(135deg, var(--primary-blue) 0%, #3b82f6 100%); height: 80px; width: 100%;"></div>
         
         <div style="width: 90px; height: 90px; border-radius: 50%; margin: -45px auto 10px auto; background: white; padding: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 2; position: relative;">
@@ -32,7 +32,6 @@
         
         <div style="text-align: center; padding: 0 20px 20px 20px; flex: 1;">
             <h3 class="search-target-name" style="margin: 0 0 8px 0; color: var(--text-dark); font-size: 18px; font-weight: 800;">{{ u.nama }}</h3>
-            
             <div class="search-target-role" style="display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 16px;
                 {% if u.role == 'super admin' %}background: #fee2e2; color: #dc2626;
                 {% elif u.role == 'bph' %}background: #fef3c7; color: #d97706;
@@ -44,22 +43,14 @@
             
             <div style="display: flex; flex-direction: column; gap: 8px; align-items: center;">
                 <p class="search-target-user" style="margin: 0; font-size: 13px; color: var(--text-gray); display: flex; align-items: center; gap: 8px;"><i class="fas fa-id-badge" style="color: var(--primary-blue); opacity: 0.7;"></i> {{ u.username }}</p>
-                <p style="margin: 0; font-size: 13px; color: var(--text-gray); display: flex; align-items: center; gap: 8px;"><i class="fas fa-phone-alt" style="color: var(--primary-blue); opacity: 0.7;"></i> {{ u.no_hp if u.no_hp else 'Belum diisi' }}</p>
+                <p class="search-target-hp" style="margin: 0; font-size: 13px; color: var(--text-gray); display: flex; align-items: center; gap: 8px;"><i class="fas fa-phone-alt" style="color: var(--primary-blue); opacity: 0.7;"></i> {{ u.no_hp if u.no_hp else 'Belum diisi' }}</p>
+                <span class="search-target-email" style="display: none;">{{ u.email }}</span>
             </div>
         </div>
         
         <div style="display: flex; padding: 16px 20px; background: #f8fafc; border-top: 1px solid var(--border-color); gap: 10px; justify-content: center;">
             <button type="button" class="btn-detail" style="flex: 1; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; background: white; color: var(--text-dark);"
-                data-username="{{ u.username }}"
-                data-nama="{{ u.nama }}"
-                data-role="{{ u.role }}"
-                data-panggilan="{{ u.nama_panggilan or '-' }}"
-                data-tgllahir="{{ u.tanggal_lahir or '-' }}"
-                data-email="{{ u.email or '-' }}"
-                data-nohp="{{ u.no_hp or '-' }}"
-                data-alamat="{{ u.alamat or '-' }}"
-                data-namaortu="{{ u.nama_ortu or '-' }}"
-                data-nohportu="{{ u.no_hp_ortu or '-' }}">
+                data-username="{{ u.username }}" data-nama="{{ u.nama }}" data-role="{{ u.role }}" data-panggilan="{{ u.nama_panggilan or '-' }}" data-tgllahir="{{ u.tanggal_lahir or '-' }}" data-email="{{ u.email or '-' }}" data-nohp="{{ u.no_hp or '-' }}" data-alamat="{{ u.alamat or '-' }}" data-namaortu="{{ u.nama_ortu or '-' }}" data-nohportu="{{ u.no_hp_ortu or '-' }}">
                 <i class="fas fa-info-circle"></i> Info
             </button>
             
@@ -79,59 +70,16 @@
     {% endfor %}
 </div>
 
-
 <style>
-.modal-overlay {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-color: rgba(0,0,0,0.5);
-    z-index: 9999;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    backdrop-filter: blur(4px);
-}
-
-.modal-box {
-    background-color: white;
-    border-radius: 16px;
-    width: 100%;
-    max-width: 500px;
-    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-    animation: modalPop 0.3s ease-out;
-}
-
-@keyframes modalPop {
-    0% { transform: scale(0.95); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 24px;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.modal-header h3 {
-    margin: 0;
-    color: var(--text-dark);
-    font-size: 18px;
-}
-
-.modal-close {
-    background: none; border: none; font-size: 24px; cursor: pointer; color: #94a3b8;
-}
+.anggota-card:hover { transform: translateY(-5px); box-shadow: 0 12px 25px rgba(0,0,0,0.1) !important; border-color: var(--primary-blue) !important; }
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+.modal-box { background-color: white; border-radius: 16px; width: 100%; max-width: 500px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: modalPop 0.3s ease-out; }
+@keyframes modalPop { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #e2e8f0; }
+.modal-header h3 { margin: 0; color: var(--text-dark); font-size: 18px; }
+.modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #94a3b8; }
 .modal-close:hover { color: #ef4444; }
-
-.modal-body {
-    padding: 24px;
-    max-height: 70vh;
-    overflow-y: auto;
-}
-
+.modal-body { padding: 24px; max-height: 70vh; overflow-y: auto; }
 .detail-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .detail-table tr { border-bottom: 1px solid #f1f5f9; }
 .detail-table td { padding: 12px 0; }
@@ -141,24 +89,16 @@
 
 <div id="detailModal" class="modal-overlay">
     <div class="modal-box">
-        <div class="modal-header">
-            <h3><i class="fas fa-address-card" style="color: var(--primary-blue); margin-right: 8px;"></i> Profil Anggota</h3>
-            <button class="modal-close" onclick="document.getElementById('detailModal').style.display='none'">&times;</button>
-        </div>
-        <div class="modal-body" id="detailBody">
-            </div>
+        <div class="modal-header"><h3><i class="fas fa-address-card" style="color: var(--primary-blue); margin-right: 8px;"></i> Profil Anggota</h3><button class="modal-close" onclick="document.getElementById('detailModal').style.display='none'">&times;</button></div>
+        <div class="modal-body" id="detailBody"></div>
     </div>
 </div>
 
 <div id="editRoleModal" class="modal-overlay">
     <div class="modal-box" style="max-width: 400px;">
-        <div class="modal-header">
-            <h3><i class="fas fa-user-cog" style="color: var(--primary-blue); margin-right: 8px;"></i> Ubah Hak Akses</h3>
-            <button class="modal-close" onclick="document.getElementById('editRoleModal').style.display='none'">&times;</button>
-        </div>
+        <div class="modal-header"><h3><i class="fas fa-user-cog" style="color: var(--primary-blue); margin-right: 8px;"></i> Ubah Hak Akses</h3><button class="modal-close" onclick="document.getElementById('editRoleModal').style.display='none'">&times;</button></div>
         <div class="modal-body">
             <p id="editRoleName" style="margin-bottom: 20px; font-weight: 700; color: var(--primary-blue); text-align: center; font-size: 16px;"></p>
-            
             <form action="{{ url_for('ubah_role') }}" method="POST">
                 <input type="hidden" name="username" id="editRoleUsername">
                 <div style="margin-bottom: 16px;">
@@ -168,19 +108,15 @@
                         <option value="pelatihan">Divisi Pelatihan</option>
                         <option value="penjadwalan">Divisi Penjadwalan</option>
                         <option value="bph">Pengurus Inti (BPH)</option>
-                        {% if current_role == 'super admin' %}
-                        <option value="super admin">Super Admin</option>
-                        {% endif %}
+                        {% if current_role == 'super admin' %}<option value="super admin">Super Admin</option>{% endif %}
                     </select>
                 </div>
-                
                 {% if current_role == 'super admin' %}
                 <div style="margin-bottom: 24px;">
                     <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px;">Reset Password (Opsional)</label>
                     <input type="password" name="password" placeholder="Isi untuk ubah sandi, kosongkan jika tidak" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; box-sizing: border-box; font-family: inherit; font-size: 14px;">
                 </div>
                 {% endif %}
-                
                 <button type="submit" style="background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 15px; transition: 0.2s;">Simpan Perubahan</button>
             </form>
         </div>
@@ -189,7 +125,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. Fitur Pencarian
     const searchInput = document.getElementById('searchAnggota');
     if (searchInput) {
         searchInput.addEventListener('keyup', function() {
@@ -200,8 +135,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 let name = card.querySelector('.search-target-name').innerText.toLowerCase();
                 let user = card.querySelector('.search-target-user').innerText.toLowerCase();
                 let role = card.querySelector('.search-target-role').innerText.toLowerCase();
+                let hp = card.querySelector('.search-target-hp').innerText.toLowerCase();
+                let email = card.querySelector('.search-target-email').innerText.toLowerCase();
                 
-                if (name.includes(filter) || user.includes(filter) || role.includes(filter)) {
+                if (name.includes(filter) || user.includes(filter) || role.includes(filter) || hp.includes(filter) || email.includes(filter)) {
                     card.style.display = 'flex'; 
                 } else {
                     card.style.display = 'none';
@@ -210,12 +147,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 2. Tampil Detail Modal Pop-up
     document.querySelectorAll('.btn-detail').forEach(btn => {
         btn.addEventListener('click', function() {
             let data = this.dataset;
-            let html = `
-                <table class="detail-table">
+            let html = `<table class="detail-table">
                     <tr><td>Nama Lengkap</td><td>${data.nama}</td></tr>
                     <tr><td>Nama Panggilan</td><td>${data.panggilan}</td></tr>
                     <tr><td>Username</td><td>${data.username}</td></tr>
@@ -226,14 +161,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     <tr><td>Alamat</td><td>${data.alamat}</td></tr>
                     <tr><td>Nama Orang Tua</td><td>${data.namaortu}</td></tr>
                     <tr style="border-bottom:none;"><td>No. HP Ortu</td><td>${data.nohportu}</td></tr>
-                </table>
-            `;
+                </table>`;
             document.getElementById('detailBody').innerHTML = html;
             document.getElementById('detailModal').style.display = 'flex';
         });
     });
 
-    // 3. Edit Akses Role Pop-up
     document.querySelectorAll('.btn-edit').forEach(btn => {
         btn.addEventListener('click', function() {
             document.getElementById('editRoleUsername').value = this.dataset.username;
@@ -243,12 +176,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
-
-// Tutup modal jika mengklik di luar area kotak
-window.onclick = function(event) {
-    if (event.target.classList.contains('modal-overlay')) {
-        event.target.style.display = "none";
-    }
-}
+window.onclick = function(event) { if (event.target.classList.contains('modal-overlay')) { event.target.style.display = "none"; } }
 </script>
 {% endblock %}
