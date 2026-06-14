@@ -63,7 +63,6 @@ def init_db():
     conn.execute('''CREATE TABLE IF NOT EXISTS form_fields (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT NOT NULL, tipe TEXT NOT NULL, wajib INTEGER DEFAULT 1)''')
     conn.execute('''CREATE TABLE IF NOT EXISTS pendaftaran (id INTEGER PRIMARY KEY AUTOINCREMENT, tanggal TEXT NOT NULL, data_respon TEXT NOT NULL, status TEXT DEFAULT 'Menunggu')''')
     conn.execute('''CREATE TABLE IF NOT EXISTS notifikasi (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, pesan TEXT NOT NULL, waktu TEXT NOT NULL, status_baca INTEGER DEFAULT 0, link TEXT)''')
-
     conn.execute('''CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)''')
     
     default_settings = {
@@ -777,7 +776,6 @@ def galeri():
         
     return render_template('galeri.html', galeri=get_filtered_items('galeri', user_id, user_role), role=user_role, users_by_role=get_grouped_users())
 
-# TAMBAHAN RUTE KONTAK (YANG SEMPAT HILANG)
 @app.route('/kontak')
 def kontak():
     conn = get_db_connection()
@@ -1054,6 +1052,9 @@ def penjadwalan():
     conn.close()
     return render_template('penjadwalan.html', users=users_db, user_names=user_names, history=history, global_before=global_before, global_after=global_after, settings=settings_data)
 
+# ==========================================
+# CETAK JADWAL — dengan is_user untuk QR
+# ==========================================
 @app.route('/cetak-jadwal')
 @login_required
 def cetak_jadwal():
@@ -1069,6 +1070,10 @@ def cetak_jadwal():
         threshold_time = datetime.now().strftime('%Y-%m-%d 00:00:00')
         end_limit = (datetime.now() + timedelta(days=60)).strftime('%Y-%m-%d 23:59:59')
         rows = conn.execute('SELECT * FROM jadwal WHERE jadwal_datetime >= ? AND jadwal_datetime <= ? ORDER BY jadwal_datetime ASC', (threshold_time, end_limit)).fetchall()
+
+    # Ambil username terdaftar untuk membedakan petugas asli (dapat QR)
+    # vs teks manual seperti "." atau nama tidak terdaftar (tanpa QR)
+    valid_usernames = {row['username'] for row in conn.execute("SELECT username FROM users").fetchall()}
     conn.close()
 
     valid_dts = [datetime.strptime(r['jadwal_datetime'], '%Y-%m-%d %H:%M:%S') for r in rows if r['nama_pengguna'] != '']
@@ -1095,7 +1100,14 @@ def cetak_jadwal():
         wkt = r['waktu']
         if wkt not in jadwal_dict[date_key]['misa']: jadwal_dict[date_key]['misa'][wkt] = []
         if r['nama_pengguna'] != '':
-            jadwal_dict[date_key]['misa'][wkt].append({'nama': r['nama_pengguna'], 'username': r['pengguna'], 'jadwal_id': r['id']})
+            # is_user=True  → petugas terdaftar → tampil nama + QR Code
+            # is_user=False → teks manual / non-anggota → tampil nama saja, tanpa QR
+            jadwal_dict[date_key]['misa'][wkt].append({
+                'nama'     : r['nama_pengguna'],
+                'username' : r['pengguna'],
+                'jadwal_id': r['id'],
+                'is_user'  : r['pengguna'] in valid_usernames
+            })
             jadwal_dict[date_key]['has_petugas'] = True
 
     for d_key in jadwal_dict: jadwal_dict[d_key]['misa'] = dict(sorted(jadwal_dict[d_key]['misa'].items()))
@@ -1126,12 +1138,15 @@ def cetak_jadwal():
             for wkt, ptgs in day['misa'].items():
                 if len(ptgs) > max_jm: max_jm = len(ptgs)
         w['max_slots_jm'] = max_jm
+        # Padding dengan dict kosong agar template tidak error saat akses .nama / .is_user
         for day in w['senin_kamis']:
             for wkt, ptgs in day['misa'].items():
-                while len(ptgs) < max_sk: ptgs.append("")
+                while len(ptgs) < max_sk:
+                    ptgs.append({'nama': '', 'username': '', 'jadwal_id': '', 'is_user': False})
         for day in w['jumat_minggu']:
             for wkt, ptgs in day['misa'].items():
-                while len(ptgs) < max_jm: ptgs.append("")
+                while len(ptgs) < max_jm:
+                    ptgs.append({'nama': '', 'username': '', 'jadwal_id': '', 'is_user': False})
         final_weeks.append(w)
     return render_template('cetak_jadwal.html', weeks=final_weeks, s_str=s_str, e_str=e_str, periode=periode_str)
 
