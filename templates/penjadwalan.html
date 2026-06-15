@@ -1,582 +1,202 @@
 {% extends "base.html" %}
 
-{% block title %}Editor & Manajemen Penjadwalan - MISDINAR{% endblock %}
+{% block title %}Editor Penjadwalan - MISDINAR{% endblock %}
 
 {% block content %}
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+/* CSS UNTUK TOGGLE SWITCH */
+.switch { position: relative; display: inline-block; width: 44px; height: 24px; margin-bottom: 0;}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 34px; }
+.slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: #10b981; }
+input:checked + .slider:before { transform: translateX(20px); }
+</style>
 
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
     <div>
-        <h2>Manajemen & Editor Penjadwalan</h2>
-        <p>Ketik jadwal rutin, kelola jadwal khusus, dan atur sistem sanksi absensi otomatis.</p>
+        <h2>Editor Penjadwalan</h2>
+        <p>Atur jadwal Misa, set bobot sanksi hukuman, dan atur waktu toleransi absen.</p>
     </div>
 </div>
 
-{% if not matrix %}
-<div class="setup-container">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 30px;">
     
-    <div class="setup-grid-wrapper" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; width: 100%;">
-        
-        <div class="setup-card card-rutin">
-            <div class="icon-header icon-rutin"><i class="fas fa-table"></i></div>
-            <h3>Buat / Edit Jadwal Rutin</h3>
-            <p>Pilih rentang tanggal untuk mulai menyusun jadwal di tabel.</p>
-            <form action="{{ url_for('penjadwalan') }}" method="POST">
-                <input type="hidden" name="action" value="buat_matriks">
-                <div class="form-row">
-                    <div class="form-group"><label>Mulai Tanggal</label><input type="date" name="start_date" required></div>
-                    <div class="form-group"><label>Sampai Tanggal</label><input type="date" name="end_date" required></div>
-                </div>
-                <button type="submit" class="btn-primary btn-rutin"><i class="fas fa-edit"></i> Buka Editor Web</button>
-            </form>
-        </div>
+    <!-- PENGATURAN SANKSI BERLUTUT -->
+    <div class="card" style="padding: 24px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow);">
+        <form action="{{ url_for('penjadwalan') }}" method="POST">
+            <input type="hidden" name="action" value="update_sanksi_settings">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+                <h3 style="margin: 0; color: #ef4444;"><i class="fas fa-gavel"></i> Bobot Sanksi Berlutut</h3>
+                <label class="switch" title="Nyalakan / Matikan Seluruh Sistem Sanksi Otomatis">
+                    <input type="checkbox" name="fitur_sanksi" value="on" {% if settings.get('fitur_sanksi', 'on') == 'on' %}checked{% endif %}>
+                    <span class="slider"></span>
+                </label>
+            </div>
 
-        <div class="setup-card card-khusus">
-            <div class="icon-header icon-khusus"><i class="fas fa-plus-circle"></i></div>
-            <h3>Tambah Jadwal Khusus</h3>
-            <p>Tambahkan Misa Manten, Arwah, dll tanpa merusak tabel rutin.</p>
-            <form action="{{ url_for('penjadwalan') }}" method="POST">
-                <input type="hidden" name="action" value="tambah_khusus">
-                <div class="form-row">
-                    <div class="form-group"><label>Tanggal</label><input type="date" name="tanggal" required></div>
-                    <div class="form-group"><label>Waktu (Jam)</label><input type="time" name="waktu" required></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group" style="flex: 2;">
-                        <label>Nama Acara</label><input type="text" name="acara" placeholder="Contoh: Misa Arwah" required>
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label>Kategori</label>
-                        <select name="kategori">
-                            <option value="Harian">Harian</option>
-                            <option value="Mingguan">Mingguan</option>
-                            <option value="Besar" selected>Besar</option>
-                        </select>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div style="background: #f8fafc; padding: 12px; border-radius: 8px;">
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-gray); display: block;">Misa Harian</label>
+                    <div style="display: flex; gap: 10px; margin-top: 8px;">
+                        <input type="number" name="sanksi_alpa_harian" value="{{ settings.get('sanksi_alpa_harian', 0) }}" style="width: 100%; padding: 6px; border: 1px solid var(--border-color); border-radius: 4px;" title="Berlutut untuk Alpa">
+                        <input type="number" name="sanksi_izin_harian" value="{{ settings.get('sanksi_izin_harian', 0) }}" style="width: 100%; padding: 6px; border: 1px solid var(--border-color); border-radius: 4px;" title="Berlutut untuk Izin">
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>Pilih Petugas Khusus</label>
-                    <select name="petugas" class="select2-petugas" multiple="multiple" required style="width: 100%;">
-                        {% for u in users %}<option value="{{ u.username }}">{{ u.nama }}</option>{% endfor %}
-                    </select>
+                <div style="background: #f8fafc; padding: 12px; border-radius: 8px;">
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-gray); display: block;">Misa Mingguan</label>
+                    <div style="display: flex; gap: 10px; margin-top: 8px;">
+                        <input type="number" name="sanksi_alpa_mingguan" value="{{ settings.get('sanksi_alpa_mingguan', 0) }}" style="width: 100%; padding: 6px; border: 1px solid var(--border-color); border-radius: 4px;" title="Berlutut untuk Alpa">
+                        <input type="number" name="sanksi_izin_mingguan" value="{{ settings.get('sanksi_izin_mingguan', 0) }}" style="width: 100%; padding: 6px; border: 1px solid var(--border-color); border-radius: 4px;" title="Berlutut untuk Izin">
+                    </div>
                 </div>
-                <div class="form-group" style="margin-bottom: 24px;">
-                    <label>Status Awal</label>
-                    <select name="status">
-                        <option value="Bertugas">Langsung Bertugas (Publik)</option>
-                        <option value="Draft">Draft (Tersembunyi)</option>
-                    </select>
+                <div style="grid-column: 1 / -1; background: #f8fafc; padding: 12px; border-radius: 8px;">
+                    <label style="font-size: 11px; font-weight: bold; color: var(--text-gray); display: block;">Misa Hari Raya (Besar)</label>
+                    <div style="display: flex; gap: 10px; margin-top: 8px;">
+                        <input type="number" name="sanksi_alpa_besar" value="{{ settings.get('sanksi_alpa_besar', 0) }}" style="width: 100%; padding: 6px; border: 1px solid var(--border-color); border-radius: 4px;" title="Berlutut untuk Alpa">
+                        <input type="number" name="sanksi_izin_besar" value="{{ settings.get('sanksi_izin_besar', 0) }}" style="width: 100%; padding: 6px; border: 1px solid var(--border-color); border-radius: 4px;" title="Berlutut untuk Izin">
+                    </div>
                 </div>
-                <button type="submit" class="btn-primary btn-khusus"><i class="fas fa-save"></i> Simpan Jadwal Khusus</button>
-            </form>
-        </div>
-
-        <div class="setup-card card-settings" style="border-top: 5px solid #4338ca;">
-            <div class="icon-header icon-settings" style="background: #e0e7ff; color: #4338ca;"><i class="fas fa-clock"></i></div>
-            <h3>Waktu Absen Rutin</h3>
-            <p>Atur batas waktu otomatis kapan QR Code bisa discan oleh anggota.</p>
-            <form action="{{ url_for('penjadwalan') }}" method="POST">
-                <input type="hidden" name="action" value="update_global_scan_window">
-                <div class="form-group" style="margin-bottom: 16px;">
-                    <label>Buka (Menit SEBELUM Misa)</label>
-                    <input type="number" name="scan_window_before" value="{{ global_before }}" required min="0">
-                </div>
-                <div class="form-group" style="margin-bottom: 24px;">
-                    <label>Tutup (Menit SESUDAH Misa)</label>
-                    <input type="number" name="scan_window_after" value="{{ global_after }}" required min="0">
-                </div>
-                <button type="submit" class="btn-primary" style="background: #4338ca;"><i class="fas fa-cog"></i> Simpan Waktu</button>
-            </form>
-        </div>
-
-        <div class="setup-card card-sanksi" style="border-top: 5px solid #ef4444;">
-            <div class="icon-header icon-sanksi" style="background: #fee2e2; color: #ef4444;"><i class="fas fa-gavel"></i></div>
-            <h3>Sanksi Otomatis</h3>
-            <p>Sistem akan memberi sanksi berlutut otomatis saat absen kadaluarsa.</p>
-            <form action="{{ url_for('penjadwalan') }}" method="POST">
-                <input type="hidden" name="action" value="update_sanksi_settings">
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-                    <div><label style="font-size: 11px; font-weight: bold; color: #16a34a;">ALPA Harian</label>
-                    <input type="number" name="sanksi_alpa_harian" value="{{ settings.sanksi_alpa_harian }}" min="0" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;"></div>
-                    <div><label style="font-size: 11px; font-weight: bold; color: #d97706;">IZIN Harian</label>
-                    <input type="number" name="sanksi_izin_harian" value="{{ settings.sanksi_izin_harian }}" min="0" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;"></div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-                    <div><label style="font-size: 11px; font-weight: bold; color: #db2777;">ALPA Mingguan</label>
-                    <input type="number" name="sanksi_alpa_mingguan" value="{{ settings.sanksi_alpa_mingguan }}" min="0" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;"></div>
-                    <div><label style="font-size: 11px; font-weight: bold; color: #d97706;">IZIN Mingguan</label>
-                    <input type="number" name="sanksi_izin_mingguan" value="{{ settings.sanksi_izin_mingguan }}" min="0" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;"></div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 24px;">
-                    <div><label style="font-size: 11px; font-weight: bold; color: #dc2626;">ALPA Besar</label>
-                    <input type="number" name="sanksi_alpa_besar" value="{{ settings.sanksi_alpa_besar }}" min="0" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;"></div>
-                    <div><label style="font-size: 11px; font-weight: bold; color: #d97706;">IZIN Besar</label>
-                    <input type="number" name="sanksi_izin_besar" value="{{ settings.sanksi_izin_besar }}" min="0" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;"></div>
-                </div>
-                <button type="submit" class="btn-primary" style="background: #ef4444;"><i class="fas fa-save"></i> Simpan Sanksi</button>
-            </form>
-        </div>
-    </div>
-
-    <div class="setup-card card-history" style="width: 100%; max-width: 100% !important; margin-top: 24px;">
-        <form action="{{ url_for('penjadwalan') }}" method="POST" id="bulkDeleteForm">
-            <input type="hidden" name="action" value="hapus_jadwal_bulk">
-            <div class="history-header">
-                <h3><i class="fas fa-list-alt"></i> Riwayat Daftar Jadwal</h3>
-                <button type="button" onclick="confirmBulkDelete()" class="btn-bulk-delete"><i class="fas fa-trash-alt"></i> Hapus Terpilih</button>
             </div>
-            <div class="table-responsive" style="width: 100%;">
-                <table class="history-table" style="width: 100%;">
-                    <thead>
-                        <tr>
-                            <th class="col-check"><input type="checkbox" id="selectAllHistory" style="cursor: pointer;"></th>
-                            <th class="col-date">Tgl & Jam</th>
-                            <th class="col-event">Nama Acara</th>
-                            <th class="col-staff">Petugas</th>
-                            <th class="col-action" style="width: 160px; text-align: right;">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if history %}
-                            {% for h in history %}
-                            <tr>
-                                <td class="col-check"><input type="checkbox" name="hapus_items" class="history-checkbox" value="{{ h.jadwal_datetime }}|{{ h.acara }}|{{ h.jenis }}" style="cursor: pointer;"></td>
-                                <td class="col-date fw-bold text-dark">
-                                    {{ h.waktu_format }}<br>
-                                    <span style="font-size: 11px; font-weight: normal; color: #64748b; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px;">
-                                        Scan: -{{ h.scan_before if h.scan_before != None else 'G' }}m / +{{ h.scan_after if h.scan_after != None else 'G' }}m
-                                    </span>
-                                </td>
-                                <td class="col-event">
-                                    <div class="event-details">
-                                        <span class="event-name">{{ h.acara }}</span>
-                                        <div class="event-badges">
-                                            {% if h.kategori_misa == 'Besar' %}<span class="badge" style="background: #fef2f2; color: #dc2626;">MISA BESAR</span>
-                                            {% elif h.kategori_misa == 'Mingguan' %}<span class="badge" style="background: #fdf4ff; color: #db2777;">MINGGUAN</span>
-                                            {% else %}<span class="badge" style="background: #f0fdf4; color: #16a34a;">HARIAN</span>{% endif %}
-                                            
-                                            {% if h.jenis == 'Khusus' %}<span class="badge badge-khusus">KHUSUS</span>{% else %}<span class="badge badge-rutin">RUTIN</span>{% endif %}
-                                            {% if h.status == 'Bertugas' %}<span class="badge badge-publik">PUBLIK</span>{% else %}<span class="badge badge-draft">DRAFT</span>{% endif %}
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="col-staff text-gray">{{ h.petugas if h.petugas else '-' }}</td>
-                                <td class="col-action" style="text-align: right;">
-                                    
-                                    <button type="button" class="btn-edit-jadwal" 
-                                        data-dt="{{ h.jadwal_datetime }}" 
-                                        data-ac="{{ h.acara }}" 
-                                        data-jn="{{ h.jenis }}"
-                                        data-tgl="{{ h.tanggal_raw }}"
-                                        data-wkt="{{ h.waktu_raw }}"
-                                        data-kat="{{ h.kategori_misa }}"
-                                        data-usr="{{ h.pengguna_list if h.pengguna_list else '' }}"
-                                        style="background: none; border: none; color: #f59e0b; cursor: pointer; font-size: 17px; margin-right: 6px;" title="Edit Jadwal (Waktu & Petugas)">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    
-                                    <button type="button" class="btn-edit-waktu" data-dt="{{ h.jadwal_datetime }}" data-ac="{{ h.acara }}" data-jn="{{ h.jenis }}" data-sb="{{ h.scan_before if h.scan_before != None else '' }}" data-sa="{{ h.scan_after if h.scan_after != None else '' }}" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-size: 17px; margin-right: 6px;" title="Atur Waktu Khusus Jadwal Ini"><i class="fas fa-clock"></i></button>
-                                    
-                                    <button type="button" class="btn-qr-event" data-dt="{{ h.jadwal_datetime }}" data-ac="{{ h.acara }}" data-format="{{ h.waktu_format }}" style="background: none; border: none; color: #10b981; cursor: pointer; font-size: 17px; margin-right: 6px;" title="Tampilkan QR Event"><i class="fas fa-qrcode"></i></button>
-                                    
-                                    <button type="button" class="btn-delete-single" data-val="{{ h.jadwal_datetime }}|{{ h.acara }}|{{ h.jenis }}" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 17px;" title="Hapus Jadwal Ini"><i class="fas fa-trash-alt"></i></button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr><td colspan="5" class="empty-row"><i class="fas fa-folder-open empty-icon"></i>Tidak ada riwayat jadwal di database.</td></tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
+            <button type="submit" class="btn-primary" style="margin-top: 16px; width: 100%;">Simpan Bobot & Status</button>
         </form>
     </div>
-</div>
 
-<div id="qrEventModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
-    <div style="background: white; padding: 30px; border-radius: 16px; text-align: center; max-width: 350px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
-        <h3 style="margin-top:0; color: var(--text-dark);" id="qrEventTitle">QR Kehadiran Acara</h3>
-        <p style="color: var(--text-gray); font-size: 13px; margin-bottom: 20px;" id="qrEventDesc">Silakan scan barcode ini dari HP anggota.</p>
-        <div style="background: #f8fafc; padding: 15px; border-radius: 12px; display: inline-block;">
-            <img id="qrEventImage" src="" style="width: 250px; height: 250px; display: block; object-fit: contain;" />
-        </div>
-        <button onclick="document.getElementById('qrEventModal').style.display='none'" style="margin-top: 24px; background: #e2e8f0; color: #475569; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 15px;">Tutup Layar QR</button>
-    </div>
-</div>
-
-<div id="waktuModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
-    <div style="background: white; padding: 30px; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
-        <h3 style="margin-top:0; color: var(--text-dark); border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;"><i class="fas fa-clock" style="color: #3b82f6;"></i> Atur Waktu Absen Spesifik</h3>
+    <!-- PENGATURAN WAKTU ABSEN -->
+    <div class="card" style="padding: 24px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow);">
         <form action="{{ url_for('penjadwalan') }}" method="POST">
-            <input type="hidden" name="action" value="update_shift_scan_window">
-            <input type="hidden" name="shift_dt" id="waktu_shift_dt">
-            <input type="hidden" name="shift_ac" id="waktu_shift_ac">
-            <input type="hidden" name="shift_jn" id="waktu_shift_jn">
-            <p style="font-size: 13px; color: var(--text-gray); margin-bottom: 20px;">Kosongkan form jika ingin menggunakan waktu absen rutin (Global).</p>
+            <input type="hidden" name="action" value="update_global_scan_window">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+                <h3 style="margin: 0; color: var(--primary-blue);"><i class="fas fa-clock"></i> Jendela Waktu Scan QR</h3>
+                <label class="switch" title="Nyalakan / Matikan Sistem Tolak Absen Otomatis">
+                    <input type="checkbox" name="fitur_scan_window" value="on" {% if settings.get('fitur_scan_window', 'on') == 'on' %}checked{% endif %}>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
             <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Buka Scanner (Menit SEBELUM Misa)</label>
-                <input type="number" name="scan_before" id="waktu_scan_before" placeholder="Kosongkan = Ikut Global" min="0" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px; color: var(--text-dark);">Buka Scan Absen (Menit sebelum Misa)</label>
+                <input type="number" name="scan_window_before" value="{{ global_before }}" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
             </div>
-            <div style="margin-bottom: 24px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Tutup Scanner (Menit SESUDAH Misa)</label>
-                <input type="number" name="scan_after" id="waktu_scan_after" placeholder="Kosongkan = Ikut Global" min="0" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
+            
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px; color: var(--text-dark);">Tutup Scan Absen (Menit setelah Misa mulai)</label>
+                <input type="number" name="scan_window_after" value="{{ global_after }}" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
+                <small style="color: #ef4444; font-size: 11px;">*Jika lewat waktu ini, sistem otomatis catat Alpa.</small>
             </div>
-            <div style="display: flex; gap: 12px;">
-                <button type="button" onclick="document.getElementById('waktuModal').style.display='none'" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; font-weight: bold; cursor: pointer;">Batal</button>
-                <button type="submit" style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: #3b82f6; color: white; font-weight: bold; cursor: pointer;">Simpan Waktu</button>
-            </div>
+            <button type="submit" class="btn-primary" style="width: 100%;">Simpan Waktu & Status</button>
         </form>
     </div>
 </div>
 
-<div id="editJadwalModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
-    <div style="background: white; padding: 30px; border-radius: 16px; width: 90%; max-width: 500px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); max-height: 90vh; overflow-y: auto;">
-        <h3 style="margin-top:0; color: var(--text-dark); border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;"><i class="fas fa-edit" style="color: #f59e0b;"></i> Edit Jadwal & Petugas</h3>
+<!-- BUAT JADWAL MATRIKS & CETAK QR -->
+<div class="card" style="padding: 24px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 30px;">
+    <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="margin: 0; color: #10b981;"><i class="fas fa-qrcode"></i> Buat Jadwal & Cetak QR Kertas</h3>
+    </div>
+    <form action="{{ url_for('penjadwalan') }}" method="POST" style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
+        <input type="hidden" name="action" value="buat_matriks">
+        <div style="flex: 1; min-width: 200px;">
+            <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px; color: var(--text-dark);">Tanggal Mulai (Senin)</label>
+            <input type="date" name="start_date" required value="{{ start if start else '' }}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
+        </div>
+        <div style="flex: 1; min-width: 200px;">
+            <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px; color: var(--text-dark);">Tanggal Selesai (Minggu)</label>
+            <input type="date" name="end_date" required value="{{ end if end else '' }}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
+        </div>
+        <button type="submit" class="btn-primary" style="padding: 12px 24px; background: #10b981;"><i class="fas fa-table"></i> Generate Matriks & QR</button>
+    </form>
+</div>
+
+<!-- DATA MATRIKS UNTUK DISIMPAN -->
+{% if matrix %}
+<div class="card" style="padding: 24px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 30px; overflow-x: auto;">
+    <form action="{{ url_for('penjadwalan') }}" method="POST">
+        <input type="hidden" name="action" value="simpan_matriks">
+        <input type="hidden" name="rendered_dates" value="{{ start }}|{{ end }}">
         
-        <form action="{{ url_for('penjadwalan') }}" method="POST">
-            <input type="hidden" name="action" value="edit_jadwal_group">
-            <input type="hidden" name="old_dt" id="edit_old_dt">
-            <input type="hidden" name="old_ac" id="edit_old_ac">
-            <input type="hidden" name="old_jn" id="edit_old_jn">
-            
-            <p style="font-size: 13px; color: #b91c1c; background: #fef2f2; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
-                <b>Peringatan:</b> Menyimpan perubahan akan memperbarui QR Code untuk Misa ini.
-            </p>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                <div>
-                    <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Tanggal</label>
-                    <input type="date" name="tanggal" id="edit_tanggal" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
-                </div>
-                <div>
-                    <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Waktu (Jam)</label>
-                    <input type="time" name="waktu" id="edit_waktu" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
-                </div>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px;">
-                <div>
-                    <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Nama Acara</label>
-                    <input type="text" name="acara" id="edit_acara" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
-                </div>
-                <div>
-                    <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Kategori</label>
-                    <select name="kategori" id="edit_kategori" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
-                        <option value="Harian">Harian</option>
-                        <option value="Mingguan">Mingguan</option>
-                        <option value="Besar">Besar</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div style="margin-bottom: 24px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Petugas Misa</label>
-                <select name="petugas" id="edit_petugas" class="select2-petugas-edit" multiple="multiple" required style="width: 100%;">
-                    {% for u in users %}<option value="{{ u.username }}">{{ u.nama }}</option>{% endfor %}
-                </select>
-            </div>
-            
-            <div style="display: flex; gap: 12px;">
-                <button type="button" onclick="document.getElementById('editJadwalModal').style.display='none'" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; font-weight: bold; cursor: pointer;">Batal</button>
-                <button type="submit" style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: #f59e0b; color: white; font-weight: bold; cursor: pointer;">Perbarui Jadwal</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-{% else %}
-<form action="{{ url_for('penjadwalan') }}" method="POST" id="matrixForm">
-    <input type="hidden" name="action" value="simpan_matriks">
-    <input type="hidden" name="rendered_dates" value="{{ start }}|{{ end }}">
-    <div class="spreadsheet-container" style="width: 100%; max-width: 100% !important;">
-        <table class="spreadsheet-table" style="width: 100%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 2px solid var(--primary-blue); padding-bottom: 12px;">
+            <h3 style="margin: 0;">Pengisian Petugas ({{ start }} - {{ end }})</h3>
+            <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan & Lanjut Cetak</button>
+        </div>
+        
+        <table style="width: 100%; border-collapse: collapse; min-width: 1000px;">
             <thead>
-                <tr>
-                    {% for m in matrix %}
-                    <th colspan="{{ m.wkt_list|length }}" class="header-main">
-                        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-                            <span>{{ m.tanggal_format }}</span>
-                            <div style="display: flex; align-items: center; gap: 4px; justify-content: center; background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px;">
-                                <span>(</span>
-                                {% set ket_val = '' %}
-                                {% if acara_data and m.date_str in acara_data %}{% set ket_val = acara_data[m.date_str] %}{% endif %}
-                                <input type="text" name="ket|{{ m.date_str }}" value="{{ ket_val }}" placeholder="Keterangan Acara" class="acara-input" title="Contoh: Hari Raya Paskah">
-                                <span>)</span>
-                            </div>
-                        </div>
-                    </th>
-                    {% endfor %}
-                </tr>
-                <tr>
-                    {% for m in matrix %}
-                        {% for wkt in m.wkt_list %}
-                        <th class="header-sub">
-                            {% set ket_val = acara_data[m.date_str] if acara_data and m.date_str in acara_data else '' %}
-                            {% set is_sabtu_sore = (m.hari == 'Sabtu' and wkt >= '15.00') %}
-                            {% set default_kat = 'Harian' %}
-                            
-                            {% if ket_val != '' %}
-                                {% set default_kat = 'Besar' %}
-                            {% elif m.hari == 'Minggu' or is_sabtu_sore %}
-                                {% set default_kat = 'Mingguan' %}
-                            {% endif %}
-                            
-                            <input type="text" name="wkt|{{ m.date_str }}|{{ loop.index0 }}" value="{{ wkt }}" class="wkt-input" title="Ubah Jam Misa"><br>
-                            
-                            <select name="kat|{{ m.date_str }}|{{ loop.index0 }}" class="kat-input">
-                                <option value="Harian" {% if default_kat == 'Harian' %}selected{% endif %}>Harian</option>
-                                <option value="Mingguan" {% if default_kat == 'Mingguan' %}selected{% endif %}>Mingguan</option>
-                                <option value="Besar" {% if default_kat == 'Besar' %}selected{% endif %}>Besar</option>
-                            </select>
-                        </th>
-                        {% endfor %}
-                    {% endfor %}
+                <tr style="background: var(--light-blue); color: var(--dark-blue);">
+                    <th style="padding: 12px; border: 1px solid var(--border-color); width: 15%;">Tanggal</th>
+                    <th style="padding: 12px; border: 1px solid var(--border-color); width: 15%;">Keterangan Misa</th>
+                    <th style="padding: 12px; border: 1px solid var(--border-color);">Shift Waktu & Petugas</th>
                 </tr>
             </thead>
             <tbody>
-                {% for row_idx in range(9) %}
+                {% for m in matrix %}
                 <tr>
-                    {% for m in matrix %}
-                        {% for wkt in m.wkt_list %}
-                        {% set key = m.date_str ~ '|' ~ wkt %}
-                        {% set val = '' %}
-                        {% if existing_data and key in existing_data and existing_data[key]|length > row_idx %}{% set val = existing_data[key][row_idx] %}{% endif %}
-                        <td>
-                            <input type="text" name="ptgs|{{ m.date_str }}|{{ loop.index0 }}|{{ m.hari }}" data-col="{{ m.date_str }}|{{ loop.index0 }}" value="{{ val }}" class="sheet-input" list="user_datalist" autocomplete="off" placeholder="Nama...">
-                        </td>
-                        {% endfor %}
-                    {% endfor %}
+                    <td style="padding: 12px; border: 1px solid var(--border-color); font-weight: bold; vertical-align: top;">{{ m.tanggal_format }}</td>
+                    <td style="padding: 12px; border: 1px solid var(--border-color); vertical-align: top;">
+                        <input type="text" name="ket|{{ m.date_str }}" value="{{ acara_data.get(m.date_str, '') }}" placeholder="Kosongkan jika Misa biasa" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
+                    </td>
+                    <td style="padding: 12px; border: 1px solid var(--border-color); vertical-align: top;">
+                        <div style="display: flex; flex-direction: column; gap: 12px;" id="shift-container-{{ m.date_str }}">
+                            {% for wkt in m.wkt_list %}
+                            <div style="display: flex; gap: 8px; align-items: flex-start;" class="shift-row">
+                                <div style="width: 100px;">
+                                    <input type="text" name="wkt|{{ m.date_str }}|{{ loop.index0 }}" value="{{ wkt }}" style="width: 100%; padding: 8px; font-weight: bold; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
+                                </div>
+                                <div style="width: 120px;">
+                                    <select name="kat|{{ m.date_str }}|{{ loop.index0 }}" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                                        <option value="Harian" {% if m.hari not in ['Sabtu', 'Minggu'] %}selected{% endif %}>Harian</option>
+                                        <option value="Mingguan" {% if m.hari in ['Sabtu', 'Minggu'] %}selected{% endif %}>Mingguan</option>
+                                        <option value="Besar">Hari Raya</option>
+                                    </select>
+                                </div>
+                                <div style="flex: 1;">
+                                    <input type="text" name="ptgs|{{ m.date_str }}|{{ loop.index0 }}|{{ m.hari }}" 
+                                        value="{% if m.date_str ~ '|' ~ wkt in existing_data %}{{ existing_data[m.date_str ~ '|' ~ wkt] | join(', ') }}{% endif %}" 
+                                        placeholder="Ketik nama pisahkan koma... (Gunakan titik '.' jika ingin cetak manual bolpoin)" 
+                                        style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;" list="namelist">
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <button type="button" onclick="tambahShift('{{ m.date_str }}', '{{ m.hari }}')" style="margin-top: 8px; font-size: 11px; padding: 4px 8px; background: #e2e8f0; border: none; border-radius: 4px; cursor: pointer;">+ Tambah Jam</button>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-    </div>
-
-    <div id="hiddenUserData" style="display: none;">{% for u in users %}{{ u.nama }}|{% endfor %}</div>
-    <datalist id="user_datalist"></datalist>
-
-    <div class="sticky-footer-action">
-        <a href="{{ url_for('penjadwalan') }}" class="btn-outline">Tutup Editor</a>
-        <button type="submit" class="btn-primary btn-rutin" style="padding: 0 40px; font-size: 16px;"><i class="fas fa-save"></i> Simpan Data Jadwal</button>
-    </div>
-</form>
+        <datalist id="namelist">
+            {% for n in user_names %}
+            <option value="{{ n }}">
+            {% endfor %}
+        </datalist>
+    </form>
+</div>
 {% endif %}
 
-<style>
-.setup-container { width: 100%; display: flex; flex-direction: column; gap: 24px; padding-bottom: 30px; }
-.setup-card { background: var(--white); padding: 30px; border-radius: 16px; box-shadow: var(--shadow); box-sizing: border-box; }
-.card-rutin { border-top: 5px solid var(--primary-blue); }
-.card-khusus { border-top: 5px solid #db2777; }
-.icon-header { width: 70px; height: 70px; font-size: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; }
-.icon-rutin { background: var(--light-blue); color: var(--primary-blue); }
-.icon-khusus { background: #fce7f3; color: #db2777; }
-.setup-card h3 { color: var(--text-dark); margin-bottom: 6px; font-size: 20px; text-align: center; }
-.setup-card p { color: var(--text-gray); font-size: 14px; margin-bottom: 24px; text-align: center; }
-
-.form-row { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; }
-.form-row .form-group { flex: 1; min-width: 120px; }
-.form-group { text-align: left; margin-bottom: 16px; width: 100%; }
-.form-group label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: var(--text-dark); }
-.form-group input, .form-group select { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; outline: none; font-family: inherit; font-size: 14px; box-sizing: border-box; }
-
-.btn-primary { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; color: white; transition: 0.3s; }
-.btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
-.btn-rutin { background: var(--primary-blue); }
-.btn-khusus { background: #db2777; }
-.w-100 { width: 100%; }
-
-.history-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
-.history-header h3 { font-size: 18px; margin: 0; color: var(--text-dark); display: flex; align-items: center; gap: 10px; }
-.history-header h3 i { color: #10b981; }
-
-.btn-bulk-delete { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
-.btn-bulk-delete:hover { background: #fecaca; }
-
-.table-responsive { width: 100%; overflow-x: auto; }
-.history-table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 800px; }
-.history-table th { padding: 14px 12px; color: var(--text-gray); border-bottom: 2px solid #e2e8f0; font-weight: 600; text-align: left; }
-.history-table td { padding: 16px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-
-.col-check { width: 40px; text-align: center; }
-.col-date { width: 22%; }
-.col-event { width: 25%; }
-.col-staff { width: 40%; line-height: 1.6; }
-
-.fw-bold { font-weight: 700; }
-.text-dark { color: var(--text-dark); }
-.text-gray { color: var(--text-gray); }
-
-.event-details { display: flex; flex-direction: column; gap: 6px; }
-.event-name { font-weight: 700; color: var(--primary-blue); font-size: 14px; }
-.event-badges { display: flex; gap: 6px; flex-wrap: wrap; }
-.badge { font-size: 10px; padding: 3px 8px; border-radius: 6px; font-weight: 800; letter-spacing: 0.5px; }
-.badge-khusus { background: #fce7f3; color: #db2777; }
-.badge-rutin { background: #eef2ff; color: var(--primary-blue); }
-.badge-publik { background: #dcfce7; color: #059669; }
-.badge-draft { background: #f1f5f9; color: #64748b; }
-
-.btn-delete-single:hover, .btn-qr-event:hover, .btn-edit-waktu:hover, .btn-edit-jadwal:hover { transform: scale(1.2); }
-.empty-row { text-align: center; padding: 60px 20px !important; color: var(--text-gray); font-size: 15px; }
-.empty-icon { font-size: 40px; color: #cbd5e1; display: block; margin-bottom: 12px; }
-
-.select2-container--default .select2-selection--multiple { border: 1px solid var(--border-color) !important; border-radius: 8px !important; min-height: 44px !important; padding: 4px 6px !important; }
-.select2-container--default.select2-container--focus .select2-selection--multiple { border-color: #db2777 !important; outline: 0; }
-.select2-container--default .select2-selection--multiple .select2-selection__choice { background-color: #fce7f3 !important; border: 1px solid #db2777 !important; color: #db2777 !important; border-radius: 4px !important; margin-top: 6px !important; padding: 2px 6px !important; font-weight: 600 !important; font-size: 12px !important; }
-
-.spreadsheet-container { width: 100%; overflow-x: auto; background: var(--white); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 100px; padding-bottom: 10px; }
-.spreadsheet-table { border-collapse: collapse; white-space: nowrap; min-width: 100%; }
-.spreadsheet-table th, .spreadsheet-table td { border: 1px solid #cbd5e1; padding: 0; text-align: center; }
-.header-main { background: var(--primary-blue); color: white; font-size: 14px; padding: 12px !important; text-transform: uppercase; letter-spacing: 0.5px; }
-.header-sub { background: var(--light-blue); color: var(--text-dark); padding: 6px !important; font-size: 14px; }
-.acara-input { width: 150px; background: transparent; border: none; text-align: center; font-size: 12px; color: white; outline: none; transition: 0.2s; font-family: inherit;}
-.acara-input::placeholder { color: rgba(255,255,255,0.6); }
-.acara-input:focus { background: white; color: var(--primary-blue); border-radius: 4px; padding: 2px;}
-.wkt-input { width: 80px; background: transparent; border: none; border-bottom: 1px dashed var(--text-gray); text-align: center; font-weight: bold; font-size: 14px; color: var(--text-dark); outline: none; font-family: inherit; padding: 4px 2px;}
-.wkt-input:focus { border-bottom: 1px solid var(--primary-blue); background: white; border-radius: 4px;}
-.kat-input { width: 90px; background: transparent; border: none; border-bottom: 1px dashed var(--primary-blue); font-size: 11px; text-align: center; color: var(--primary-blue); font-weight: bold; margin-top: 6px; outline: none;}
-.sheet-input { border: none; outline: none; width: 130px; padding: 12px 8px; font-size: 13px; text-align: center; background: transparent; transition: 0.2s; font-family: inherit; color: var(--text-dark); font-weight: 500; }
-.sheet-input:focus { background: #eef2ff; box-shadow: inset 0 0 0 2px var(--primary-blue); }
-.sheet-input::placeholder { color: #cbd5e1; font-weight: normal; }
-.btn-outline { padding: 10px 24px; border: 1px solid var(--text-gray); color: var(--text-gray); border-radius: 8px; font-weight: bold; transition: 0.3s; background: transparent; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center;}
-.btn-outline:hover { background: var(--bg-gray); color: var(--text-dark); }
-.sticky-footer-action { position: fixed; bottom: 0; left: var(--sidebar-width); right: 0; background: var(--white); padding: 16px 24px; box-shadow: 0 -4px 12px rgba(0,0,0,0.05); display: flex; justify-content: flex-end; gap: 12px; z-index: 90; border-top: 1px solid var(--border-color); transition: left 0.3s;}
-</style>
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    
-    if (typeof jQuery !== 'undefined') {
-        $('.select2-petugas').select2({ placeholder: "🔍 Ketik nama petugas...", allowClear: true, width: '100%' });
-        
-        // Memastikan dropdown Select2 bisa tampil sempurna di depan Modal Edit Jadwal
-        $('.select2-petugas-edit').select2({ 
-            placeholder: "🔍 Tambah/Hapus petugas...", 
-            allowClear: true, 
-            width: '100%',
-            dropdownParent: $('#editJadwalModal')
-        });
-    }
-
-    const selectAllCb = document.getElementById('selectAllHistory');
-    if (selectAllCb) {
-        selectAllCb.addEventListener('change', function() { document.querySelectorAll('.history-checkbox').forEach(cb => { cb.checked = this.checked; }); });
-    }
-
-    document.querySelectorAll('.btn-delete-single').forEach(btn => {
-        btn.addEventListener('click', function() {
-            let val = this.getAttribute('data-val');
-            if(confirm('Hapus jadwal ini secara permanen?')) {
-                let form = document.getElementById('bulkDeleteForm');
-                document.querySelectorAll('.history-checkbox').forEach(cb => cb.checked = false);
-                let input = document.createElement('input');
-                input.type = 'hidden'; input.name = 'hapus_items'; input.value = val;
-                form.appendChild(input); form.submit();
-            }
-        });
-    });
-
-    // MUNCULKAN QR EVENT
-    document.querySelectorAll('.btn-qr-event').forEach(btn => {
-        btn.addEventListener('click', function() {
-            let dt = this.getAttribute('data-dt');
-            let ac = this.getAttribute('data-ac');
-            let format = this.getAttribute('data-format');
-            let dataObj = {type: 'event', dt: dt, ac: ac};
-            let dataStr = JSON.stringify(dataObj);
-            let qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=2&data=" + encodeURIComponent(dataStr);
-            document.getElementById('qrEventImage').src = qrUrl;
-            document.getElementById('qrEventTitle').innerText = ac;
-            document.getElementById('qrEventDesc').innerText = "Waktu: " + format + "\nSilakan minta anggota scan untuk absen hadir.";
-            document.getElementById('qrEventModal').style.display = 'flex';
-        });
-    });
-    
-    // MUNCULKAN MODAL EDIT WAKTU
-    document.querySelectorAll('.btn-edit-waktu').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.getElementById('waktu_shift_dt').value = this.getAttribute('data-dt');
-            document.getElementById('waktu_shift_ac').value = this.getAttribute('data-ac');
-            document.getElementById('waktu_shift_jn').value = this.getAttribute('data-jn');
-            document.getElementById('waktu_scan_before').value = this.getAttribute('data-sb');
-            document.getElementById('waktu_scan_after').value = this.getAttribute('data-sa');
-            document.getElementById('waktuModal').style.display = 'flex';
-        });
-    });
-
-    // MUNCULKAN MODAL EDIT JADWAL PENUH
-    document.querySelectorAll('.btn-edit-jadwal').forEach(btn => {
-        btn.addEventListener('click', function() {
-            let dt = this.getAttribute('data-dt');
-            let ac = this.getAttribute('data-ac');
-            let jn = this.getAttribute('data-jn');
-            
-            document.getElementById('edit_old_dt').value = dt;
-            document.getElementById('edit_old_ac').value = ac;
-            document.getElementById('edit_old_jn').value = jn;
-            
-            document.getElementById('edit_tanggal').value = this.getAttribute('data-tgl');
-            document.getElementById('edit_waktu').value = this.getAttribute('data-wkt');
-            
-            let acaraNamaLengkap = ac.startsWith('Misa ') ? ac.substring(5) : ac;
-            document.getElementById('edit_acara').value = acaraNamaLengkap;
-            document.getElementById('edit_kategori').value = this.getAttribute('data-kat');
-            
-            // Masukkan data petugas ke Select2 Multiple
-            let usrStr = this.getAttribute('data-usr');
-            let usrArr = usrStr ? usrStr.split(',') : [];
-            $('.select2-petugas-edit').val(usrArr).trigger('change');
-            
-            document.getElementById('editJadwalModal').style.display = 'flex';
-        });
-    });
-
-    const hiddenDataEl = document.getElementById('hiddenUserData');
-    if (hiddenDataEl) {
-        let rawData = hiddenDataEl.innerText;
-        let allUsers = rawData.split('|').filter(n => n.trim() !== '');
-        const matrixInputs = document.querySelectorAll('.sheet-input');
-        matrixInputs.forEach(input => {
-            input.addEventListener('focus', function() {
-                let colId = this.getAttribute('data-col');
-                let inputsInSameCol = document.querySelectorAll('.sheet-input[data-col="' + colId + '"]');
-                let usedNames = [];
-                inputsInSameCol.forEach(inp => { if (inp !== this && inp.value.trim() !== '') { usedNames.push(inp.value.trim().toLowerCase()); } });
-                let datalist = document.getElementById('user_datalist');
-                if(datalist){
-                     datalist.innerHTML = ''; 
-                     allUsers.forEach(nama => {
-                         if (!usedNames.includes(nama.toLowerCase())) {
-                             let opt = document.createElement('option'); opt.value = nama; datalist.appendChild(opt);
-                         }
-                     });
-                }
-            });
-            input.addEventListener('change', function() {
-                let val = this.value.trim().toLowerCase();
-                if (!val) return;
-                let colId = this.getAttribute('data-col');
-                let inputsInSameCol = document.querySelectorAll('.sheet-input[data-col="' + colId + '"]');
-                let duplicateCount = 0;
-                inputsInSameCol.forEach(inp => { if (inp.value.trim().toLowerCase() === val) duplicateCount++; });
-                if (duplicateCount > 1) {
-                    alert("⚠️ Nama yang Anda ketik sudah bertugas pada jam dan hari ini.\n\nSistem otomatis menghapus input Anda untuk mencegah duplikasi data ganda.");
-                    this.value = ''; 
-                }
-            });
-        });
-    }
-});
-
-function confirmBulkDelete() {
-    let checkedBoxes = document.querySelectorAll('.history-checkbox:checked');
-    if (checkedBoxes.length === 0) { alert("Silakan centang jadwal terlebih dahulu."); return false; }
-    if(confirm("Anda akan menghapus " + checkedBoxes.length + " jadwal. Lanjutkan?")) { document.getElementById('bulkDeleteForm').submit(); }
+function tambahShift(dateStr, hariStr) {
+    var container = document.getElementById('shift-container-' + dateStr);
+    var idx = container.querySelectorAll('.shift-row').length;
+    var div = document.createElement('div');
+    div.className = 'shift-row';
+    div.style.cssText = 'display: flex; gap: 8px; align-items: flex-start; margin-top: 8px;';
+    div.innerHTML = `
+        <div style="width: 100px;">
+            <input type="text" name="wkt|${dateStr}|${idx}" value="00.00" style="width: 100%; padding: 8px; font-weight: bold; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
+        </div>
+        <div style="width: 120px;">
+            <select name="kat|${dateStr}|${idx}" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                <option value="Harian">Harian</option>
+                <option value="Mingguan">Mingguan</option>
+                <option value="Besar">Hari Raya</option>
+            </select>
+        </div>
+        <div style="flex: 1;">
+            <input type="text" name="ptgs|${dateStr}|${idx}|${hariStr}" placeholder="Nama petugas..." style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;" list="namelist">
+        </div>
+    `;
+    container.appendChild(div);
 }
 </script>
 {% endblock %}

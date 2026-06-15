@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Titip Absen - MISDINAR{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+    <div>
+        <h2>Titip Absen (Open Slot)</h2>
+        <p>Ambil slot kosong yang dibuka pengurus untuk mendapatkan poin tambahan.</p>
+    </div>
+    {% if role in ['super admin', 'penjadwalan', 'bph'] %}
+    <button onclick="document.getElementById('bukaSlotModal').style.display='flex'" class="btn-primary" style="border-radius: 8px; font-weight: bold;">
+        <i class="fas fa-plus"></i> Buka Slot Baru
+    </button>
+    {% endif %}
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+    {% for s in slots %}
+    <div class="card" style="background: white; border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; {% if s.is_past %}opacity: 0.6; filter: grayscale(100%);{% endif %}">
+        <div style="background: {% if s.is_past %}#94a3b8{% elif s.sisa == 0 %}#ef4444{% else %}#10b981{% endif %}; color: white; padding: 16px 20px;">
+            <h3 style="margin: 0; font-size: 18px;">{{ s.acara }}</h3>
+            <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;"><i class="far fa-calendar-alt"></i> {{ s.tanggal }} | <i class="far fa-clock"></i> {{ s.waktu }}</p>
+        </div>
+        
+        <div style="padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 13px;">
+                <span style="color: var(--text-gray); font-weight: bold;">Status Kuota:</span>
+                <span style="font-weight: 800; padding: 4px 10px; border-radius: 20px; {% if s.sisa > 0 %}background: #dcfce7; color: #059669;{% else %}background: #fee2e2; color: #dc2626;{% endif %}">
+                    {{ s.terisi }} / {{ s.kuota }} Terisi
+                </span>
+            </div>
+            
+            <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+                <p style="margin: 0 0 8px 0; font-size: 11px; color: var(--text-gray); font-weight: bold;">Peserta Bergabung:</p>
+                {% if s.peserta %}
+                    {% for p in s.peserta %}
+                        <span style="display: inline-block; background: white; border: 1px solid #e2e8f0; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin: 0 4px 4px 0; font-weight: bold; color: var(--primary-blue);">{{ p }}</span>
+                    {% endfor %}
+                {% else %}
+                    <span style="font-size: 12px; color: #94a3b8;"><i>Belum ada yang mengambil slot ini.</i></span>
+                {% endif %}
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                {% if s.sudah_join %}
+                    <button disabled style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: #e2e8f0; color: #64748b; font-weight: bold; cursor: not-allowed;">Anda Sudah Bergabung</button>
+                {% elif s.is_past %}
+                    <button disabled style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: #e2e8f0; color: #64748b; font-weight: bold; cursor: not-allowed;">Slot Ditutup (Waktu Lewat)</button>
+                {% elif s.sisa == 0 %}
+                    <button disabled style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: #fee2e2; color: #dc2626; font-weight: bold; cursor: not-allowed;">Slot Penuh</button>
+                {% else %}
+                    <form action="{{ url_for('titip') }}" method="POST" style="flex: 1; margin: 0;">
+                        <input type="hidden" name="action" value="ambil_slot">
+                        <input type="hidden" name="slot_id" value="{{ s.id }}">
+                        <button type="submit" style="width: 100%; padding: 12px; border-radius: 8px; border: none; background: #0ea5e9; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(14, 165, 233, 0.2);">Ambil Slot Sekarang</button>
+                    </form>
+                {% endif %}
+                
+                {% if role in ['super admin', 'penjadwalan'] %}
+                    <form action="{{ url_for('titip') }}" method="POST" style="margin: 0;" onsubmit="return confirm('Hapus slot ini permanen?');">
+                        <input type="hidden" name="action" value="hapus_slot">
+                        <input type="hidden" name="id" value="{{ s.id }}">
+                        <button type="submit" style="padding: 12px; border-radius: 8px; border: 1px solid #ef4444; background: white; color: #ef4444; cursor: pointer;"><i class="fas fa-trash"></i></button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
+        <i class="fas fa-box-open" style="font-size: 48px; color: #cbd5e1; margin-bottom: 16px;"></i>
+        <h3 style="color: var(--text-dark);">Belum Ada Slot Titip Absen</h3>
+        <p style="color: var(--text-gray);">Pengurus belum membuka slot kekosongan jadwal.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- MODAL BUKA SLOT ADMIN -->
+{% if role in ['super admin', 'penjadwalan', 'bph'] %}
+<div id="bukaSlotModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+    <div style="background: white; padding: 24px; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+        <h3 style="margin-top:0; color: var(--text-dark); border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;"><i class="fas fa-plus-circle" style="color: #10b981;"></i> Buka Slot Titip Absen</h3>
+        
+        <form action="{{ url_for('titip') }}" method="POST">
+            <input type="hidden" name="action" value="buka_slot">
+            
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Tanggal</label>
+                <input type="date" name="tanggal" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; font-family: inherit;">
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Waktu</label>
+                <input type="time" name="waktu" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; font-family: inherit;">
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Nama Misa / Kegiatan</label>
+                <input type="text" name="acara" required placeholder="Contoh: Misa Pagi" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; font-family: inherit;">
+            </div>
+            
+            <div style="margin-bottom: 24px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Kuota Maksimal (Rebutan)</label>
+                <input type="number" name="kuota" required min="1" value="1" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; font-family: inherit;">
+            </div>
+            
+            <div style="display: flex; gap: 12px;">
+                <button type="button" onclick="document.getElementById('bukaSlotModal').style.display='none'" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; font-weight: bold; cursor: pointer;">Batal</button>
+                <button type="submit" style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: #10b981; color: white; font-weight: bold; cursor: pointer;">Buka Slot</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

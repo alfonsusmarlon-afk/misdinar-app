@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page-header" style="text-align: center; margin-bottom: 30px;">
     <h2>Scan Kehadiran Otomatis</h2>
-    <p>Arahkan kamera ke QR Code milik Anda pada kertas jadwal yang tercetak di Sakristi / Papan Pengumuman.</p>
+    <p>Arahkan kamera ke QR Code milik Anda pada kertas jadwal yang tercetak di Sakristi.</p>
 </div>
 
 <div class="card" style="background: white; padding: 30px; border-radius: 16px; box-shadow: var(--shadow); text-align: center; max-width: 600px; margin: 0 auto;">
@@ -27,11 +27,10 @@ function onScanSuccess(decodedText, decodedResult) {
     box.style.display = 'block';
     box.style.backgroundColor = '#fef3c7';
     box.style.color = '#d97706';
-    box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memvalidasi jadwal & waktu...';
+    box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memvalidasi jadwal...';
     
     try {
         JSON.parse(decodedText);
-        
         fetch("{{ url_for('api_absen') }}", {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -40,30 +39,22 @@ function onScanSuccess(decodedText, decodedResult) {
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                box.style.backgroundColor = '#dcfce7';
-                box.style.color = '#059669';
+                box.style.backgroundColor = '#dcfce7'; box.style.color = '#059669';
                 box.innerHTML = '<i class="fas fa-check-circle"></i> ' + data.message;
             } else {
-                box.style.backgroundColor = '#fee2e2';
-                box.style.color = '#dc2626';
+                box.style.backgroundColor = '#fee2e2'; box.style.color = '#dc2626';
                 box.innerHTML = '<i class="fas fa-times-circle"></i> ' + data.message;
             }
-            
-            setTimeout(() => {
-                box.style.display = 'none';
-                isScanning = false;
-            }, 5000); 
+            setTimeout(() => { box.style.display = 'none'; isScanning = false; }, 4000); 
         })
         .catch(err => {
-            box.style.backgroundColor = '#fee2e2';
-            box.style.color = '#dc2626';
+            box.style.backgroundColor = '#fee2e2'; box.style.color = '#dc2626';
             box.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Gagal terhubung ke server.';
             setTimeout(() => { box.style.display = 'none'; isScanning = false; }, 3000);
         });
         
     } catch(e) {
-        box.style.backgroundColor = '#fee2e2';
-        box.style.color = '#dc2626';
+        box.style.backgroundColor = '#fee2e2'; box.style.color = '#dc2626';
         box.innerHTML = '<i class="fas fa-times-circle"></i> QR Code bukan format absensi.';
         setTimeout(() => { box.style.display = 'none'; isScanning = false; }, 3000);
     }
@@ -71,15 +62,16 @@ function onScanSuccess(decodedText, decodedResult) {
 
 function onScanFailure(error) {}
 
-// OPTIMASI: Menggunakan FPS 10 agar HP low-end tidak lag.
+// FITUR ZOOM & FOCUS UNTUK KAMERA HP
 let html5QrcodeScanner = new Html5QrcodeScanner(
   "reader",
   { 
-      fps: 10,
-      qrbox: {width: 250, height: 250},
+      fps: 15,
+      qrbox: {width: 280, height: 280},
       aspectRatio: 1.0,
       videoConstraints: {
-          facingMode: "environment"
+          facingMode: "environment",
+          advanced: [{ focusMode: "continuous" }]
       }
   },
   false);

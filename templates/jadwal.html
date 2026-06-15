@@ -7,7 +7,7 @@
     <div>
         <h2>Jadwal Pelayanan Misdinar</h2>
         {% if view_mode == 'private' %}
-        <p>Menampilkan jadwal Misa Anda beserta rekan yang bertugas bersama Anda.</p>
+        <p>Menampilkan jadwal Misa Anda. Silakan ajukan izin ke pengurus jika berhalangan.</p>
         {% elif view_mode == 'admin_all' %}
         <p>Menampilkan seluruh jadwal pelayanan beserta <b style="color: #059669;">Status Kehadiran</b> anggota saat ini.</p>
         {% else %}
@@ -17,8 +17,8 @@
 
     <div style="display: flex; gap: 10px;">
         {% if is_logged_in and session.get('role') in ['super admin', 'penjadwalan'] %}
-        <a href="{{ url_for('penjadwalan') }}" class="btn-primary" style="background-color: var(--white); color: var(--primary-blue); border: 1px solid var(--primary-blue);">
-            <i class="fas fa-edit"></i> Edit Matriks Jadwal
+        <a href="{{ url_for('penjadwalan') }}" class="btn-primary" style="background-color: var(--white); color: var(--primary-blue); border: 1px solid var(--primary-blue); font-size: 13px; font-weight: bold; padding: 8px 12px; border-radius: 8px; cursor: pointer; text-decoration: none;">
+            <i class="fas fa-edit"></i> Edit Jadwal
         </a>
         {% endif %}
     </div>
@@ -41,7 +41,7 @@
         <i class="fas fa-calendar-times empty-icon"></i>
         <h3>Belum Ada Jadwal</h3>
         {% if is_logged_in %}
-        <p>Tidak ada jadwal pelayanan dalam waktu dekat.</p>
+        <p>Tidak ada jadwal pelayanan untuk Anda dalam waktu dekat.</p>
         {% else %}
         <p>Belum ada jadwal pelayanan yang dipublikasikan oleh pengurus.</p>
         {% endif %}
@@ -54,7 +54,7 @@
             {% set key = j.tanggal ~ '-' ~ j.bulan ~ '-' ~ j.waktu ~ '-' ~ j.acara %}
             
             {% if key not in grouped_jadwal %}
-                {% set _ = grouped_jadwal.update({key: {'data': j, 'petugas': [{'nama': j.nama_pengguna, 'username': j.pengguna, 'status': j.status_kehadiran|default('') }]}}) %}
+                {% set _ = grouped_jadwal.update({key: {'data': j, 'petugas': [{'id': j.id, 'nama': j.nama_pengguna, 'username': j.pengguna, 'status': j.status_kehadiran|default('') }]}}) %}
             {% else %}
                 {% set exist = namespace(found=false) %}
                 {% for p in grouped_jadwal[key]['petugas'] %}
@@ -64,27 +64,30 @@
                 {% endfor %}
                 
                 {% if not exist.found %}
-                    {% set _ = grouped_jadwal[key]['petugas'].append({'nama': j.nama_pengguna, 'username': j.pengguna, 'status': j.status_kehadiran|default('') }) %}
+                    {% set _ = grouped_jadwal[key]['petugas'].append({'id': j.id, 'nama': j.nama_pengguna, 'username': j.pengguna, 'status': j.status_kehadiran|default('') }) %}
                 {% endif %}
             {% endif %}
         {% endfor %}
 
         {% for key, group in grouped_jadwal.items() %}
             {% set j = group['data'] %}
-            <div class="schedule-card">
+            <div class="schedule-card {% if j.is_past %}past-schedule{% endif %}">
                 
-                <div class="date-box">
+                <div class="date-box" style="{% if j.is_past %}background: #64748b;{% endif %}">
                     <span class="date">{{ j.tanggal }}</span>
                     <span class="month">{{ j.bulan }}</span>
                 </div>
                 
                 <div class="schedule-info">
-                    <h4 style="margin-top: 0;">{{ j.hari }}, Pkl. {{ j.waktu }}</h4>
-                    <span class="badge badge-primary">{{ j.acara }}</span>
+                    <h4 style="margin-top: 0; {% if j.is_past %}color: #64748b;{% endif %}">
+                        {{ j.hari }}, Pkl. {{ j.waktu }}
+                        {% if j.is_past %} <span style="font-size: 10px; background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">LEWAT</span> {% endif %}
+                    </h4>
+                    <span class="badge badge-primary" style="{% if j.is_past %}background: #f1f5f9; color: #64748b;{% endif %}">{{ j.acara }}</span>
                     
                     <div class="petugas-list" style="margin-top: 14px;">
                         <span style="font-size: 12px; color: var(--text-gray); display: block; margin-bottom: 8px;">Daftar Petugas:</span>
-                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
                             
                             {% for p in group['petugas'] %}
                                 {% if view_mode == 'admin_all' %}
@@ -103,12 +106,43 @@
                                     
                                 {% else %}
                                     {% if is_logged_in and p.username == session.get('user_id') %}
-                                    <span class="badge" style="background-color: #f59e0b; color: white; font-size: 13px; padding: 6px 12px; border-radius: 6px; box-shadow: 0 2px 4px rgba(245,158,11,0.2);">
-                                        <i class="fas fa-star" style="margin-right: 4px;"></i> {{ p.nama }} (Anda)
-                                    </span>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; background: #fef3c7; border: 1px solid #fde68a; padding: 8px 12px; border-radius: 8px;">
+                                        <span style="color: #d97706; font-size: 13px; font-weight: bold;">
+                                            <i class="fas fa-star" style="margin-right: 4px;"></i> {{ p.nama }} (Anda)
+                                        </span>
+                                        
+                                        {% if j.is_past %}
+                                            <span style="font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 4px;
+                                                {% if p.status == 'Hadir' %}background:#dcfce7;color:#059669;
+                                                {% elif p.status == 'Izin' %}background:#fef3c7;color:#d97706;
+                                                {% else %}background:#fee2e2;color:#dc2626;{% endif %}">
+                                                Selesai: {{ p.status | upper }}
+                                            </span>
+                                        {% else %}
+                                            {% if p.id in izin_dict %}
+                                                <span style="font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 4px;
+                                                    {% if izin_dict[p.id] == 'Disetujui' %}background:#dcfce7;color:#059669;
+                                                    {% elif izin_dict[p.id] == 'Ditolak' %}background:#fee2e2;color:#dc2626;
+                                                    {% else %}background:#e0e7ff;color:#4338ca;{% endif %}">
+                                                    Izin: {{ izin_dict[p.id] }}
+                                                </span>
+                                            {% else %}
+                                                <button onclick="bukaModalIzin('{{ p.id }}', '{{ j.acara }} Pkl {{ j.waktu }}')" style="background: white; border: 1px solid #d97706; color: #d97706; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s;">Ajukan Izin</button>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
                                     {% else %}
-                                    <span class="badge" style="background-color: var(--light-blue); color: var(--primary-blue); font-size: 13px; padding: 6px 12px; border-radius: 6px;">
+                                    <span class="badge" style="background-color: var(--light-blue); color: var(--primary-blue); font-size: 13px; padding: 6px 12px; border-radius: 6px; align-self: flex-start; {% if j.is_past %}background-color: #f1f5f9; color: #64748b;{% endif %}">
                                         <i class="fas fa-user-circle" style="margin-right: 4px;"></i> {{ p.nama }}
+                                        
+                                        {% if j.is_past and p.status %}
+                                        <small style="margin-left: 6px; font-weight:bold;
+                                            {% if p.status == 'Hadir' %}color:#059669;
+                                            {% elif p.status == 'Izin' %}color:#d97706;
+                                            {% else %}color:#dc2626;{% endif %}">
+                                            ({{ p.status | upper }})
+                                        </small>
+                                        {% endif %}
                                     </span>
                                     {% endif %}
                                 {% endif %}
@@ -123,6 +157,35 @@
     {% endif %}
 </div>
 
+<div id="izinModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+    <div style="background: white; padding: 24px; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+        <h3 style="margin-top:0; color: #d97706; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;"><i class="fas fa-envelope-open-text"></i> Form Pengajuan Izin</h3>
+        
+        <form action="{{ url_for('jadwal') }}" method="POST">
+            <input type="hidden" name="action" value="ajukan_izin">
+            <input type="hidden" name="jadwal_id" id="izin_jadwal_id">
+            
+            <p style="font-size: 13px; color: var(--text-gray); margin-bottom: 16px;">Anda mengajukan izin tidak bertugas untuk Misa: <strong id="izin_acara_teks"></strong></p>
+            
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Alasan Izin / Halangan</label>
+                <textarea name="alasan" required rows="3" placeholder="Sakit, pergi ke luar kota, dll..." style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit; resize: vertical;"></textarea>
+            </div>
+            
+            <div style="margin-bottom: 24px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Nama Pengganti (Jika Ada)</label>
+                <input type="text" name="pengganti" placeholder="Kosongkan jika belum dapat pengganti" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
+                <small style="color: #ef4444; font-size: 11px; display: block; margin-top: 4px;">*Jika izin ditolak/diabaikan pengurus, Anda tetap akan terkena sanksi alpa otomatis.</small>
+            </div>
+            
+            <div style="display: flex; gap: 12px;">
+                <button type="button" onclick="document.getElementById('izinModal').style.display='none'" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; font-weight: bold; cursor: pointer;">Batal</button>
+                <button type="submit" style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: #d97706; color: white; font-weight: bold; cursor: pointer;">Kirim Permintaan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <style>
 .schedule-container { background: var(--white); padding: 30px; border-radius: 16px; box-shadow: var(--shadow); width: 100%; box-sizing: border-box; }
 .empty-state { text-align: center; padding: 60px 20px; }
@@ -130,22 +193,20 @@
 .schedule-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; width: 100%; }
 .schedule-card { display: flex; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; transition: 0.3s; background: #fafafa; }
 .schedule-card:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); transform: translateY(-2px); border-color: var(--primary-blue); }
+.past-schedule { opacity: 0.8; filter: grayscale(40%); } 
 .date-box { background: var(--primary-blue); color: var(--white); padding: 20px 24px; display: flex; flex-direction: column; justify-content: center; align-items: center; min-width: 90px; }
 .date-box .date { font-size: 28px; font-weight: 800; line-height: 1; }
-.date-box .month { font-size: 14px; font-weight: 600; text-transform: uppercase; margin-top: 4px; }
-.schedule-info { padding: 20px; flex: 1; background: white; }
-.schedule-info h4 { color: var(--text-dark); font-size: 17px; font-weight: 800; margin-bottom: 8px; }
-.badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-.badge-primary { background: #eef2ff; color: var(--primary-blue); }
-.btn-primary { border: none; cursor: pointer; transition: 0.2s; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; }
-.btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
-.btn-outline { border: 1px solid var(--border-color); background: white; color: var(--text-dark); transition: 0.2s; cursor: pointer;}
-.btn-outline:hover { background: #f1f5f9; }
-
-@media (max-width: 768px) {
-    .schedule-container { padding: 20px; }
-    .schedule-list { grid-template-columns: 1fr; }
-    .date-box { padding: 15px; min-width: 80px; }
-}
+.date-box .month { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+.schedule-info { padding: 20px; flex: 1; }
+.badge { display: inline-block; padding: 6px 12px; border-radius: 30px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; }
+.badge-primary { background: #e0e7ff; color: #4338ca; }
 </style>
+
+<script>
+function bukaModalIzin(idJadwal, namaAcara) {
+    document.getElementById('izin_jadwal_id').value = idJadwal;
+    document.getElementById('izin_acara_teks').innerText = namaAcara;
+    document.getElementById('izinModal').style.display = 'flex';
+}
+</script>
 {% endblock %}

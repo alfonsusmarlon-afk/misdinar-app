@@ -89,21 +89,21 @@
                         {% for day in week.senin_kamis %}
                             {% if day.misa %}
                                 {% for wkt, ptgs in day.misa.items() %}
-                                    {% if i >= ptgs|length or ptgs[i].nama == '' %}
+                                    {% if i >= ptgs|length or ptgs[i] == '' %}
                                         <td class="empty-cell"></td>
-
-                                    {% elif ptgs[i].is_user %}
+                                        
+                                    {% elif '.' in ptgs[i].nama or '-' in ptgs[i].nama %}
+                                        <td class="name-cell">
+                                            <div class="name-wrapper manual-slot">
+                                                <span>.....................................</span>
+                                            </div>
+                                        </td>
+                                        
+                                    {% else %}
                                         <td class="name-cell">
                                             <div class="name-wrapper">
                                                 <span>{{ ptgs[i].nama }}</span>
                                                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=2&data={{ ('{\"j\":' ~ ptgs[i].jadwal_id ~ ',\"u\":\"' ~ ptgs[i].username ~ '\"}') | urlencode }}" class="qr-print" crossorigin="anonymous" />
-                                            </div>
-                                        </td>
-
-                                    {% else %}
-                                        <td class="name-cell">
-                                            <div class="name-wrapper name-only">
-                                                <span>{{ ptgs[i].nama }}</span>
                                             </div>
                                         </td>
                                     {% endif %}
@@ -148,21 +148,21 @@
                         {% for day in week.jumat_minggu %}
                             {% if day.misa %}
                                 {% for wkt, ptgs in day.misa.items() %}
-                                    {% if i >= ptgs|length or ptgs[i].nama == '' %}
+                                    {% if i >= ptgs|length or ptgs[i] == '' %}
                                         <td class="empty-cell"></td>
-
-                                    {% elif ptgs[i].is_user %}
+                                        
+                                    {% elif '.' in ptgs[i].nama or '-' in ptgs[i].nama %}
+                                        <td class="name-cell">
+                                            <div class="name-wrapper manual-slot">
+                                                <span>.....................................</span>
+                                            </div>
+                                        </td>
+                                        
+                                    {% else %}
                                         <td class="name-cell">
                                             <div class="name-wrapper">
                                                 <span>{{ ptgs[i].nama }}</span>
                                                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=2&data={{ ('{\"j\":' ~ ptgs[i].jadwal_id ~ ',\"u\":\"' ~ ptgs[i].username ~ '\"}') | urlencode }}" class="qr-print" crossorigin="anonymous" />
-                                            </div>
-                                        </td>
-
-                                    {% else %}
-                                        <td class="name-cell">
-                                            <div class="name-wrapper name-only">
-                                                <span>{{ ptgs[i].nama }}</span>
                                             </div>
                                         </td>
                                     {% endif %}
@@ -189,11 +189,11 @@
 /* CSS Tambahan: Memperbesar QR sedikit agar mudah dishoot kamera */
 .name-cell { vertical-align: middle !important; padding: 6px 8px !important; border: 1px solid #333 !important; }
 .name-wrapper { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; font-size: 11px;}
-.qr-print { width: 45px; height: 45px; object-fit: contain; border-radius: 4px;} 
+.qr-print { width: 45px; height: 45px; object-fit: contain; border-radius: 4px;}
 
-/* TEKS MANUAL (BUKAN AKUN TERDAFTAR) -> TANPA QR, RATA TENGAH */
-.name-only { justify-content: center; }
-.name-only span { text-align: center; width: 100%; }
+/* KHUSUS UNTUK SLOT KOSONG ISI MANUAL */
+.manual-slot { justify-content: center; opacity: 0.5;}
+.manual-slot span { letter-spacing: 2px; }
 
 .filter-box { background: var(--white); padding: 20px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 24px; border-left: 4px solid var(--primary-blue);}
 .form-group label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-dark);}
