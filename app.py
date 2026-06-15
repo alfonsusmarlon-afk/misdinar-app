@@ -63,6 +63,8 @@ def init_db():
     conn.execute('''CREATE TABLE IF NOT EXISTS form_fields (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT NOT NULL, tipe TEXT NOT NULL, wajib INTEGER DEFAULT 1)''')
     conn.execute('''CREATE TABLE IF NOT EXISTS pendaftaran (id INTEGER PRIMARY KEY AUTOINCREMENT, tanggal TEXT NOT NULL, data_respon TEXT NOT NULL, status TEXT DEFAULT 'Menunggu')''')
     conn.execute('''CREATE TABLE IF NOT EXISTS notifikasi (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, pesan TEXT NOT NULL, waktu TEXT NOT NULL, status_baca INTEGER DEFAULT 0, link TEXT)''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS izin_jadwal (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, nama TEXT NOT NULL, jadwal_id INTEGER NOT NULL, tanggal_misa TEXT NOT NULL, acara TEXT NOT NULL, alasan TEXT NOT NULL, pengganti TEXT DEFAULT "-", status TEXT DEFAULT "Menunggu", waktu_pengajuan TEXT NOT NULL, tanggapan_admin TEXT DEFAULT "-")''')
+
     conn.execute('''CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)''')
     
     default_settings = {
@@ -141,7 +143,6 @@ def process_auto_absent(conn):
     settings = dict(conn.execute("SELECT key, value FROM settings").fetchall())
     global_after = int(settings.get('scan_window_after', 180))
     now = datetime.now()
-    
     past_jadwals = conn.execute("SELECT * FROM jadwal WHERE status='Bertugas' AND nama_pengguna != '' AND jadwal_datetime <= ?", (now.strftime('%Y-%m-%d %H:%M:%S'),)).fetchall()
     
     for j in past_jadwals:
@@ -165,7 +166,6 @@ def process_auto_absent(conn):
                 
                 key_sanksi = f"sanksi_alpa_{kategori.lower()}"
                 weight = int(settings.get(key_sanksi, 0))
-                
                 if weight > 0:
                     pelanggaran = f"Alpa - {kategori}"
                     tindakan = f"{weight} Kali Berlutut"
@@ -255,7 +255,7 @@ def index():
         conn.close()
         return render_template('index.html', pengumuman=filtered_pengumuman, jadwal=valid_jadwal, quote=quote, is_logged_in=False)
 
-@app.route('/jadwal')
+@app.route('/jadwal', methods=['GET', 'POST'])
 def jadwal():
     conn = get_db_connection()
     process_auto_absent(conn)
@@ -263,8 +263,33 @@ def jadwal():
     is_logged_in = 'user_id' in session
     user_id = session.get('user_id')
     user_role = session.get('role', '')
-    view_req = request.args.get('view', '')
     
+    if request.method == 'POST' and is_logged_in:
+        action = request.form.get('action')
+        if action == 'ajukan_izin':
+            jadwal_id = request.form.get('jadwal_id')
+            alasan = request.form.get('alasan')
+            pengganti = request.form.get('pengganti', '-')
+            
+            jadwal_target = conn.execute("SELECT * FROM jadwal WHERE id=?", (jadwal_id,)).fetchone()
+            if jadwal_target and jadwal_target['pengguna'] == user_id:
+                waktu_pengajuan = datetime.now().strftime('%d %b %Y, %H:%M')
+                dt_obj = datetime.strptime(jadwal_target['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
+                tgl_misa = dt_obj.strftime('%d %b %Y')
+                acara = f"{jadwal_target['acara']} Pkl {jadwal_target['waktu']}"
+                
+                exist_izin = conn.execute("SELECT 1 FROM izin_jadwal WHERE jadwal_id=? AND username=?", (jadwal_id, user_id)).fetchone()
+                if not exist_izin:
+                    conn.execute('INSERT INTO izin_jadwal (username, nama, jadwal_id, tanggal_misa, acara, alasan, pengganti, status, waktu_pengajuan) VALUES (?, ?, ?, ?, ?, ?, ?, "Menunggu", ?)',
+                                 (user_id, session.get('nama_user'), jadwal_id, tgl_misa, acara, alasan, pengganti, waktu_pengajuan))
+                    create_notification(conn, 'penjadwalan,super admin,bph', f"{session.get('nama_user')} mengajukan izin untuk {acara} tanggal {tgl_misa}.", url_for('kehadiran'))
+                    conn.commit()
+                    flash("Pengajuan izin berhasil dikirim ke pengurus Penjadwalan. Harap tunggu persetujuan.", "success")
+                else:
+                    flash("Anda sudah mengajukan izin untuk jadwal ini sebelumnya.", "error")
+        return redirect(url_for('jadwal'))
+
+    view_req = request.args.get('view', '')
     if is_logged_in:
         if user_role == 'user' or view_req == 'private':
             user_shifts = conn.execute("SELECT DISTINCT jadwal_datetime, acara FROM jadwal WHERE jadwal_datetime >= ? AND status = 'Bertugas' AND pengguna = ?", (threshold_time, user_id)).fetchall()
@@ -290,13 +315,17 @@ def jadwal():
                 else: j['status_kehadiran'] = 'Belum Absen'
                 jadwal_data.append(j)
             view_mode = 'admin_all'
+            
+        user_izin = conn.execute("SELECT jadwal_id, status FROM izin_jadwal WHERE username=?", (user_id,)).fetchall()
+        izin_dict = {i['jadwal_id']: i['status'] for i in user_izin}
+        
         conn.close()
-        return render_template('jadwal.html', jadwal=jadwal_data, user_id=user_id, is_logged_in=True, view_mode=view_mode, user_role=user_role)
+        return render_template('jadwal.html', jadwal=jadwal_data, user_id=user_id, is_logged_in=True, view_mode=view_mode, user_role=user_role, izin_dict=izin_dict)
     else:
         rows = conn.execute("SELECT * FROM jadwal WHERE jadwal_datetime >= ? AND status = 'Bertugas' AND nama_pengguna != '' ORDER BY jadwal_datetime ASC", (threshold_time,)).fetchall()
         jadwal_data = [dict(r) for r in rows]
         conn.close()
-        return render_template('jadwal.html', jadwal=jadwal_data, user_id=None, is_logged_in=False, view_mode='public', user_role=None)
+        return render_template('jadwal.html', jadwal=jadwal_data, user_id=None, is_logged_in=False, view_mode='public', user_role=None, izin_dict={})
 
 @app.route('/scan-absen')
 @login_required
@@ -390,6 +419,46 @@ def kehadiran():
         item_id = request.form.get('id', '')
         target_username = request.form.get('username') or request.form.get('username_hidden')
         
+        # --- BLOK BARU: ACC IZIN DAN UBAH JADWAL ---
+        if action == 'tanggapi_izin':
+            izin_id = request.form.get('izin_id')
+            status_tanggapan = request.form.get('status_tanggapan')
+            pesan_admin = request.form.get('tanggapan_admin', '')
+            pengganti_username = request.form.get('pengganti_username', '') 
+            
+            izin_data = conn.execute("SELECT * FROM izin_jadwal WHERE id=?", (izin_id,)).fetchone()
+            if izin_data:
+                conn.execute("UPDATE izin_jadwal SET status=?, tanggapan_admin=? WHERE id=?", (status_tanggapan, pesan_admin, izin_id))
+                
+                if status_tanggapan == 'Disetujui':
+                    jadwal_target = conn.execute("SELECT * FROM jadwal WHERE id=?", (izin_data['jadwal_id'],)).fetchone()
+                    if jadwal_target:
+                        j_dict = dict(jadwal_target)
+                        dt_obj = datetime.strptime(j_dict['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
+                        tgl = dt_obj.strftime('%Y-%m-%d')
+                        keg = f"{j_dict['acara']} Pkl {j_dict['waktu']}"
+                        
+                        # Set yang izin menjadi 'Izin' supaya tidak dihukum
+                        conn.execute('INSERT INTO kehadiran (username, nama, tanggal, kegiatan, status, keterangan, waktu_scan) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+                                     (izin_data['username'], izin_data['nama'], tgl, keg, 'Izin', f"Izin Disetujui: {izin_data['alasan']}", 'Sistem (ACC)'))
+                        
+                        # Jika Admin juga memilih orang penggantinya di Modal
+                        if pengganti_username:
+                            user_pg = conn.execute("SELECT nama FROM users WHERE username=?", (pengganti_username,)).fetchone()
+                            if user_pg:
+                                nama_pg = user_pg['nama']
+                                # Ganti nama pengguna di tabel jadwal
+                                conn.execute("UPDATE jadwal SET pengguna=?, nama_pengguna=? WHERE id=?", (pengganti_username, nama_pg, izin_data['jadwal_id']))
+                                # NOTIFIKASI TEPAT SEPERTI YANG ANDA MINTA
+                                create_notification(conn, izin_data['username'], f"Izin Disetujui! Untuk Misa {keg}, kamu sudah diganti oleh {nama_pg}.", url_for('jadwal', view='private'))
+                                create_notification(conn, pengganti_username, f"Anda ditugaskan pada Misa {keg} menggantikan {izin_data['nama']}.", url_for('jadwal', view='private'))
+                        else:
+                            create_notification(conn, izin_data['username'], f"Pengajuan izin Anda untuk Misa {keg} telah Disetujui.", url_for('jadwal', view='private'))
+                else:
+                    create_notification(conn, izin_data['username'], f"Pengajuan izin Anda untuk Misa {izin_data['tanggal_misa']} telah Ditolak. {pesan_admin}", url_for('jadwal', view='private'))
+                conn.commit()
+            return redirect(url_for('kehadiran'))
+
         if target_username == user_id and action != 'hapus':
             flash("Keamanan Sistem: Anda tidak diizinkan mengedit status absensi milik Anda sendiri.", "error")
             return redirect(url_for('kehadiran'))
@@ -440,9 +509,11 @@ def kehadiran():
 
     users_list = conn.execute("SELECT username, nama FROM users WHERE role != 'super admin' ORDER BY nama ASC").fetchall() if user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] else []
     
+    data_izin = []
     if user_role in ['super admin', 'bph', 'penjadwalan', 'pelatihan']:
         jadwals = conn.execute("SELECT * FROM jadwal WHERE status='Bertugas' AND nama_pengguna != ''").fetchall()
         kehadirans = conn.execute("SELECT * FROM kehadiran").fetchall()
+        data_izin = conn.execute("SELECT * FROM izin_jadwal ORDER BY id DESC").fetchall()
     else:
         jadwals = conn.execute("SELECT * FROM jadwal WHERE status='Bertugas' AND pengguna = ?", (user_id,)).fetchall()
         kehadirans = conn.execute("SELECT * FROM kehadiran WHERE username=?", (user_id,)).fetchall()
@@ -477,7 +548,7 @@ def kehadiran():
 
     combined = sorted(combined, key=lambda x: (x['tanggal'], x['kegiatan']), reverse=True)
     conn.close()
-    return render_template('kehadiran.html', kehadiran=combined, users=users_list, role=user_role)
+    return render_template('kehadiran.html', kehadiran=combined, data_izin=data_izin, users=users_list, role=user_role)
 
 @app.route('/hukuman', methods=['GET', 'POST'])
 @login_required
@@ -776,15 +847,6 @@ def galeri():
         
     return render_template('galeri.html', galeri=get_filtered_items('galeri', user_id, user_role), role=user_role, users_by_role=get_grouped_users())
 
-@app.route('/kontak')
-def kontak():
-    conn = get_db_connection()
-    pengurus_db = conn.execute("SELECT nama, role, no_hp FROM users WHERE role IN ('bph', 'penjadwalan', 'pelatihan') ORDER BY role ASC, nama ASC").fetchall()
-    conn.close()
-    pengurus_by_role = {}
-    for p in pengurus_db: pengurus_by_role.setdefault(p['role'], []).append(dict(p))
-    return render_template('kontak.html', pengurus_by_role=pengurus_by_role)
-
 @app.route('/penjadwalan', methods=['GET', 'POST'])
 @login_required
 def penjadwalan():
@@ -875,15 +937,23 @@ def penjadwalan():
                         old_r = existing_map[username].pop(0)
                         conn.execute('UPDATE jadwal SET jadwal_datetime=?, tanggal=?, bulan=?, hari=?, waktu=?, acara=?, kategori_misa=?, nama_pengguna=? WHERE id=?', 
                                      (jadwal_dt.strftime('%Y-%m-%d %H:%M:%S'), dt.strftime('%d'), months_id[dt.month], hari, wkt, acara, kategori, nama_pengguna, old_r['id']))
+                        
+                        # --- NOTIFIKASI OTOMATIS JIKA ADMIN MENGGANTI ORANG VIA MENU PENJADWALAN ---
+                        if old_r['pengguna'] != username and old_r['pengguna']:
+                            create_notification(conn, old_r['pengguna'], f"Untuk tugas Misa {old_ac}, kamu sudah diganti oleh {nama_pengguna}.", url_for('jadwal', view='private'))
+                            create_notification(conn, username, f"Anda ditugaskan pada Misa {acara} menggantikan {old_r['nama_pengguna']}.", url_for('jadwal', view='private'))
                     else:
                         conn.execute('INSERT INTO jadwal (jadwal_datetime, tanggal, bulan, hari, waktu, acara, status, pengguna, nama_pengguna, jenis, kategori_misa, scan_before, scan_after) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', 
                                      (jadwal_dt.strftime('%Y-%m-%d %H:%M:%S'), dt.strftime('%d'), months_id[dt.month], hari, wkt, acara, status, username, nama_pengguna, old_jn, kategori, sb, sa))
                 
                 for u_key, leftover in existing_map.items():
-                    for r in leftover: conn.execute("DELETE FROM jadwal WHERE id=?", (r['id'],))
+                    for r in leftover: 
+                        if r['pengguna']:
+                            create_notification(conn, r['pengguna'], f"Jadwal Anda untuk Misa {old_ac} telah dibatalkan/dihapus oleh pengurus.", url_for('jadwal', view='private'))
+                        conn.execute("DELETE FROM jadwal WHERE id=?", (r['id'],))
                         
                 conn.commit()
-                flash("Jadwal berhasil diperbarui! QR Code otomatis menyesuaikan dengan data terbaru.", "success")
+                flash("Jadwal berhasil diperbarui! Notifikasi otomatis terkirim ke anggota yang diganti.", "success")
             return redirect(url_for('penjadwalan'))
         
         elif action == 'buat_matriks':
@@ -1052,9 +1122,6 @@ def penjadwalan():
     conn.close()
     return render_template('penjadwalan.html', users=users_db, user_names=user_names, history=history, global_before=global_before, global_after=global_after, settings=settings_data)
 
-# ==========================================
-# CETAK JADWAL — dengan is_user untuk QR
-# ==========================================
 @app.route('/cetak-jadwal')
 @login_required
 def cetak_jadwal():
@@ -1070,10 +1137,6 @@ def cetak_jadwal():
         threshold_time = datetime.now().strftime('%Y-%m-%d 00:00:00')
         end_limit = (datetime.now() + timedelta(days=60)).strftime('%Y-%m-%d 23:59:59')
         rows = conn.execute('SELECT * FROM jadwal WHERE jadwal_datetime >= ? AND jadwal_datetime <= ? ORDER BY jadwal_datetime ASC', (threshold_time, end_limit)).fetchall()
-
-    # Ambil username terdaftar untuk membedakan petugas asli (dapat QR)
-    # vs teks manual seperti "." atau nama tidak terdaftar (tanpa QR)
-    valid_usernames = {row['username'] for row in conn.execute("SELECT username FROM users").fetchall()}
     conn.close()
 
     valid_dts = [datetime.strptime(r['jadwal_datetime'], '%Y-%m-%d %H:%M:%S') for r in rows if r['nama_pengguna'] != '']
@@ -1100,14 +1163,7 @@ def cetak_jadwal():
         wkt = r['waktu']
         if wkt not in jadwal_dict[date_key]['misa']: jadwal_dict[date_key]['misa'][wkt] = []
         if r['nama_pengguna'] != '':
-            # is_user=True  → petugas terdaftar → tampil nama + QR Code
-            # is_user=False → teks manual / non-anggota → tampil nama saja, tanpa QR
-            jadwal_dict[date_key]['misa'][wkt].append({
-                'nama'     : r['nama_pengguna'],
-                'username' : r['pengguna'],
-                'jadwal_id': r['id'],
-                'is_user'  : r['pengguna'] in valid_usernames
-            })
+            jadwal_dict[date_key]['misa'][wkt].append({'nama': r['nama_pengguna'], 'username': r['pengguna'], 'jadwal_id': r['id']})
             jadwal_dict[date_key]['has_petugas'] = True
 
     for d_key in jadwal_dict: jadwal_dict[d_key]['misa'] = dict(sorted(jadwal_dict[d_key]['misa'].items()))
@@ -1138,15 +1194,12 @@ def cetak_jadwal():
             for wkt, ptgs in day['misa'].items():
                 if len(ptgs) > max_jm: max_jm = len(ptgs)
         w['max_slots_jm'] = max_jm
-        # Padding dengan dict kosong agar template tidak error saat akses .nama / .is_user
         for day in w['senin_kamis']:
             for wkt, ptgs in day['misa'].items():
-                while len(ptgs) < max_sk:
-                    ptgs.append({'nama': '', 'username': '', 'jadwal_id': '', 'is_user': False})
+                while len(ptgs) < max_sk: ptgs.append("")
         for day in w['jumat_minggu']:
             for wkt, ptgs in day['misa'].items():
-                while len(ptgs) < max_jm:
-                    ptgs.append({'nama': '', 'username': '', 'jadwal_id': '', 'is_user': False})
+                while len(ptgs) < max_jm: ptgs.append("")
         final_weeks.append(w)
     return render_template('cetak_jadwal.html', weeks=final_weeks, s_str=s_str, e_str=e_str, periode=periode_str)
 

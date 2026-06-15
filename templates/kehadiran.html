@@ -8,7 +8,7 @@
         <h2>Absensi & Rekap Kehadiran</h2>
         <p>
             {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-            Kelola data absensi, catat kehadiran manual, atau ubah status izin anggota.
+            Kelola izin anggota, data absensi manual, dan ubah status kehadiran.
             {% else %}
             Pantau riwayat kehadiran Anda dalam melayani Misa dan kegiatan lainnya.
             {% endif %}
@@ -20,6 +20,114 @@
     </button>
     {% endif %}
 </div>
+
+{% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] and data_izin %}
+<div class="card" style="background: white; padding: 24px; border-radius: 16px; box-shadow: var(--shadow); margin-bottom: 30px; border-left: 5px solid #d97706;">
+    <h3 style="margin-top:0; color: #b45309;"><i class="fas fa-envelope-open-text"></i> Menunggu Persetujuan Izin</h3>
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; text-align: left; border-collapse: collapse; min-width: 800px; font-size: 13px;">
+            <thead>
+                <tr style="border-bottom: 2px solid #e2e8f0; color: var(--text-gray);">
+                    <th style="padding: 10px;">Waktu Request</th>
+                    <th style="padding: 10px;">Nama Pemohon</th>
+                    <th style="padding: 10px;">Jadwal Misa</th>
+                    <th style="padding: 10px;">Alasan & Pengganti</th>
+                    <th style="padding: 10px;">Status</th>
+                    <th style="padding: 10px; text-align: center;">Tindakan</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for iz in data_izin %}
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 10px;">{{ iz.waktu_pengajuan }}</td>
+                    <td style="padding: 10px; font-weight: bold;">{{ iz.nama }}</td>
+                    <td style="padding: 10px; color: var(--primary-blue); font-weight: 600;">{{ iz.acara }}<br><small style="color: #64748b;">Tgl: {{ iz.tanggal_misa }}</small></td>
+                    <td style="padding: 10px;">
+                        <i>"{{ iz.alasan }}"</i><br>
+                        <span style="font-size: 11px; background:#f1f5f9; padding:2px 6px; border-radius:4px;">Ganti: {{ iz.pengganti }}</span>
+                    </td>
+                    <td style="padding: 10px;">
+                        <span style="font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 4px;
+                            {% if iz.status == 'Disetujui' %}background:#dcfce7;color:#059669;
+                            {% elif iz.status == 'Ditolak' %}background:#fee2e2;color:#dc2626;
+                            {% else %}background:#fef3c7;color:#d97706;{% endif %}">
+                            {{ iz.status }}
+                        </span>
+                    </td>
+                    <td style="padding: 10px; text-align: center;">
+                        {% if iz.status == 'Menunggu' %}
+                        <button onclick="bukaModalResponIzin('{{ iz.id }}', '{{ iz.nama }}', '{{ iz.acara }}')" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">Tanggapi</button>
+                        {% else %}
+                        <span style="font-size: 11px; color: #94a3b8;">Selesai diproses</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="responIzinModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+    <div style="background: white; padding: 24px; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+        <h3 style="margin-top:0; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;"><i class="fas fa-check-square" style="color: #3b82f6;"></i> Proses Izin Anggota</h3>
+        
+        <form action="{{ url_for('kehadiran') }}" method="POST">
+            <input type="hidden" name="action" value="tanggapi_izin">
+            <input type="hidden" name="izin_id" id="respon_izin_id">
+            
+            <p style="font-size: 13px; color: var(--text-gray); margin-bottom: 16px;">Beri keputusan untuk pengajuan izin <strong id="respon_nama_teks"></strong> pada Misa <strong id="respon_acara_teks"></strong>.</p>
+            
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Keputusan</label>
+                <select name="status_tanggapan" id="statusTanggapanSelect" onchange="togglePenggantiField()" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
+                    <option value="Disetujui">Setujui Izin</option>
+                    <option value="Ditolak">Tolak Izin (Wajib datang / alpa)</option>
+                </select>
+            </div>
+
+            <div id="penggantiField" style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px; color: #10b981;">Pilih Pengganti (Opsional)</label>
+                <select name="pengganti_username" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
+                    <option value="">-- Kosongkan jika edit manual nanti di penjadwalan --</option>
+                    {% for u in users %}
+                    <option value="{{ u.username }}">{{ u.nama }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div style="margin-bottom: 24px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Pesan Balasan ke Anggota (Opsional)</label>
+                <input type="text" name="tanggapan_admin" placeholder="Misal: Oke, jadwalku sudah saya ubah." style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
+            </div>
+            
+            <div style="display: flex; gap: 12px;">
+                <button type="button" onclick="document.getElementById('responIzinModal').style.display='none'" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; font-weight: bold; cursor: pointer;">Batal</button>
+                <button type="submit" style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: #10b981; color: white; font-weight: bold; cursor: pointer;">Simpan Keputusan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function bukaModalResponIzin(id, nama, acara) {
+    document.getElementById('respon_izin_id').value = id;
+    document.getElementById('respon_nama_teks').innerText = nama;
+    document.getElementById('respon_acara_teks').innerText = acara;
+    document.getElementById('responIzinModal').style.display = 'flex';
+}
+
+function togglePenggantiField() {
+    var status = document.getElementById('statusTanggapanSelect').value;
+    var field = document.getElementById('penggantiField');
+    if (status === 'Disetujui') {
+        field.style.display = 'block';
+    } else {
+        field.style.display = 'none';
+    }
+}
+</script>
+{% endif %}
 
 <div class="card" style="background: white; padding: 24px; border-radius: 16px; box-shadow: var(--shadow); overflow-x: auto;">
     <table style="width: 100%; text-align: left; border-collapse: collapse; min-width: 900px; font-size: 14px;">
@@ -200,6 +308,7 @@ function openEditModal(id, username, nama, tanggal, kegiatan, status, keterangan
 
 window.onclick = function(event) {
     if (event.target == document.getElementById('kehadiranModal')) document.getElementById('kehadiranModal').style.display = "none";
+    if (event.target == document.getElementById('responIzinModal')) document.getElementById('responIzinModal').style.display = "none";
 }
 </script>
 {% endif %}
