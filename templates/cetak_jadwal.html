@@ -24,7 +24,7 @@
             <input type="hidden" name="target_start" value="{{ s_str }}">
             <input type="hidden" name="target_end" value="{{ e_str }}">
             <button type="submit" class="btn-primary no-print" style="display: flex; align-items: center; gap: 8px; background-color: #10b981; border: none;">
-                <i class="fas fa-paper-plane"></i> Apply ke Web Pelayanan
+                <i class="fas fa-paper-plane"></i> Apply ke Web
             </button>
         </form>
     </div>
@@ -40,7 +40,7 @@
             <label>Sampai Tanggal:</label>
             <input type="date" name="target_end" required value="{{ request.args.get('target_end', '') }}">
         </div>
-        <button type="submit" class="btn-outline" style="padding: 11px 20px;"><i class="fas fa-filter"></i> Terapkan Filter</button>
+        <button type="submit" class="btn-outline" style="padding: 11px 20px;"><i class="fas fa-filter"></i> Filter</button>
     </form>
 </div>
 
@@ -205,9 +205,9 @@
 .matriks-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;}
 
 /* Default Th Td untuk header */
-.matriks-table th { border: 1px solid #333; padding: 8px; text-align: center; }
-.header-day { background-color: #f1f5f9; font-weight: bold; text-transform: uppercase; padding: 10px !important;}
-.header-time { background-color: #f8fafc; font-weight: bold; }
+.matriks-table th { border: 1px solid #333; padding: 8px; text-align: center; color: black !important;}
+.header-day { background-color: #f1f5f9 !important; font-weight: bold; text-transform: uppercase; padding: 10px !important;}
+.header-time { background-color: #f8fafc !important; font-weight: bold; }
 
 /* INI ADALAH KUNCI UNTUK MENGHILANGKAN KOTAK KOSONG YANG TIDAK TERPAKAI */
 .empty-cell { background-color: transparent !important; border: none !important; }
@@ -215,15 +215,16 @@
 @media print {
     body * { visibility: hidden; }
     .print-container, .print-container * { visibility: visible; }
-    .print-container { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; box-shadow: none; }
+    .print-container { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; box-shadow: none; background: white;}
     .no-print { display: none !important; }
     .page-break { page-break-after: always; }
     @page { size: landscape; margin: 1cm; }
     
     /* Mencegah printer secara otomatis menambahkan border kembali */
     .empty-cell { border: none !important; background-color: transparent !important; }
-    .name-cell { border: 1px solid #000 !important; height: 50px; }
-    .matriks-table th { border: 1px solid #000 !important; }
+    .name-cell { border: 1px solid #000 !important; height: 50px; color: black !important;}
+    .name-wrapper span { color: black !important; }
+    .matriks-table th { border: 1px solid #000 !important; color: black !important; -webkit-print-color-adjust: exact;}
 }
 </style>
 {% endblock %}

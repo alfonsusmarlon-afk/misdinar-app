@@ -5,292 +5,273 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}MISDINAR APP{% endblock %}</title>
     
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <link rel="manifest" href="{{ url_for('manifest') }}">
+    <meta name="theme-color" content="#1e40af">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Misdinar">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3075/3075908.png">
 
     <style>
-        :root {
-            /* Tema Terang (Default) */
-            --primary-blue: #2563eb;
-            --dark-blue: #1e40af;
-            --light-blue: #dbeafe;
-            --background: #f8fafc;
-            --white: #ffffff;
-            --text-dark: #1e293b;
-            --text-gray: #64748b;
-            --border-color: #e2e8f0;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --sidebar-width: 260px;
-        }
-
-        /* Tema Gelap (Dark Mode) */
+        /* Dark Mode Variables untuk style.css */
         body.dark-mode {
-            --background: #0f172a;
+            --bg-body: #0f172a;
+            --bg-gray: #1e293b;
             --white: #1e293b;
-            --text-dark: #f1f5f9;
+            --text-dark: #f8fafc;
             --text-gray: #94a3b8;
             --border-color: #334155;
             --light-blue: #1e3a8a;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
-            color: var(--text-dark);
+            --primary-blue: #3b82f6;
+            --shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
 
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Nunito', sans-serif;
-            background-color: var(--background);
-            color: var(--text-dark);
-            display: flex;
-            min-height: 100vh;
-            overflow-x: hidden;
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-
-        a { color: var(--primary-blue); text-decoration: none; }
-
-        .card { background: var(--white); border-radius: 12px; box-shadow: var(--shadow); transition: 0.3s ease; }
-        .btn-primary { background: var(--primary-blue); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .btn-outline { background: transparent; color: var(--primary-blue); border: 1px solid var(--primary-blue); padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-
-        .sidebar { width: var(--sidebar-width); background-color: var(--white); border-right: 1px solid var(--border-color); position: fixed; height: 100vh; overflow-y: auto; transition: all 0.3s ease; z-index: 1000; display: flex; flex-direction: column; }
-        .sidebar-header { padding: 24px; text-align: center; border-bottom: 1px solid var(--border-color); }
-        .sidebar-header h2 { margin: 0; color: var(--primary-blue); font-weight: 800; font-size: 24px; letter-spacing: 1px; }
-        .sidebar-menu { list-style: none; padding: 16px 0; margin: 0; flex: 1; }
-        .sidebar-menu li { margin-bottom: 4px; }
-        .sidebar-menu a { display: flex; align-items: center; padding: 12px 24px; color: var(--text-gray); text-decoration: none; font-weight: 600; transition: all 0.2s; }
-        .sidebar-menu a:hover, .sidebar-menu a.active { background-color: var(--light-blue); color: var(--primary-blue); border-right: 4px solid var(--primary-blue); }
-        .sidebar-menu i { width: 24px; font-size: 18px; margin-right: 12px; text-align: center; }
-        .menu-label { padding: 12px 24px 8px; font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 800; letter-spacing: 1px; }
-
-        .main-wrapper { flex: 1; margin-left: var(--sidebar-width); display: flex; flex-direction: column; min-width: 0; transition: all 0.3s ease; }
-        .topbar { height: 70px; background-color: var(--white); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; position: sticky; top: 0; z-index: 99; transition: 0.3s ease;}
-        .topbar-left { display: flex; align-items: center; gap: 16px; }
-        .menu-toggle { display: none; background: none; border: none; font-size: 24px; color: var(--text-dark); cursor: pointer; }
-        .topbar-right { display: flex; align-items: center; gap: 20px; }
-
-        .theme-btn { background: none; border: none; font-size: 20px; color: var(--text-gray); cursor: pointer; transition: 0.2s; padding: 8px;}
-        .theme-btn:hover { color: var(--primary-blue); }
-
+        /* Notifikasi & Aksesoris yang belum ada di style.css */
         .notif-container { position: relative; }
         .notif-btn { background: none; border: none; font-size: 20px; color: var(--text-gray); cursor: pointer; position: relative; padding: 8px; transition: 0.2s; }
         .notif-btn:hover { color: var(--primary-blue); }
-        .notif-badge { position: absolute; top: 0; right: 0; background-color: #ef4444; color: white; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 10px; border: 2px solid white; }
-        .notif-dropdown { display: none; position: absolute; top: 100%; right: 0; width: 320px; background: var(--white); border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid var(--border-color); overflow: hidden; z-index: 1000; }
+        .notif-badge { position: absolute; top: 0; right: 0; background-color: #ef4444; color: white; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 10px; border: 2px solid var(--white); }
+        .notif-dropdown { display: none; position: absolute; top: 100%; right: 0; width: 320px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow); border: 1px solid var(--border-color); overflow: hidden; z-index: 1000; }
         .notif-dropdown.show { display: block; }
-        .notif-header { padding: 16px; background: var(--background); border-bottom: 1px solid var(--border-color); font-weight: bold; display: flex; justify-content: space-between; }
+        .notif-header { padding: 16px; background: var(--bg-gray); border-bottom: 1px solid var(--border-color); font-weight: 600; font-size: 14px; }
         .notif-body { max-height: 350px; overflow-y: auto; }
         .notif-item { padding: 16px; border-bottom: 1px solid var(--border-color); display: block; text-decoration: none; color: var(--text-dark); transition: 0.2s; }
-        .notif-item:hover { background: var(--background); }
+        .notif-item:hover { background: var(--bg-body); }
         .notif-item.unread { background: var(--light-blue); }
         .notif-time { font-size: 11px; color: var(--text-gray); margin-top: 6px; display: block; }
 
-        .user-profile { display: flex; align-items: center; gap: 12px; font-weight: bold; color: var(--text-dark); text-decoration: none; }
-        .user-avatar { width: 36px; height: 36px; border-radius: 50%; background-color: var(--primary-blue); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; object-fit: cover; }
-
-        .content { padding: 30px; }
-        .flash-messages { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
-        .toast { padding: 16px 20px; border-radius: 8px; color: white; font-weight: bold; display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); animation: slideIn 0.3s ease-out forwards; }
-        .toast.success { background-color: #10b981; }
-        .toast.error { background-color: #ef4444; }
-
-        /* Tabel Responsif untuk Dark Mode */
-        table th { color: var(--text-dark); }
-        table td { color: var(--text-gray); }
-
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-        @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); }
-            .sidebar.show { transform: translateX(0); box-shadow: 5px 0 15px rgba(0,0,0,0.1); }
-            .main-wrapper { margin-left: 0; }
-            .menu-toggle { display: block; }
-            .content { padding: 20px 16px; }
-            .notif-dropdown { width: 280px; right: -50px; }
+        /* PWA Install Banner Style */
+        #pwaInstallBanner {
+            display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--primary-blue); color: white; padding: 12px 24px; border-radius: 30px;
+            box-shadow: var(--shadow); z-index: 9999; font-size: 14px; font-weight: bold; align-items: center; gap: 12px;
+            cursor: pointer; animation: slideUp 0.5s ease-out;
         }
+        @keyframes slideUp { from { bottom: -50px; opacity: 0; } to { bottom: 20px; opacity: 1; } }
     </style>
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').then(function(registration) {
+            console.log('ServiceWorker PWA siap berjalan di scope: ', registration.scope);
+          }, function(err) {
+            console.log('ServiceWorker PWA gagal didaftarkan: ', err);
+          });
+        });
+      }
+    </script>
 </head>
 <body>
-
-    <nav class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h2>MISDINAR</h2>
-        </div>
-        <ul class="sidebar-menu">
-            <li>
-                <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">
-                    <i class="fas fa-home"></i> <span>Dashboard</span>
-                </a>
-            </li>
-
-            {% if session.get('user_id') %}
-                <div class="menu-label">Pelayanan</div>
-                <li>
-                    <a href="{{ url_for('jadwal') }}" class="{% if request.endpoint == 'jadwal' %}active{% endif %}">
-                        <i class="fas fa-calendar-alt"></i> <span>Jadwal Misa</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('titip') }}" class="{% if request.endpoint == 'titip' %}active{% endif %}">
-                        <i class="fas fa-hand-paper"></i> <span>Titip Absen</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('scan_absen') }}" class="{% if request.endpoint == 'scan_absen' %}active{% endif %}">
-                        <i class="fas fa-qrcode"></i> <span>Scan Kehadiran</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('kehadiran') }}" class="{% if request.endpoint == 'kehadiran' %}active{% endif %}">
-                        <i class="fas fa-clipboard-check"></i> <span>Rekap Absensi</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('hukuman') }}" class="{% if request.endpoint == 'hukuman' %}active{% endif %}">
-                        <i class="fas fa-gavel"></i> <span>Sanksi & Hukuman</span>
-                    </a>
-                </li>
-            {% else %}
-                <div class="menu-label">Akses Publik</div>
-                <li>
-                    <a href="{{ url_for('jadwal') }}" class="{% if request.endpoint == 'jadwal' %}active{% endif %}">
-                        <i class="fas fa-calendar-alt"></i> <span>Lihat Jadwal</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('pendaftaran') }}" class="{% if request.endpoint == 'pendaftaran' %}active{% endif %}">
-                        <i class="fas fa-user-plus"></i> <span>Daftar Anggota Baru</span>
-                    </a>
-                </li>
-            {% endif %}
-
-            <!-- INFORMASI UMUM SELALU ADA -->
-            <div class="menu-label">Informasi</div>
-            <li>
-                <a href="{{ url_for('pengumuman') }}" class="{% if request.endpoint == 'pengumuman' %}active{% endif %}">
-                    <i class="fas fa-bullhorn"></i> <span>Pengumuman</span>
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('dokumen') }}" class="{% if request.endpoint == 'dokumen' %}active{% endif %}">
-                    <i class="fas fa-file-pdf"></i> <span>Dokumen Paroki</span>
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('galeri') }}" class="{% if request.endpoint == 'galeri' %}active{% endif %}">
-                    <i class="fas fa-images"></i> <span>Galeri Kegiatan</span>
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('kontak') }}" class="{% if request.endpoint == 'kontak' %}active{% endif %}">
-                    <i class="fas fa-address-book"></i> <span>Kontak Pengurus</span>
-                </a>
-            </li>
-
-            {% if session.get('role') in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-            <div class="menu-label">Menu Admin</div>
-                {% if session.get('role') in ['super admin', 'penjadwalan'] %}
-                <li>
-                    <a href="{{ url_for('penjadwalan') }}" class="{% if request.endpoint == 'penjadwalan' %}active{% endif %}">
-                        <i class="fas fa-calendar-plus"></i> <span>Susun Jadwal</span>
-                    </a>
-                </li>
-                {% endif %}
-                <li>
-                    <a href="{{ url_for('anggota') }}" class="{% if request.endpoint == 'anggota' %}active{% endif %}">
-                        <i class="fas fa-users-cog"></i> <span>Kelola Anggota</span>
-                    </a>
-                </li>
-                {% if session.get('role') in ['super admin', 'bph'] %}
-                <li>
-                    <a href="{{ url_for('kelola_pendaftaran') }}" class="{% if request.endpoint == 'kelola_pendaftaran' %}active{% endif %}">
-                        <i class="fas fa-user-plus"></i> <span>Data Pendaftar Baru</span>
-                    </a>
-                </li>
-                {% endif %}
-            {% endif %}
-        </ul>
-    </nav>
-
-    <div class="main-wrapper" id="mainWrapper">
-        <header class="topbar no-print">
-            <div class="topbar-left">
-                <button class="menu-toggle" id="menuToggle">
-                    <i class="fas fa-bars"></i>
-                </button>
+    <div class="app-container">
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-icon"><i class="fas fa-church"></i></div>
+                <div class="logo-text">
+                    <h2>MISDINAR</h2>
+                    <p>Sistem Pelayanan</p>
+                </div>
             </div>
-
-            <div class="topbar-right">
-                <!-- TOMBOL THEME DARK / LIGHT MODE -->
-                <button class="theme-btn" id="themeToggle" title="Ganti Tema">
-                    <i class="fas fa-moon"></i>
-                </button>
+            
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">
+                        <i class="fas fa-home"></i> <span>Dashboard</span>
+                    </a>
+                </li>
 
                 {% if session.get('user_id') %}
-                <div class="notif-container">
-                    <button class="notif-btn" id="notifBtn">
-                        <i class="fas fa-bell"></i>
-                        {% if unread_count > 0 %}
-                        <span class="notif-badge" id="notifBadge">{{ unread_count }}</span>
+                    <li style="padding: 12px 24px 4px; font-size: 11px; font-weight: 700; color: var(--text-gray); text-transform: uppercase;">Pelayanan</li>
+                    <li>
+                        <a href="{{ url_for('jadwal') }}" class="{% if request.endpoint == 'jadwal' %}active{% endif %}">
+                            <i class="fas fa-calendar-alt"></i> <span>Jadwal Misa</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('titip') }}" class="{% if request.endpoint == 'titip' %}active{% endif %}">
+                            <i class="fas fa-hand-paper"></i> <span>Titip Absen</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('scan_absen') }}" class="{% if request.endpoint == 'scan_absen' %}active{% endif %}">
+                            <i class="fas fa-qrcode"></i> <span>Scan Kehadiran</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('kehadiran') }}" class="{% if request.endpoint == 'kehadiran' %}active{% endif %}">
+                            <i class="fas fa-clipboard-check"></i> <span>Rekap Absensi</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('hukuman') }}" class="{% if request.endpoint == 'hukuman' %}active{% endif %}">
+                            <i class="fas fa-gavel"></i> <span>Sanksi & Hukuman</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li style="padding: 12px 24px 4px; font-size: 11px; font-weight: 700; color: var(--text-gray); text-transform: uppercase;">Akses Publik</li>
+                    <li>
+                        <a href="{{ url_for('jadwal') }}" class="{% if request.endpoint == 'jadwal' %}active{% endif %}">
+                            <i class="fas fa-calendar-alt"></i> <span>Lihat Jadwal</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('pendaftaran') }}" class="{% if request.endpoint in ['pendaftaran', 'isi_formulir'] %}active{% endif %}">
+                            <i class="fas fa-user-plus"></i> <span>Form Pendaftaran</span>
+                        </a>
+                    </li>
+                {% endif %}
+
+                <li style="padding: 12px 24px 4px; font-size: 11px; font-weight: 700; color: var(--text-gray); text-transform: uppercase;">Informasi</li>
+                <li>
+                    <a href="{{ url_for('pengumuman') }}" class="{% if request.endpoint == 'pengumuman' %}active{% endif %}">
+                        <i class="fas fa-bullhorn"></i> <span>Pengumuman</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('dokumen') }}" class="{% if request.endpoint == 'dokumen' %}active{% endif %}">
+                        <i class="fas fa-file-pdf"></i> <span>Dokumen Paroki</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('galeri') }}" class="{% if request.endpoint == 'galeri' %}active{% endif %}">
+                        <i class="fas fa-images"></i> <span>Galeri Kegiatan</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('kontak') }}" class="{% if request.endpoint == 'kontak' %}active{% endif %}">
+                        <i class="fas fa-address-book"></i> <span>Kontak Pengurus</span>
+                    </a>
+                </li>
+
+                {% if session.get('role') in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+                    <li style="padding: 12px 24px 4px; font-size: 11px; font-weight: 700; color: var(--text-gray); text-transform: uppercase;">Menu Admin</li>
+                    {% if session.get('role') in ['super admin', 'penjadwalan'] %}
+                    <li>
+                        <a href="{{ url_for('penjadwalan') }}" class="{% if request.endpoint == 'penjadwalan' %}active{% endif %}">
+                            <i class="fas fa-calendar-plus"></i> <span>Susun Jadwal</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li>
+                        <a href="{{ url_for('anggota') }}" class="{% if request.endpoint == 'anggota' %}active{% endif %}">
+                            <i class="fas fa-users-cog"></i> <span>Kelola Anggota</span>
+                        </a>
+                    </li>
+                    {% if session.get('role') in ['super admin', 'bph'] %}
+                    <li>
+                        <a href="{{ url_for('kelola_pendaftaran') }}" class="{% if request.endpoint == 'kelola_pendaftaran' %}active{% endif %}">
+                            <i class="fas fa-file-signature"></i> <span>Kelola Formulir</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                {% endif %}
+            </ul>
+
+            {% if session.get('user_id') %}
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <a href="{{ url_for('pengaturan') }}" class="sidebar-avatar" title="Pengaturan">
+                        {% if session.get('foto_profil') %}
+                            <img src="{{ url_for('static', filename=session.get('foto_profil')) }}" alt="Profil">
+                        {% else %}
+                            <i class="fas fa-user"></i>
                         {% endif %}
-                    </button>
-                    
-                    <div class="notif-dropdown" id="notifDropdown">
-                        <div class="notif-header">
-                            <span>Notifikasi</span>
-                        </div>
-                        <div class="notif-body">
-                            {% if notifs %}
-                                {% for n in notifs %}
-                                <a href="{{ n.link }}" class="notif-item {% if n.status_baca == 0 %}unread{% endif %}">
-                                    <div style="font-size: 13px; font-weight: {% if n.status_baca == 0 %}bold{% else %}normal{% endif %};">{{ n.pesan }}</div>
-                                    <span class="notif-time">{{ n.waktu }}</span>
-                                </a>
-                                {% endfor %}
-                            {% else %}
-                                <div style="padding: 20px; text-align: center; color: var(--text-gray); font-size: 13px;">Belum ada notifikasi.</div>
-                            {% endif %}
-                        </div>
+                    </a>
+                    <div class="sidebar-user-info">
+                        <h4>{{ session.get('nama_user').split()[0] }}</h4>
+                        <span>{{ session.get('role') | title }}</span>
                     </div>
+                    <a href="{{ url_for('logout') }}" class="sidebar-logout" title="Keluar">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </nav>
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        <div class="main-content" id="mainContent">
+            <header class="topbar no-print">
+                <button class="mobile-toggle" id="menuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Cari jadwal atau pengumuman...">
                 </div>
 
-                <a href="{{ url_for('pengaturan') }}" class="user-profile" title="Pengaturan Akun">
-                    <span style="display: none; display: sm-block;">Halo, {{ session.get('nama_user').split()[0] }}</span>
-                    {% if session.get('foto_profil') %}
-                        <img src="{{ url_for('static', filename=session.get('foto_profil')) }}" class="user-avatar" alt="Profil">
-                    {% else %}
-                        <div class="user-avatar"><i class="fas fa-user"></i></div>
-                    {% endif %}
-                </a>
-                
-                <a href="{{ url_for('logout') }}" style="color: #ef4444; font-size: 18px; margin-left: 8px;" title="Keluar">
-                    <i class="fas fa-sign-out-alt"></i>
-                </a>
-                {% else %}
-                <a href="{{ url_for('login') }}" class="btn-primary" style="padding: 8px 20px; font-size: 14px;">
-                    <i class="fas fa-sign-in-alt" style="margin-right: 6px;"></i> Login
-                </a>
-                {% endif %}
-            </div>
-        </header>
+                <div class="topbar-right" style="display: flex; align-items: center; gap: 16px;">
+                    <button class="btn-icon" id="themeToggle" title="Ganti Tema">
+                        <i class="fas fa-moon"></i>
+                    </button>
 
-        <div class="flash-messages">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="toast {{ category }}">
-                            {% if category == 'success' %} <i class="fas fa-check-circle"></i> 
-                            {% else %} <i class="fas fa-exclamation-circle"></i> {% endif %}
-                            <span>{{ message }}</span>
+                    {% if session.get('user_id') %}
+                    <div class="notif-container">
+                        <button class="notif-btn" id="notifBtn">
+                            <i class="fas fa-bell"></i>
+                            {% if unread_count > 0 %}
+                            <span class="notif-badge" id="notifBadge">{{ unread_count }}</span>
+                            {% endif %}
+                        </button>
+                        
+                        <div class="notif-dropdown" id="notifDropdown">
+                            <div class="notif-header">Notifikasi</div>
+                            <div class="notif-body">
+                                {% if notifs %}
+                                    {% for n in notifs %}
+                                    <a href="{{ n.link }}" class="notif-item {% if n.status_baca == 0 %}unread{% endif %}">
+                                        <div style="font-size: 13px; font-weight: {% if n.status_baca == 0 %}600{% else %}400{% endif %};">{{ n.pesan }}</div>
+                                        <span class="notif-time">{{ n.waktu }}</span>
+                                    </a>
+                                    {% endfor %}
+                                {% else %}
+                                    <div style="padding: 20px; text-align: center; color: var(--text-gray); font-size: 13px;">Belum ada notifikasi.</div>
+                                {% endif %}
+                            </div>
                         </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-        </div>
+                    </div>
+                    {% else %}
+                    <div class="auth-buttons">
+                        <a href="{{ url_for('login') }}" class="btn-primary">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </header>
 
-        <main class="content">
-            {% block content %}{% endblock %}
-        </main>
+            <main class="content-wrapper">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }}">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <i class="fas {% if category == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
+                                    <span>{{ message }}</span>
+                                </div>
+                                <button class="close-btn" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <div id="pwaInstallBanner">
+        <i class="fas fa-download"></i> Install App Misdinar
+        <button id="pwaCloseBtn" style="background: none; border: none; color: white; margin-left: 12px; font-size: 16px; cursor: pointer;"><i class="fas fa-times"></i></button>
     </div>
 
     <script>
@@ -314,15 +295,19 @@
             }
         });
 
-        // SIDEBAR LOGIC
+        // SIDEBAR LOGIC (Responsive)
         const sidebar = document.getElementById('sidebar');
         const menuToggle = document.getElementById('menuToggle');
-        menuToggle.addEventListener('click', () => { sidebar.classList.toggle('show'); });
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        
+        menuToggle.addEventListener('click', () => { 
+            sidebar.classList.toggle('open'); 
+            sidebarOverlay.classList.toggle('show');
+        });
 
-        document.addEventListener('click', (e) => {
-            if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
-                sidebar.classList.remove('show');
-            }
+        sidebarOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            sidebarOverlay.classList.remove('show');
         });
 
         // NOTIFIKASI LOGIC
@@ -346,15 +331,30 @@
             }
         });
 
-        // TOASTS LOGIC
-        const toasts = document.querySelectorAll('.toast');
-        toasts.forEach(toast => {
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(100%)';
-                toast.style.transition = 'all 0.4s ease';
-                setTimeout(() => toast.remove(), 400);
-            }, 4000);
+        // LOGIKA PROMPT PWA (ADD TO HOME SCREEN)
+        let deferredPrompt;
+        const installBanner = document.getElementById('pwaInstallBanner');
+        const closeBtn = document.getElementById('pwaCloseBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Cegah prompt bawaan Chrome muncul langsung
+            e.preventDefault();
+            deferredPrompt = e;
+            // Tampilkan tombol Install custom kita
+            installBanner.style.display = 'flex';
+        });
+
+        installBanner.addEventListener('click', async (e) => {
+            if(e.target === closeBtn || e.target.parentElement === closeBtn) return;
+            installBanner.style.display = 'none';
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to the install prompt: ${outcome}`);
+            deferredPrompt = null;
+        });
+
+        closeBtn.addEventListener('click', () => {
+            installBanner.style.display = 'none';
         });
     </script>
 </body>

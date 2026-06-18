@@ -1,145 +1,217 @@
-{% extends "base.html" %}
-
-{% block title %}Pendaftaran Misdinar - MISDINAR{% endblock %}
-
-{% block content %}
-<div class="page-header">
-    <h2>Pendaftaran Calon Misdinar</h2>
-    <p>Mari bergabung bersama kami dalam melayani Tuhan di Altar!</p>
-</div>
-
-<div class="pendaftaran-container">
-    {% if success %}
-    <!-- JIKA BERHASIL MENDAFTAR MUNCULKAN AKUN -->
-    <div class="success-card">
-        <i class="fas fa-check-circle success-icon"></i>
-        <h3>Pendaftaran Berhasil Dikirim!</h3>
-        <p>Terima kasih telah mendaftar. Data Anda sedang ditinjau, namun <b>Sistem telah membuatkan Akun Anggota sementara untuk Anda.</b></p>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ schema.title }}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #f0ebf8; font-family: 'Roboto', sans-serif; margin: 0; padding: 0; color: #202124; }
+        .gf-wrapper { max-width: 640px; margin: 0 auto; padding: 30px 16px; }
+        .gf-card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 12px; border: 1px solid #dadce0; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .header-card { border-top: 8px solid #673ab7; border-top-left-radius: 8px; border-top-right-radius: 8px; }
+        .gf-title { font-size: 32px; margin: 0 0 12px 0; font-weight: 400; }
+        .gf-desc { font-size: 14px; margin: 0; line-height: 1.5; color: #202124; }
+        .gf-q-title { font-size: 16px; font-weight: 500; margin: 0 0 16px 0; }
         
-        <div class="credentials-box">
-            <p><strong>Username Anda:</strong> <span class="highlight-text">{{ new_username }}</span></p>
-            <p><strong>Password Anda:</strong> <span class="highlight-text">{{ new_password }}</span></p>
-        </div>
-
-        <div class="warning-box">
-            <i class="fas fa-exclamation-triangle"></i>
-            <div>
-                <strong>PENTING: Jaga Kerahasiaan Akun!</strong><br>
-                Segera klik tombol Login di bawah, lalu masuk ke menu <strong>Pengaturan</strong> untuk mengubah Password Anda demi keamanan.
-            </div>
-        </div>
-
-        <button onclick="window.location.href='/login'" class="btn-primary" style="margin-top: 16px; width: 100%; max-width: 300px; font-size: 16px;">
-            Login Sekarang
-        </button>
-    </div>
-    
-    {% else %}
-    <!-- FORM PENDAFTARAN DINAMIS -->
-    <div class="form-card">
-        {% if fields|length == 0 %}
-        <div style="text-align: center; padding: 40px;">
-            <i class="fas fa-door-closed" style="font-size: 40px; color: var(--text-gray); margin-bottom: 12px;"></i>
-            <h3>Pendaftaran Belum Dibuka</h3>
-            <p>Pengurus belum mengatur formulir pendaftaran saat ini.</p>
-        </div>
-        {% else %}
+        .gf-public-input { border: none; border-bottom: 1px solid #dadce0; width: 100%; padding: 8px 0; font-size: 14px; outline: none; transition: 0.2s; font-family: inherit; background: transparent; }
+        .gf-public-input:focus { border-bottom: 2px solid #673ab7; padding-bottom: 7px; }
         
-        <form action="{{ url_for('pendaftaran') }}" method="POST" class="dynamic-form">
-            <p class="form-info"><i class="fas fa-info-circle"></i> Isilah formulir di bawah ini dengan data yang sebenarnya.</p>
-            <hr>
+        .gf-btn-publish { background: #673ab7; color: white; border: none; padding: 10px 24px; border-radius: 4px; font-weight: 500; font-family: inherit; cursor: pointer; transition: 0.2s; font-size: 14px; }
+        .gf-btn-publish:hover { background: #5e35b1; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        
+        .gf-radio-group { display: flex; flex-direction: column; gap: 16px; }
+        .gf-radio-label { display: flex; align-items: center; gap: 12px; cursor: pointer; font-size: 14px; }
+        .gf-radio-label input { width: 20px; height: 20px; cursor: pointer; accent-color: #673ab7; }
+        
+        textarea.gf-public-input { resize: none; overflow: hidden; }
+        
+        /* Styles untuk Tipe Pertanyaan Baru */
+        .rating-group { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: 8px; }
+        .rating-group input { display: none; }
+        .rating-group label { cursor: pointer; font-size: 32px; color: #dadce0; transition: 0.2s; }
+        .rating-group label:hover, .rating-group label:hover ~ label, .rating-group input:checked ~ label { color: #fbbc04; }
+        
+        .linear-scale { display: flex; align-items: flex-end; gap: 16px; margin-top: 12px; flex-wrap: wrap; justify-content: center;}
+        .scale-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .scale-item span { font-size: 14px; color: #5f6368; }
+        
+        .grid-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        .grid-table th { padding: 12px; color: #5f6368; font-weight: 400; font-size: 14px; text-align: center; }
+        .grid-table td { padding: 12px; border-top: 1px solid #dadce0; text-align: center; }
+        .grid-table td:first-child { text-align: left; background: #f8f9fa; border-radius: 8px 0 0 8px; font-size: 14px; }
+        
+        /* Media Block Styles */
+        .media-block { text-align: center; margin-bottom: 24px; }
+        .media-block img { max-width: 100%; border-radius: 8px; }
+        .media-block iframe { width: 100%; height: 350px; border-radius: 8px; border: none; }
+    </style>
+</head>
+<body>
+    <div class="gf-wrapper">
+        {% if closed %}
+        <div class="gf-card header-card">
+            <h1 class="gf-title">{{ schema.title }}</h1>
+            <p class="gf-desc">Formulir ini sudah ditutup dan tidak menerima tanggapan lagi.</p>
+        </div>
+        
+        {% elif success %}
+        <div class="gf-card header-card">
+            <h1 class="gf-title">{{ schema.title }}</h1>
+            <p class="gf-desc">Tanggapan Anda telah direkam.</p>
             
-            {% for f in fields %}
-            <div class="form-group {% if f.tipe == 'textarea' %}full-width{% endif %}">
-                <label>{{ f.label }} {% if f.wajib %}<span style="color: #dc3545;">*</span>{% endif %}</label>
+            {% if is_default == 1 and new_username %}
+                <div style="margin-top: 24px; padding: 20px; background: #e8f0fe; border-radius: 8px; border: 1px solid #d2e3fc;">
+                    <h3 style="color: #1967d2; margin-top: 0;">Akun Sistem Anda Berhasil Dibuat!</h3>
+                    <p style="margin: 8px 0; font-size: 15px;"><strong>Username:</strong> {{ new_username }}</p>
+                    <p style="margin: 8px 0; font-size: 15px;"><strong>Password:</strong> <span style="font-family: monospace; background: #fff; padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc;">{{ new_password }}</span></p>
+                    <p style="margin: 16px 0 0; font-size: 13px; color: #5f6368;">Silakan simpan informasi login ini dengan baik. Anda sekarang dapat masuk ke dalam dashboard sistem.</p>
+                    <a href="{{ url_for('login') }}" class="gf-btn-publish" style="margin-top: 16px; display: inline-block; text-decoration: none;">Login Sekarang</a>
+                </div>
+            {% else %}
+                <a href="{{ url_for('isi_formulir', form_id=request.path.split('/')[-1]) }}" style="display: inline-block; margin-top: 24px; color: #1a73e8; text-decoration: none; font-size: 14px;">Kirim tanggapan lain</a>
+            {% endif %}
+        </div>
+        
+        {% else %}
+        <!-- Diperbarui agar mendukung multipart/form-data (Upload File) -->
+        <form action="{{ url_for('isi_formulir', form_id=request.path.split('/')[-1]) }}" method="POST" enctype="multipart/form-data">
+            <div class="gf-card header-card">
+                <h1 class="gf-title">{{ schema.title }}</h1>
+                <!-- Deskripsi diformat menggunakan filter "safe" agar Rich Text/HTML tampil -->
+                <div class="gf-desc">{{ schema.description | safe }}</div>
+                <hr style="border: 0; border-bottom: 1px solid #dadce0; margin: 16px 0;">
+                <p style="color: #d93025; font-size: 13px; margin: 0;">* Menunjukkan pertanyaan yang wajib diisi</p>
+            </div>
+            
+            {% for q in schema.questions %}
+                {% if q.type == 'image' %}
+                <!-- BLOK MEDIA: GAMBAR -->
+                <div class="gf-card" style="padding: 16px;">
+                    <h3 class="gf-q-title" style="margin-bottom: 16px;">{{ q.question }}</h3>
+                    <div class="media-block">
+                        <img src="{{ q.url }}" alt="Gambar Formulir" onerror="this.src='https://via.placeholder.com/600x300?text=Gambar+Tidak+Ditemukan'">
+                    </div>
+                </div>
                 
-                {% if f.tipe == 'textarea' %}
-                    <textarea name="field_{{ f.id }}" rows="3" {% if f.wajib %}required{% endif %} placeholder="Tulis jawaban di sini..."></textarea>
+                {% elif q.type == 'video' %}
+                <!-- BLOK MEDIA: VIDEO -->
+                <div class="gf-card" style="padding: 16px;">
+                    <h3 class="gf-q-title" style="margin-bottom: 16px;">{{ q.question }}</h3>
+                    <div class="media-block">
+                        {% set video_id = q.url.split('v=')[-1].split('&')[0] if 'v=' in q.url else q.url.split('/')[-1] %}
+                        <iframe src="https://www.youtube.com/embed/{{ video_id }}" allowfullscreen></iframe>
+                    </div>
+                </div>
                 
                 {% else %}
-                    <input type="{{ f.tipe }}" name="field_{{ f.id }}" {% if f.wajib %}required{% endif %} placeholder="Ketik {{ f.label }}...">
+                <!-- BLOK PERTANYAAN STANDAR -->
+                <div class="gf-card">
+                    <h3 class="gf-q-title">{{ q.question }} {% if q.required %}<span style="color:#d93025;">*</span>{% endif %}</h3>
+                    
+                    {% if q.type == 'short' %}
+                        <input type="text" name="q_{{ q.id }}" class="gf-public-input" style="max-width: 300px;" placeholder="Jawaban Anda" {% if q.required %}required{% endif %}>
+                    
+                    {% elif q.type == 'paragraph' %}
+                        <textarea name="q_{{ q.id }}" class="gf-public-input" placeholder="Jawaban Anda" rows="1" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'" {% if q.required %}required{% endif %}></textarea>
+                    
+                    {% elif q.type == 'radio' %}
+                        <div class="gf-radio-group">
+                            {% for opt in q.options %}
+                            <label class="gf-radio-label">
+                                <input type="radio" name="q_{{ q.id }}" value="{{ opt }}" {% if q.required %}required{% endif %}>
+                                <span>{{ opt }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        
+                    {% elif q.type == 'checkbox' %}
+                        <div class="gf-radio-group">
+                            {% for opt in q.options %}
+                            <label class="gf-radio-label">
+                                <input type="checkbox" name="q_{{ q.id }}" value="{{ opt }}">
+                                <span>{{ opt }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        
+                    {% elif q.type == 'dropdown' %}
+                        <select name="q_{{ q.id }}" class="gf-public-input" style="max-width: 300px; padding: 12px; border: 1px solid #dadce0; border-radius: 4px;" {% if q.required %}required{% endif %}>
+                            <option value="">Pilih</option>
+                            {% for opt in q.options %}
+                            <option value="{{ opt }}">{{ opt }}</option>
+                            {% endfor %}
+                        </select>
+                        
+                    {% elif q.type == 'file' %}
+                        <div style="padding: 12px; border: 1px solid #dadce0; border-radius: 4px; display: inline-block;">
+                            <input type="file" name="q_{{ q.id }}" {% if q.required %}required{% endif %} style="font-family: inherit;">
+                        </div>
+                        
+                    {% elif q.type == 'linear_scale' %}
+                        <div class="linear-scale">
+                            <span style="padding-bottom: 24px; font-size: 14px; color: #202124;">(Buruk)</span>
+                            {% for i in range(1, 6) %}
+                            <div class="scale-item">
+                                <span>{{ i }}</span>
+                                <input type="radio" name="q_{{ q.id }}" value="{{ i }}" style="width:20px; height:20px; accent-color: #673ab7;" {% if q.required %}required{% endif %}>
+                            </div>
+                            {% endfor %}
+                            <span style="padding-bottom: 24px; font-size: 14px; color: #202124;">(Sangat Baik)</span>
+                        </div>
+                        
+                    {% elif q.type == 'rating' %}
+                        <div class="rating-group">
+                            <input type="radio" id="star5_{{ q.id }}" name="q_{{ q.id }}" value="5" {% if q.required %}required{% endif %}><label for="star5_{{ q.id }}"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="star4_{{ q.id }}" name="q_{{ q.id }}" value="4"><label for="star4_{{ q.id }}"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="star3_{{ q.id }}" name="q_{{ q.id }}" value="3"><label for="star3_{{ q.id }}"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="star2_{{ q.id }}" name="q_{{ q.id }}" value="2"><label for="star2_{{ q.id }}"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="star1_{{ q.id }}" name="q_{{ q.id }}" value="1"><label for="star1_{{ q.id }}"><i class="fas fa-star"></i></label>
+                        </div>
+                        
+                    {% elif q.type == 'grid_radio' or q.type == 'grid_checkbox' %}
+                        <div style="overflow-x: auto;">
+                            <table class="grid-table">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        {% for col in q.columns %}
+                                        <th>{{ col }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in q.rows %}
+                                    {% set r_idx = loop.index0 %}
+                                    <tr>
+                                        <td>{{ row }}</td>
+                                        {% for col in q.columns %}
+                                        <td>
+                                            <input type="{{ 'radio' if q.type == 'grid_radio' else 'checkbox' }}" name="q_{{ q.id }}_r{{ r_idx }}" value="{{ col }}" style="width: 18px; height: 18px; accent-color: #673ab7;" {% if q.type == 'grid_radio' and q.required %}required{% endif %}>
+                                        </td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                    {% elif q.type == 'date' %}
+                        <input type="date" name="q_{{ q.id }}" class="gf-public-input" style="max-width: 200px; padding: 10px; border: 1px solid #dadce0; border-radius: 4px;" {% if q.required %}required{% endif %}>
+                    {% elif q.type == 'time' %}
+                        <input type="time" name="q_{{ q.id }}" class="gf-public-input" style="max-width: 150px; padding: 10px; border: 1px solid #dadce0; border-radius: 4px;" {% if q.required %}required{% endif %}>
+                    {% endif %}
+                </div>
                 {% endif %}
-            </div>
             {% endfor %}
             
-            <div class="form-action full-width" style="margin-top: 24px;">
-                <button type="submit" class="btn-primary w-100" style="padding: 14px; font-size: 16px;">
-                    <i class="fas fa-paper-plane"></i> Kirim Formulir Pendaftaran
-                </button>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 16px;">
+                <button type="submit" class="gf-btn-publish">Kirim</button>
+                <span style="color:#5f6368; font-size:12px;">Kosongkan sandi. Jangan pernah mengirimkan sandi Anda.</span>
             </div>
         </form>
         {% endif %}
     </div>
-    {% endif %}
-</div>
-
-<style>
-.pendaftaran-container { max-width: 800px; margin: 0 auto; }
-.form-card, .success-card { background: var(--white); padding: 32px; border-radius: 12px; box-shadow: var(--shadow); border-top: 4px solid var(--primary-green); }
-.success-card { text-align: center; padding: 50px 20px; }
-.success-icon { font-size: 64px; color: #28a745; margin-bottom: 16px; }
-
-/* Styling Area Akun & Peringatan */
-.credentials-box {
-    background: #f8f9fa;
-    border: 1px solid var(--border-color);
-    padding: 20px;
-    border-radius: 12px;
-    margin: 24px auto;
-    max-width: 350px;
-    text-align: left;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
-}
-.credentials-box p {
-    margin: 12px 0;
-    font-size: 15px;
-    color: var(--text-dark);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.highlight-text {
-    font-family: monospace;
-    font-weight: 900;
-    color: var(--primary-green);
-    background: #e2f0e6;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 16px;
-    letter-spacing: 1px;
-}
-.warning-box {
-    background: #fff3cd;
-    color: #856404;
-    padding: 16px;
-    border-radius: 12px;
-    font-size: 14px;
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-    margin: 0 auto 32px auto;
-    max-width: 500px;
-    text-align: left;
-    line-height: 1.5;
-}
-.warning-box i { font-size: 24px; margin-top: 2px; }
-
-.dynamic-form { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.form-info { grid-column: 1 / -1; color: var(--text-gray); font-size: 14px; margin-bottom: 0; }
-.dynamic-form hr { grid-column: 1 / -1; border: 0; border-top: 1px solid var(--border-color); margin: 0 0 10px 0; }
-
-.full-width { grid-column: 1 / -1; }
-.form-group label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--text-dark); }
-.form-group input, .form-group textarea { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; font-family: inherit; transition: 0.3s; }
-.form-group input:focus, .form-group textarea:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(45, 95, 63, 0.1); }
-.form-group textarea { resize: vertical; min-height: 80px; }
-
-.btn-primary { background: var(--primary-green); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s;}
-.btn-primary:hover { background: var(--accent-green); }
-
-@media(max-width: 768px) {
-    .dynamic-form { grid-template-columns: 1fr; }
-    .credentials-box p { flex-direction: column; align-items: flex-start; gap: 8px;}
-}
-</style>
-{% endblock %}
+</body>
+</html>

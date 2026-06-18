@@ -1,196 +1,134 @@
 {% extends "base.html" %}
 
-{% block title %}Sanksi & Teguran - MISDINAR{% endblock %}
+{% block title %}Sanksi & Hukuman - MISDINAR{% endblock %}
 
 {% block content %}
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
     <div>
-        <h2>Sanksi, Peringatan & Teguran</h2>
-        <p>
-            {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-            Kelola data hukuman, cek tunggakan sanksi anggota, dan tandai sanksi yang sudah selesai.
-            {% else %}
-            Periksa catatan teguran dan sanksi Anda. Segera selesaikan jika Anda memiliki tunggakan!
-            {% endif %}
-        </p>
+        <h2>Sanksi & Hukuman</h2>
+        <p>Catatan kedisiplinan dan akumulasi sanksi berlutut anggota.</p>
     </div>
-    {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-    <button class="btn-primary" onclick="openAddModal()" style="border-radius: 8px; padding: 10px 16px; font-weight: bold; border: none; cursor: pointer; color: white; background: var(--primary-blue);">
-        <i class="fas fa-plus"></i> Tambah Teguran Manual
-    </button>
-    {% endif %}
+    
+    <!-- FITUR FILTER BULAN -->
+    <form action="{{ url_for('hukuman') }}" method="GET" style="display: flex; gap: 8px; align-items: center;">
+        <label style="font-weight: bold; font-size: 13px; color: var(--text-dark);">Filter Bulan:</label>
+        <input type="month" name="bulan" value="{{ selected_month }}" onchange="this.form.submit()" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--white); color: var(--text-dark); font-family: inherit;">
+    </form>
 </div>
 
-{% if role == 'user' and current_user in tunggakan and tunggakan[current_user] > 0 %}
-<div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 12px; padding: 20px; margin-bottom: 24px; display: flex; align-items: center; gap: 20px; box-shadow: 0 4px 6px rgba(239,68,68,0.1);">
-    <div style="width: 50px; height: 50px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;">
-        <i class="fas fa-exclamation-triangle"></i>
-    </div>
-    <div>
-        <h3 style="margin: 0 0 6px 0; color: #b91c1c; font-size: 18px;">PERINGATAN SANKSI!</h3>
-        <p style="margin: 0; color: #991b1b; font-size: 14px; line-height: 1.5;">
-            Anda memiliki total tunggakan hukuman sebesar <b>{{ tunggakan[current_user] }} Kali Berlutut</b> akibat Alpa/Izin Misa.<br>
-            <i>Silakan segera selesaikan sebelum/sesudah Misa selanjutnya dan lapor ke Pengurus untuk dihapus.</i>
-        </p>
-    </div>
+{% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+<div class="card" style="padding: 24px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 24px;">
+    <h3 style="margin-top: 0; color: #ef4444;"><i class="fas fa-gavel"></i> Berikan Sanksi Manual</h3>
+    <form action="{{ url_for('hukuman') }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+        <input type="hidden" name="action" value="tambah">
+        <div>
+            <label style="font-size: 13px; font-weight: bold;">Pilih Anggota</label>
+            <select name="username" required style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                {% for u in users %}
+                <option value="{{ u.username }}">{{ u.nama }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size: 13px; font-weight: bold;">Tanggal Pelanggaran</label>
+            <input type="date" name="tanggal" required style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+        </div>
+        <div>
+            <label style="font-size: 13px; font-weight: bold;">Jenis Pelanggaran</label>
+            <input type="text" name="pelanggaran" placeholder="Cth: Telat datang rapat" required style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+        </div>
+        <div>
+            <label style="font-size: 13px; font-weight: bold;">Tindakan / Sanksi</label>
+            <input type="text" name="tindakan" placeholder="Cth: 15 Kali Berlutut" required style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+        </div>
+        <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end;">
+            <input type="hidden" name="status" value="Belum Selesai">
+            <button type="submit" class="btn-primary" style="background: #ef4444;"><i class="fas fa-plus"></i> Tambah Sanksi</button>
+        </div>
+    </form>
 </div>
 {% endif %}
 
-<div class="card" style="background: white; padding: 24px; border-radius: 16px; box-shadow: var(--shadow); overflow-x: auto;">
-    <table style="width: 100%; text-align: left; border-collapse: collapse; min-width: 800px; font-size: 14px;">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; margin-bottom: 24px;">
+    {% if role not in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+    <div class="card" style="padding: 24px; background: linear-gradient(135deg, #ef4444, #991b1b); color: white; border-radius: 12px; box-shadow: var(--shadow); text-align: center;">
+        <h3 style="margin: 0 0 8px 0;">Total Sanksi Anda</h3>
+        <h1 style="margin: 0; font-size: 48px;">{{ tunggakan.get(current_user, 0) }}</h1>
+        <p style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.9;">Kali Berlutut Belum Selesai</p>
+    </div>
+    {% else %}
+    <div class="card" style="padding: 24px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow);">
+        <h3 style="margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">Top Tunggakan Sanksi (Bulan Ini)</h3>
+        {% if tunggakan %}
+            <ul style="list-style: none; padding: 0; margin: 0;">
+            {% for usr, amt in tunggakan.items()|sort(attribute=1, reverse=true) %}
+                {% if loop.index <= 5 %}
+                <li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border-color);">
+                    <span style="font-weight: 500;">{{ usr }}</span>
+                    <span style="color: #ef4444; font-weight: bold;">{{ amt }}x</span>
+                </li>
+                {% endif %}
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p style="color: var(--text-gray); font-size: 13px;">Tidak ada tunggakan sanksi berlutut.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<div class="card" style="padding: 24px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow); overflow-x: auto;">
+    <h3 style="margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">Riwayat Pelanggaran & Sanksi</h3>
+    <table style="width: 100%; border-collapse: collapse; min-width: 800px; font-size: 14px;">
         <thead>
-            <tr style="border-bottom: 2px solid #e2e8f0; color: var(--text-gray);">
-                <th style="padding: 14px 12px; width: 12%;">Tanggal</th>
-                <th style="padding: 14px 12px; width: 18%;">Nama Anggota</th>
-                <th style="padding: 14px 12px; width: 25%;">Pelanggaran / Misa</th>
-                <th style="padding: 14px 12px; width: 15%;">Sanksi / Tindakan</th>
-                <th style="padding: 14px 12px; width: 15%;">Status</th>
+            <tr style="background: var(--background); color: var(--text-dark); text-align: left;">
+                <th style="padding: 12px; border-bottom: 2px solid var(--border-color);">Tanggal</th>
+                <th style="padding: 12px; border-bottom: 2px solid var(--border-color);">Nama Anggota</th>
+                <th style="padding: 12px; border-bottom: 2px solid var(--border-color);">Pelanggaran</th>
+                <th style="padding: 12px; border-bottom: 2px solid var(--border-color);">Sanksi</th>
+                <th style="padding: 12px; border-bottom: 2px solid var(--border-color);">Status</th>
                 {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-                <th style="padding: 14px 12px; width: 15%; text-align: center;">Aksi</th>
+                <th style="padding: 12px; border-bottom: 2px solid var(--border-color); text-align: center;">Aksi</th>
                 {% endif %}
             </tr>
         </thead>
         <tbody>
             {% for h in hukuman %}
-            <tr style="border-bottom: 1px solid #f1f5f9; transition: 0.2s;">
-                <td style="padding: 16px 12px; font-weight: bold; color: var(--text-dark);">{{ h.tanggal }}</td>
-                
-                <td style="padding: 16px 12px;">
-                    <div style="display: flex; flex-direction: column;">
-                        <span>{{ h.nama }}</span>
-                        {% if role != 'user' and h.status != 'Selesai' and h.username in tunggakan and tunggakan[h.username] > 0 %}
-                        <span style="font-size: 10px; color: #ef4444; font-weight: bold; margin-top: 4px;">
-                            (Total Hutang: {{ tunggakan[h.username] }} Kali)
-                        </span>
-                        {% endif %}
-                    </div>
-                </td>
-                
-                <td style="padding: 16px 12px; color: #b91c1c; font-weight: 600;">{{ h.pelanggaran }}</td>
-                <td style="padding: 16px 12px; font-weight: bold;">{{ h.tindakan }}</td>
-                
-                <td style="padding: 16px 12px;">
-                    <span style="display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;
-                        {% if h.status == 'Selesai' %}background: #dcfce7; color: #059669;
-                        {% else %}background: #fee2e2; color: #dc2626;{% endif %}">
-                        {{ h.status }}
-                    </span>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 12px;">{{ h.tanggal }}</td>
+                <td style="padding: 12px;"><strong>{{ h.nama }}</strong></td>
+                <td style="padding: 12px; color: #dc2626;">{{ h.pelanggaran }}</td>
+                <td style="padding: 12px; font-weight: bold;">{{ h.tindakan }}</td>
+                <td style="padding: 12px;">
+                    {% if h.status == 'Selesai' %}
+                        <span style="background: #dcfce7; color: #059669; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px;"><i class="fas fa-check-circle"></i> Selesai</span>
+                    {% else %}
+                        <span style="background: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px;"><i class="fas fa-exclamation-circle"></i> Belum Selesai</span>
+                    {% endif %}
                 </td>
                 
                 {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-                <td style="padding: 16px 12px; text-align: center;">
+                <td style="padding: 12px; text-align: center;">
                     {% if h.status != 'Selesai' %}
-                    <form action="{{ url_for('hukuman') }}" method="POST" style="display: inline;" onsubmit="return confirm('Tandai sanksi ini sudah diselesaikan/dilaksanakan?');">
+                    <form action="{{ url_for('hukuman') }}" method="POST" style="display: inline;">
                         <input type="hidden" name="action" value="selesai">
                         <input type="hidden" name="id" value="{{ h.id }}">
-                        <button type="submit" class="btn-icon" style="color: white; background: #10b981; border: none; cursor: pointer; margin-right: 4px; padding: 6px; border-radius: 6px;" title="Tandai Selesai">
-                            <i class="fas fa-check"></i>
-                        </button>
+                        <button type="submit" class="btn-primary" style="padding: 4px 8px; font-size: 11px; background: #10b981; border: none;" title="Tandai Selesai"><i class="fas fa-check"></i></button>
                     </form>
                     {% endif %}
-                    
-                    <button class="btn-icon" onclick="openEditModal('{{ h.id }}', '{{ h.username }}', '{{ h.tanggal }}', '{{ h.pelanggaran }}', '{{ h.tindakan }}', '{{ h.status }}')" style="color: white; background: var(--primary-blue); border: none; cursor: pointer; margin-right: 4px; padding: 6px; border-radius: 6px;" title="Edit Data">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    
-                    <form action="{{ url_for('hukuman') }}" method="POST" style="display: inline;" onsubmit="return confirm('Hapus riwayat hukuman ini?');">
+                    <form action="{{ url_for('hukuman') }}" method="POST" style="display: inline;" onsubmit="return confirm('Hapus riwayat sanksi ini?');">
                         <input type="hidden" name="action" value="hapus">
                         <input type="hidden" name="id" value="{{ h.id }}">
-                        <button type="submit" class="btn-icon" style="color: white; background: #ef4444; border: none; cursor: pointer; padding: 6px; border-radius: 6px;" title="Hapus Data">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
+                        <button type="submit" class="btn-outline" style="padding: 4px 8px; font-size: 11px; color: #ef4444; border-color: #ef4444;" title="Hapus"><i class="fas fa-trash"></i></button>
                     </form>
                 </td>
                 {% endif %}
             </tr>
-            {% else %}
-            <tr>
-                <td colspan="6" style="padding: 60px 20px; text-align: center; color: var(--text-gray);">
-                    <i class="fas fa-shield-alt" style="font-size: 40px; color: #cbd5e1; display: block; margin-bottom: 12px;"></i>
-                    Belum ada data teguran atau sanksi keterlambatan.
-                </td>
-            </tr>
             {% endfor %}
+            {% if not hukuman %}
+            <tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-gray);">Tidak ada catatan sanksi/hukuman di bulan ini.</td></tr>
+            {% endif %}
         </tbody>
     </table>
 </div>
-
-{% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-<div id="hukumanModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
-    <div style="background: white; border-radius: 16px; width: 100%; max-width: 450px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden;">
-        
-        <div style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-            <h3 id="modalTitle" style="margin: 0; color: var(--text-dark); font-size: 18px;"><i class="fas fa-gavel" style="color: #ef4444;"></i> Kelola Hukuman</h3>
-            <button onclick="document.getElementById('hukumanModal').style.display='none'" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #94a3b8;">&times;</button>
-        </div>
-        
-        <form action="{{ url_for('hukuman') }}" method="POST" style="padding: 24px;">
-            <input type="hidden" name="action" id="actionField" value="tambah">
-            <input type="hidden" name="id" id="idField">
-            
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Pilih Anggota</label>
-                <select name="username" id="usernameField" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; font-family: inherit;">
-                    {% for u in users %}
-                    <option value="{{ u.username }}">{{ u.nama }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Tanggal</label>
-                <input type="date" name="tanggal" id="tanggalField" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
-            </div>
-            
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Jenis Pelanggaran / Misa</label>
-                <input type="text" name="pelanggaran" id="pelanggaranField" placeholder="Contoh: Bercanda di Panti Imam / Alpa Misa" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
-            </div>
-            
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Sanksi / Tindakan</label>
-                <input type="text" name="tindakan" id="tindakanField" placeholder="Contoh: 15 Kali Berlutut / Teguran Lisan" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
-            </div>
-            
-            <div style="margin-bottom: 24px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Status Hukuman</label>
-                <select name="status" id="statusField" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; font-family: inherit;">
-                    <option value="Belum Selesai">Belum Dilaksanakan / Belum Lunas</option>
-                    <option value="Selesai">Selesai / Lunas</option>
-                </select>
-            </div>
-            
-            <button type="submit" style="background: #ef4444; color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 14px; transition: 0.2s;">Simpan Sanksi</button>
-        </form>
-    </div>
-</div>
-
-<script>
-function openAddModal() {
-    document.getElementById('actionField').value = 'tambah';
-    document.getElementById('idField').value = '';
-    document.getElementById('pelanggaranField').value = '';
-    document.getElementById('tindakanField').value = '';
-    document.getElementById('statusField').value = 'Belum Selesai';
-    document.getElementById('hukumanModal').style.display = 'flex';
-}
-
-function openEditModal(id, username, tanggal, pelanggaran, tindakan, status) {
-    document.getElementById('actionField').value = 'edit';
-    document.getElementById('idField').value = id;
-    document.getElementById('usernameField').value = username;
-    document.getElementById('tanggalField').value = tanggal;
-    document.getElementById('pelanggaranField').value = pelanggaran;
-    document.getElementById('tindakanField').value = tindakan;
-    document.getElementById('statusField').value = status;
-    document.getElementById('hukumanModal').style.display = 'flex';
-}
-
-window.onclick = function(event) {
-    if (event.target == document.getElementById('hukumanModal')) {
-        document.getElementById('hukumanModal').style.display = "none";
-    }
-}
-</script>
-{% endif %}
 {% endblock %}

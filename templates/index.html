@@ -1,174 +1,88 @@
 {% extends "base.html" %}
 
-{% block title %}Beranda - MISDINAR{% endblock %}
+{% block title %}Dashboard - MISDINAR{% endblock %}
 
 {% block content %}
-<section class="hero-banner">
-    <div class="hero-content">
-        <h2>Melayani dengan Hati,<br>Beriman dalam Aksi.</h2>
-        <p>Aplikasi informasi untuk seluruh misdinar<br>Gereja kita tercinta.</p>
-        {% if is_logged_in %}
-        <button class="btn-primary" onclick="window.location.href='/jadwal'">
-            Lihat Jadwal Pelayanan Saya
-            <i class="fas fa-arrow-right"></i>
-        </button>
-        {% else %}
-        <button class="btn-primary" onclick="window.location.href='/jadwal'">
-            Lihat Jadwal Pelayanan
-            <i class="fas fa-arrow-right"></i>
-        </button>
-        {% endif %}
-    </div>
-    <div class="hero-illustration">
-        <svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
-            <rect x="350" y="150" width="200" height="150" fill="#cbd5e1" rx="5"/>
-            <polygon points="450,100 350,150 550,150" fill="#94a3b8"/>
-            <rect x="430" y="230" width="40" height="70" fill="#64748b"/>
-            <rect x="380" y="180" width="30" height="35" fill="#475569"/>
-            <rect x="490" y="180" width="30" height="35" fill="#475569"/>
-            <circle cx="450" cy="197" r="8" fill="#64748b"/>
-            <line x1="450" y1="100" x2="450" y2="70" stroke="#a67c52" stroke-width="6"/>
-            <line x1="435" y1="80" x2="465" y2="80" stroke="#a67c52" stroke-width="6"/>
-            
-            <g transform="translate(100, 180)">
-                <ellipse cx="40" cy="100" rx="12" ry="14" fill="#f5d5b8"/>
-                <path d="M 30 115 Q 40 110 50 115 L 50 160 L 30 160 Z" fill="#fff"/>
-                <rect x="30" y="120" width="20" height="15" fill="#1e3a8a"/>
-                <ellipse cx="40" cy="175" rx="18" ry="8" fill="#4a4a4a"/>
-                <path d="M 32 140 L 20 165 L 25 168 L 35 145 Z" fill="#f5d5b8"/>
-                <rect x="18" y="165" width="8" height="30" fill="#a67c52" rx="4"/>
-                
-                <g transform="translate(70, 0)">
-                    <ellipse cx="40" cy="100" rx="12" ry="14" fill="#f5d5b8"/>
-                    <path d="M 30 115 Q 40 110 50 115 L 50 160 L 30 160 Z" fill="#fff"/>
-                    <rect x="30" y="120" width="20" height="15" fill="#1e3a8a"/>
-                    <ellipse cx="40" cy="175" rx="18" ry="8" fill="#4a4a4a"/>
-                    <rect x="35" y="140" width="4" height="30" fill="#f5d5b8"/>
-                    <path d="M 35 145 L 35 165 L 42 168 Z" fill="#a67c52"/>
-                </g>
-                
-                <g transform="translate(140, 0)">
-                    <ellipse cx="40" cy="100" rx="12" ry="14" fill="#f5d5b8"/>
-                    <path d="M 40 114 L 35 114 Q 32 120 32 125 L 32 160 L 48 160 L 48 125 Q 48 120 45 114 Z" fill="#fff"/>
-                    <rect x="32" y="120" width="16" height="15" fill="#1e3a8a"/>
-                    <ellipse cx="40" cy="175" rx="18" ry="8" fill="#4a4a4a"/>
-                    <rect x="35" y="140" width="4" height="25" fill="#f5d5b8"/>
-                    <rect x="32" y="162" width="10" height="4" fill="#1e3a8a"/>
-                    <path d="M 34 115 L 34 105 Q 34 100 38 100 L 42 100 Q 46 100 46 105 L 46 115" fill="#1e3a8a"/>
-                </g>
-            </g>
-            <ellipse cx="320" cy="280" rx="45" ry="35" fill="#cbd5e1" opacity="0.6"/>
-            <ellipse cx="280" cy="270" rx="35" ry="28" fill="#cbd5e1" opacity="0.5"/>
-            <ellipse cx="560" cy="285" rx="40" ry="32" fill="#cbd5e1" opacity="0.6"/>
-        </svg>
-    </div>
-</section>
+<div style="display: flex; flex-direction: column; gap: 24px;">
 
-<section class="quick-access">
-    <h3>Akses Cepat</h3>
-    <div class="access-grid">
-        <a href="/jadwal" class="access-card">
-            <div class="access-icon main-theme">
-                <i class="far fa-calendar"></i>
-            </div>
-            {% if is_logged_in %}
-            <h4>Jadwal Pelayanan Saya</h4>
-            <p>Lihat jadwal bertugas</p>
-            {% else %}
-            <h4>Jadwal Pelayanan</h4>
-            <p>Lihat jadwal semua anggota</p>
-            {% endif %}
-        </a>
-
-        {% if session.get('role') in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-        <a href="/anggota" class="access-card">
-            <div class="access-icon blue">
-                <i class="fas fa-users"></i>
-            </div>
-            <h4>Cari Anggota</h4>
-            <p>Direktori akun & pengaturan</p>
-        </a>
-        {% endif %}
-
-        {% if not is_logged_in %}
-        <a href="/pendaftaran" class="access-card">
-            <div class="access-icon yellow">
-                <i class="far fa-edit"></i>
-            </div>
-            <h4>Pendaftaran</h4>
-            <p>Daftar kegiatan pelayanan</p>
-        </a>
-        {% endif %}
-
-        <a href="/pengumuman" class="access-card">
-            <div class="access-icon purple">
-                <i class="fas fa-bullhorn"></i>
-            </div>
-            <h4>Pengumuman</h4>
-            <p>Informasi terbaru & detail</p>
-        </a>
-    </div>
-</section>
-
-<div class="two-column-layout">
-    <section class="jadwal-section">
-        <div class="section-header">
-            <h3>Jadwal Terdekat</h3>
-            <a href="/jadwal" class="link-primary">Lihat semua</a>
+    <!-- HEADER WELCOME DENGAN WARNA BACKGROUND GELAP -->
+    <div style="background: linear-gradient(135deg, #1e40af, #0f172a); border-radius: 16px; padding: 32px; color: #ffffff; box-shadow: var(--shadow); position: relative; overflow: hidden;">
+        <div style="position: relative; z-index: 2;">
+            <h1 style="margin: 0 0 8px 0; font-size: 28px;">Halo, {% if is_logged_in %}{{ session.get('nama_user').split()[0] }}{% else %}Sahabat Misdinar{% endif %}! 👋</h1>
+            <p style="margin: 0; font-size: 15px; opacity: 0.9;">"{{ quote }}"</p>
         </div>
-        <div class="jadwal-list">
-            {% for item in jadwal %}
-            <div class="jadwal-item">
-                <div class="jadwal-date">
-                    <span class="date-number">{{ item.tanggal }}</span>
-                    <span class="date-month">{{ item.bulan }}</span>
-                </div>
-                <div class="jadwal-info">
-                    <div class="jadwal-time">{{ item.hari }}, {{ item.waktu }}</div>
-                    <div class="jadwal-title">{{ item.acara }}</div>
-                </div>
-                <div class="jadwal-status">
-                    {% if is_logged_in %}
-                    <span class="badge-status {% if item.status == 'Bertugas' %}badge-success{% else %}badge-secondary{% endif %}">
-                        {{ item.status }}
-                    </span>
-                    {% endif %}
-                    <i class="fas fa-chevron-right"></i>
-                </div>
-            </div>
-            {% endfor %}
-            {% if not jadwal %}
-            <div class="empty-jadwal-state">Belum ada jadwal terdekat saat ini.</div>
-            {% endif %}
-        </div>
-    </section>
+        <i class="fas fa-church" style="position: absolute; right: 20px; bottom: -20px; font-size: 120px; opacity: 0.1; z-index: 1;"></i>
+    </div>
 
-    <aside class="sidebar-content">
-        <section class="doa-section">
-            <h3>Quotes Hari Ini</h3>
-            <div class="doa-card">
-                <i class="fas fa-quote-left quote-icon"></i>
-                <p>{{ quote }}</p>
-            </div>
-        </section>
+    <!-- KOTAK INFORMASI -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
         
-        <section class="pengumuman-section">
-            <div class="section-header">
-                <h3>Pengumuman Terbaru</h3>
-                <a href="/pengumuman" class="link-primary">Lihat semua</a>
-            </div>
-            <div class="pengumuman-list">
-                {% for item in pengumuman[:5] %}
-                <div class="pengumuman-item">
-                    <div class="pengumuman-indicator"></div>
-                    <div class="pengumuman-content">
-                        <h4>{{ item.judul }}</h4>
-                        <span class="pengumuman-date">{{ item.tanggal_dibuat }}</span>
+        <!-- JADWAL TERDEKAT -->
+        <div class="card" style="padding: 24px; background: var(--white); color: inherit;">
+            <h3 style="margin: 0 0 16px 0; color: var(--primary-blue); display: flex; align-items: center; justify-content: space-between;">
+                <span><i class="fas fa-calendar-check"></i> Jadwal {% if is_logged_in %}Saya{% else %}Terdekat{% endif %}</span>
+                <a href="{{ url_for('jadwal') }}" style="font-size: 13px; background: var(--light-blue); color: var(--primary-blue); padding: 4px 10px; border-radius: 20px; text-decoration: none;">Lihat Semua</a>
+            </h3>
+            
+            {% if jadwal %}
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                {% for j in jadwal %}
+                    <div style="display: flex; align-items: center; gap: 16px; padding: 12px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--background);">
+                        <div style="background: var(--white); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; text-align: center; min-width: 50px;">
+                            <span style="display: block; font-size: 20px; font-weight: 800; line-height: 1;">{{ j.tanggal }}</span>
+                            <span style="display: block; font-size: 11px; font-weight: bold; opacity: 0.7; text-transform: uppercase;">{{ j.bulan }}</span>
+                        </div>
+                        <div style="flex: 1;">
+                            <h4 style="margin: 0 0 4px 0; font-size: 15px;">{{ j.acara }}</h4>
+                            <p style="margin: 0; font-size: 12px; opacity: 0.7;"><i class="far fa-clock"></i> {{ j.hari }}, Pkl {{ j.waktu }}</p>
+                        </div>
                     </div>
-                </div>
                 {% endfor %}
-            </div>
-        </section>
-    </aside>
+                </div>
+            {% else %}
+                <div style="text-align: center; padding: 30px 10px; background: var(--background); border-radius: 12px;">
+                    <i class="far fa-calendar-times" style="font-size: 32px; opacity: 0.5; margin-bottom: 12px;"></i>
+                    <p style="margin: 0; font-size: 14px; opacity: 0.7;">Tidak ada jadwal terdekat.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- PENGUMUMAN TERBARU -->
+        <div class="card" style="padding: 24px; background: var(--white); color: inherit;">
+            <h3 style="margin: 0 0 16px 0; color: #d97706; display: flex; align-items: center; justify-content: space-between;">
+                <span><i class="fas fa-bullhorn"></i> Pengumuman Terbaru</span>
+                <a href="{{ url_for('pengumuman') }}" style="font-size: 13px; background: rgba(217, 119, 6, 0.1); color: #d97706; padding: 4px 10px; border-radius: 20px; text-decoration: none;">Lihat Semua</a>
+            </h3>
+            
+            {% if pengumuman %}
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                {% for p in pengumuman[:3] %}
+                    <div style="padding: 16px; border-left: 4px solid #d97706; border-radius: 8px; background: rgba(217, 119, 6, 0.05);">
+                        <h4 style="margin: 0 0 4px 0; font-size: 14px;">{{ p.judul }}</h4>
+                        <p style="margin: 0; font-size: 12px; color: #d97706; font-weight: 600;"><i class="far fa-calendar-alt"></i> Dibuat: {{ p.tanggal_dibuat }}</p>
+                    </div>
+                {% endfor %}
+                </div>
+            {% else %}
+                <div style="text-align: center; padding: 30px 10px; background: var(--background); border-radius: 12px;">
+                    <i class="far fa-bell-slash" style="font-size: 32px; opacity: 0.5; margin-bottom: 12px;"></i>
+                    <p style="margin: 0; font-size: 14px; opacity: 0.7;">Belum ada pengumuman.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- QUICK ACTIONS -->
+    {% if is_logged_in %}
+    <div class="card" style="padding: 24px; background: var(--white); color: inherit;">
+        <h3 style="margin: 0 0 16px 0;"><i class="fas fa-bolt"></i> Akses Cepat</h3>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <a href="{{ url_for('scan_absen') }}" class="btn-primary" style="text-decoration: none; flex: 1; text-align: center; background: #10b981; color: white;"><i class="fas fa-qrcode"></i> Scan Absen</a>
+            <a href="{{ url_for('titip') }}" class="btn-primary" style="text-decoration: none; flex: 1; text-align: center; background: #0ea5e9; color: white;"><i class="fas fa-hand-paper"></i> Titip Absen</a>
+            <a href="{{ url_for('hukuman') }}" class="btn-outline" style="text-decoration: none; flex: 1; text-align: center; border-color: #ef4444; color: #ef4444;"><i class="fas fa-gavel"></i> Cek Sanksi</a>
+        </div>
+    </div>
+    {% endif %}
+
 </div>
 {% endblock %}

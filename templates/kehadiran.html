@@ -1,72 +1,167 @@
 {% extends "base.html" %}
 
-{% block title %}Absensi & Kehadiran - MISDINAR{% endblock %}
+{% block title %}Kehadiran & Izin - MISDINAR{% endblock %}
 
 {% block content %}
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
     <div>
-        <h2>Absensi & Rekap Kehadiran</h2>
-        <p>Kelola izin anggota, data absensi manual, dan ubah status kehadiran.</p>
+        <h2>Rekap Absensi & Izin</h2>
+        <p>Pantau kehadiran Misa dan kelola pengajuan izin anggota.</p>
     </div>
+    
+    <!-- FITUR FILTER BULAN -->
+    <form action="{{ url_for('kehadiran') }}" method="GET" style="display: flex; gap: 8px; align-items: center;">
+        <label style="font-weight: bold; font-size: 13px; color: var(--text-dark);">Filter Bulan:</label>
+        <input type="month" name="bulan" value="{{ selected_month }}" onchange="this.form.submit()" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--white); color: var(--text-dark); font-family: inherit;">
+    </form>
+</div>
+
+<!-- Tabs Control -->
+<div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+    <button onclick="switchTab('absensi')" id="tab-absensi" class="btn-primary" style="border-radius: 20px;">Rekap Absensi</button>
     {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-    <button class="btn-primary" onclick="openAddModal()" style="border-radius: 8px; padding: 10px 16px; font-weight: bold; border: none; cursor: pointer; color: white; background: var(--primary-blue);">
-        <i class="fas fa-plus"></i> Tambah Manual
-    </button>
+    <button onclick="switchTab('izin')" id="tab-izin" class="btn-outline" style="border-radius: 20px;">Kelola Izin & Tukar</button>
     {% endif %}
 </div>
 
-<!-- PANEL PERIZINAN KHUSUS ADMIN -->
-{% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] and data_izin %}
-<div class="card" style="background: white; padding: 24px; border-radius: 16px; box-shadow: var(--shadow); margin-bottom: 30px; border-left: 5px solid #d97706;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
-        <h3 style="margin:0; color: #b45309;"><i class="fas fa-envelope-open-text"></i> Proses Izin & Titip Absen</h3>
-        <form action="{{ url_for('kehadiran') }}" method="POST" onsubmit="return confirm('Hapus semua riwayat izin yang sudah selesai diproses?');">
-            <input type="hidden" name="action" value="hapus_riwayat_izin">
-            <button type="submit" style="background: white; border: 1px solid #ef4444; color: #ef4444; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;"><i class="fas fa-broom"></i> Bersihkan Riwayat Selesai</button>
+<!-- TAB ABSENSI -->
+<div id="content-absensi">
+    {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+    <div class="card" style="padding: 24px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 24px;">
+        <h3 style="margin-top: 0;"><i class="fas fa-plus-circle"></i> Catat Kehadiran Manual</h3>
+        <form action="{{ url_for('kehadiran') }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+            <input type="hidden" name="action" value="tambah">
+            <div>
+                <label style="font-size: 13px; font-weight: bold;">Anggota</label>
+                <select name="username" required style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                    {% for u in users %}
+                    <option value="{{ u.username }}">{{ u.nama }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="font-size: 13px; font-weight: bold;">Tanggal</label>
+                <input type="date" name="tanggal" required style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+            </div>
+            <div>
+                <label style="font-size: 13px; font-weight: bold;">Kegiatan / Misa</label>
+                <input type="text" name="kegiatan" placeholder="Cth: Misa Pagi Pkl 08.00" required style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+            </div>
+            <div>
+                <label style="font-size: 13px; font-weight: bold;">Status</label>
+                <select name="status" required style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                    <option value="Hadir">Hadir</option>
+                    <option value="Tidak Hadir">Tidak Hadir (Alpa)</option>
+                    <option value="Izin">Izin</option>
+                </select>
+            </div>
+            <div style="grid-column: 1 / -1; display: flex; align-items: flex-end; gap: 12px;">
+                <div style="flex: 1;">
+                    <label style="font-size: 13px; font-weight: bold;">Keterangan Tambahan</label>
+                    <input type="text" name="keterangan" placeholder="Alasan izin / telat..." style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                </div>
+                <button type="submit" class="btn-primary">Catat Absen</button>
+            </div>
         </form>
     </div>
-    <div style="overflow-x: auto;">
-        <table style="width: 100%; text-align: left; border-collapse: collapse; min-width: 800px; font-size: 13px;">
+    {% endif %}
+
+    <div class="card" style="padding: 24px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow); overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; min-width: 800px; font-size: 14px;">
             <thead>
-                <tr style="border-bottom: 2px solid #e2e8f0; color: var(--text-gray);">
-                    <th style="padding: 10px;">Waktu Request</th>
-                    <th style="padding: 10px;">Nama Pemohon</th>
-                    <th style="padding: 10px;">Jadwal / Kegiatan</th>
-                    <th style="padding: 10px;">Alasan & Pengganti</th>
-                    <th style="padding: 10px;">Status</th>
-                    <th style="padding: 10px; text-align: center;">Tindakan</th>
+                <tr style="background: var(--background); color: var(--text-dark); text-align: left;">
+                    <th style="padding: 12px; border-bottom: 2px solid var(--border-color);">Tanggal</th>
+                    <th style="padding: 12px; border-bottom: 2px solid var(--border-color);">Nama</th>
+                    <th style="padding: 12px; border-bottom: 2px solid var(--border-color);">Kegiatan</th>
+                    <th style="padding: 12px; border-bottom: 2px solid var(--border-color);">Status</th>
+                    <th style="padding: 12px; border-bottom: 2px solid var(--border-color);">Waktu Scan</th>
+                    {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+                    <th style="padding: 12px; border-bottom: 2px solid var(--border-color); text-align: center;">Aksi</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
-                {% for iz in data_izin %}
-                <tr style="border-bottom: 1px solid #f1f5f9; {% if iz.status != 'Menunggu' %}opacity: 0.6;{% endif %}">
-                    <td style="padding: 10px;">{{ iz.waktu_pengajuan }}</td>
-                    <td style="padding: 10px; font-weight: bold;">
-                        {{ iz.nama }}<br>
-                        {% if iz.jenis_izin == 'Non-Jadwal' %}
-                        <span style="font-size:10px; background:#e0f2fe; color:#0284c7; padding:2px 4px; border-radius:4px;">TITIP ABSEN</span>
+                {% for k in kehadiran %}
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                    <td style="padding: 12px;">{{ k.tanggal }}</td>
+                    <td style="padding: 12px;"><strong>{{ k.nama }}</strong></td>
+                    <td style="padding: 12px;">{{ k.kegiatan }}</td>
+                    <td style="padding: 12px;">
+                        {% if k.status == 'Hadir' %}
+                            <span style="background: #dcfce7; color: #059669; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px;"><i class="fas fa-check-circle"></i> Hadir</span>
+                        {% elif k.status == 'Tidak Hadir' %}
+                            <span style="background: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px;"><i class="fas fa-times-circle"></i> Alpa</span>
+                        {% elif k.status == 'Belum Absen' %}
+                            <span style="background: #f1f5f9; color: #64748b; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px;"><i class="fas fa-clock"></i> Belum Absen</span>
                         {% else %}
-                        <span style="font-size:10px; background:#ffedd5; color:#b45309; padding:2px 4px; border-radius:4px;">IZIN MISA</span>
+                            <span style="background: #fef3c7; color: #d97706; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px;"><i class="fas fa-envelope-open-text"></i> Izin</span>
+                        {% endif %}
+                        {% if k.keterangan and k.keterangan != '-' %}
+                        <div style="font-size: 11px; color: var(--text-gray); margin-top: 4px;">{{ k.keterangan }}</div>
                         {% endif %}
                     </td>
-                    <td style="padding: 10px; color: var(--primary-blue); font-weight: 600;">{{ iz.acara }}<br><small style="color: #64748b;">Tgl: {{ iz.tanggal_misa }}</small></td>
-                    <td style="padding: 10px;">
-                        <i>"{{ iz.alasan }}"</i><br>
-                        <span style="font-size: 11px; background:#f1f5f9; padding:2px 6px; border-radius:4px;">Ganti: {{ iz.pengganti }}</span>
+                    <td style="padding: 12px; font-size: 12px; color: var(--text-gray);">{{ k.waktu_scan }}</td>
+                    
+                    {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+                    <td style="padding: 12px; text-align: center;">
+                        <button onclick="bukaEditAbsen('{{ k.id }}', '{{ k.username }}', '{{ k.tanggal }}', '{{ k.kegiatan }}', '{{ k.status }}', '{{ k.keterangan }}')" class="btn-outline" style="padding: 4px 8px; font-size: 11px;">Edit</button>
                     </td>
-                    <td style="padding: 10px;">
-                        <span style="font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 4px;
-                            {% if iz.status == 'Disetujui' %}background:#dcfce7;color:#059669;
-                            {% elif iz.status == 'Ditolak' %}background:#fee2e2;color:#dc2626;
-                            {% else %}background:#fef3c7;color:#d97706;{% endif %}">
-                            {{ iz.status }}
-                        </span>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+                {% if not kehadiran %}
+                <tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-gray);">Tidak ada data kehadiran di bulan ini.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
+<!-- TAB IZIN -->
+<div id="content-izin" style="display: none;">
+    <div class="card" style="padding: 24px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow); overflow-x: auto;">
+        
+        <form action="{{ url_for('kehadiran') }}" method="POST" style="margin-bottom: 16px;">
+            <input type="hidden" name="action" value="hapus_riwayat_izin">
+            <button type="submit" class="btn-outline" style="color: #ef4444; border-color: #ef4444;" onclick="return confirm('Hapus semua riwayat izin yang sudah Disetujui/Ditolak?');"><i class="fas fa-trash"></i> Bersihkan Riwayat Izin</button>
+        </form>
+
+        <table style="width: 100%; border-collapse: collapse; min-width: 800px; font-size: 14px;">
+            <thead>
+                <tr style="background: var(--background); color: var(--text-dark); text-align: left;">
+                    <th style="padding: 12px; border-bottom: 2px solid var(--border-color);">Pengaju</th>
+                    <th style="padding: 12px; border-bottom: 2px solid var(--border-color);">Kegiatan & Alasan</th>
+                    <th style="padding: 12px; border-bottom: 2px solid var(--border-color);">Pengganti (Tukar)</th>
+                    <th style="padding: 12px; border-bottom: 2px solid var(--border-color);">Status & Tanggapan</th>
+                    <th style="padding: 12px; border-bottom: 2px solid var(--border-color); text-align: center;">Tindakan</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in data_izin %}
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                    <td style="padding: 12px;">
+                        <strong>{{ i.nama }}</strong><br>
+                        <small style="color: var(--text-gray);">{{ i.waktu_pengajuan }}</small>
                     </td>
-                    <td style="padding: 10px; text-align: center;">
-                        {% if iz.status == 'Menunggu' %}
-                        <button onclick="bukaModalResponIzin('{{ iz.id }}', '{{ iz.nama }}', '{{ iz.acara }}', '{{ iz.jenis_izin }}')" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">Tanggapi</button>
+                    <td style="padding: 12px;">
+                        <span style="color: var(--primary-blue); font-weight: bold;">{{ i.acara }} ({{ i.tanggal_misa }})</span><br>
+                        <i>"{{ i.alasan }}"</i>
+                    </td>
+                    <td style="padding: 12px; font-weight: bold; color: #10b981;">{{ i.pengganti }}</td>
+                    <td style="padding: 12px;">
+                        <span style="padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; 
+                            background: {% if i.status=='Menunggu' %}#fef3c7{% elif i.status=='Disetujui' %}#dcfce7{% else %}#fee2e2{% endif %};
+                            color: {% if i.status=='Menunggu' %}#d97706{% elif i.status=='Disetujui' %}#059669{% else %}#dc2626{% endif %};">
+                            {{ i.status }}
+                        </span><br>
+                        <small style="color: var(--text-gray);">Resp: {{ i.tanggapan_admin }}</small>
+                    </td>
+                    <td style="padding: 12px; text-align: center;">
+                        {% if i.status == 'Menunggu' %}
+                        <button onclick="bukaTanggapan('{{ i.id }}', '{{ i.nama }}', '{{ i.acara }}', '{{ i.pengganti }}')" class="btn-primary" style="padding: 6px 12px; font-size: 12px;">Tanggapi</button>
                         {% else %}
-                        <span style="font-size: 11px; color: #94a3b8;">Selesai diproses</span>
+                        <i class="fas fa-check" style="color: #cbd5e1;"></i>
                         {% endif %}
                     </td>
                 </tr>
@@ -76,216 +171,104 @@
     </div>
 </div>
 
-<div id="responIzinModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
-    <div style="background: white; padding: 24px; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
-        <h3 style="margin-top:0; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;"><i class="fas fa-check-square" style="color: #3b82f6;"></i> Proses Izin Anggota</h3>
-        
+<!-- Modal Tanggapan Izin -->
+<div id="tanggapanModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: var(--white); padding: 24px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: var(--shadow);">
+        <h3 style="margin-top:0; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">Tanggapi Izin: <span id="nama_pengaju" style="color: var(--primary-blue);"></span></h3>
         <form action="{{ url_for('kehadiran') }}" method="POST">
             <input type="hidden" name="action" value="tanggapi_izin">
-            <input type="hidden" name="izin_id" id="respon_izin_id">
-            
-            <p style="font-size: 13px; color: var(--text-gray); margin-bottom: 16px;">Beri keputusan untuk pengajuan <strong id="respon_nama_teks"></strong> pada <strong id="respon_acara_teks"></strong>.</p>
+            <input type="hidden" name="izin_id" id="tanggapan_izin_id">
             
             <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Keputusan</label>
-                <select name="status_tanggapan" id="statusTanggapanSelect" onchange="togglePenggantiField()" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
-                    <option value="Disetujui">Setujui Izin (Bebas Sanksi)</option>
-                    <option value="Ditolak">Tolak Izin (Otomatis Alpa)</option>
+                <label style="font-size: 13px; font-weight: bold;">Status Keputusan</label>
+                <select name="status_tanggapan" required style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                    <option value="Disetujui">Setujui Izin</option>
+                    <option value="Ditolak">Tolak Izin</option>
                 </select>
             </div>
-
-            <div id="penggantiField" style="margin-bottom: 16px; display: none;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px; color: #10b981;">Pilih Pengganti (Opsional)</label>
-                <select name="pengganti_username" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
-                    <option value="">-- Kosongkan jika tidak ada --</option>
+            
+            <div style="margin-bottom: 16px;" id="div_pengganti">
+                <label style="font-size: 13px; font-weight: bold; color: #10b981;">Validasi Nama Pengganti (Jika Ada)</label>
+                <select name="pengganti_username" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                    <option value="">-- Tidak ada pengganti / Biarkan kosong --</option>
                     {% for u in users %}
                     <option value="{{ u.username }}">{{ u.nama }}</option>
                     {% endfor %}
                 </select>
+                <small style="color: var(--text-gray); font-size: 11px;">*Pilih nama sistem dari orang yang disebut sebagai pengganti agar jadwal terganti otomatis.</small>
             </div>
-            
+
             <div style="margin-bottom: 24px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Pesan Balasan</label>
-                <input type="text" name="tanggapan_admin" placeholder="Opsional..." style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
+                <label style="font-size: 13px; font-weight: bold;">Pesan / Tanggapan Admin</label>
+                <input type="text" name="tanggapan_admin" placeholder="Cth: Ok, sudah diganti Budi." required style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
             </div>
             
             <div style="display: flex; gap: 12px;">
-                <button type="button" onclick="document.getElementById('responIzinModal').style.display='none'" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; font-weight: bold; cursor: pointer;">Batal</button>
-                <button type="submit" style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: #10b981; color: white; font-weight: bold; cursor: pointer;">Simpan</button>
+                <button type="button" onclick="document.getElementById('tanggapanModal').style.display='none'" class="btn-outline" style="flex:1;">Batal</button>
+                <button type="submit" class="btn-primary" style="flex:1;">Kirim Keputusan</button>
             </div>
         </form>
     </div>
 </div>
 
-<script>
-window.currentJenisIzin = '';
-function bukaModalResponIzin(id, nama, acara, jenis) {
-    document.getElementById('respon_izin_id').value = id;
-    document.getElementById('respon_nama_teks').innerText = nama;
-    document.getElementById('respon_acara_teks').innerText = acara;
-    window.currentJenisIzin = jenis;
-    togglePenggantiField();
-    document.getElementById('responIzinModal').style.display = 'flex';
-}
-function togglePenggantiField() {
-    var status = document.getElementById('statusTanggapanSelect').value;
-    var field = document.getElementById('penggantiField');
-    if (status === 'Disetujui' && window.currentJenisIzin !== 'Non-Jadwal') { field.style.display = 'block'; } 
-    else { field.style.display = 'none'; }
-}
-</script>
-{% endif %}
-
-<!-- TABEL KEHADIRAN -->
-<div class="card" style="background: white; padding: 24px; border-radius: 16px; box-shadow: var(--shadow); overflow-x: auto;">
-    <table style="width: 100%; text-align: left; border-collapse: collapse; min-width: 900px; font-size: 14px;">
-        <thead>
-            <tr style="border-bottom: 2px solid #e2e8f0; color: var(--text-gray);">
-                <th style="padding: 14px 12px; width: 12%;">Tanggal</th>
-                <th style="padding: 14px 12px; width: 18%;">Nama Petugas</th>
-                <th style="padding: 14px 12px; width: 20%;">Kegiatan/Misa</th>
-                <th style="padding: 14px 12px; width: 10%;">Status</th>
-                <th style="padding: 14px 12px; width: 15%;">Waktu Absen</th>
-                <th style="padding: 14px 12px; width: 15%;">Keterangan</th>
-                {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-                <th style="padding: 14px 12px; width: 10%; text-align: center;">Aksi</th>
-                {% endif %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for k in kehadiran %}
-            <tr style="border-bottom: 1px solid #f1f5f9; transition: 0.2s;">
-                <td style="padding: 16px 12px; font-weight: bold; color: var(--text-dark);">{{ k.tanggal }}</td>
-                <td style="padding: 16px 12px;">{{ k.nama }}</td>
-                <td style="padding: 16px 12px; color: var(--primary-blue); font-weight: 600;">{{ k.kegiatan }}</td>
-                <td style="padding: 16px 12px;">
-                    <span style="display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;
-                        {% if k.status == 'Hadir' %}background: #dcfce7; color: #059669;
-                        {% elif k.status == 'Izin' %}background: #fef3c7; color: #d97706;
-                        {% elif k.status == 'Belum Absen' %}background: #f1f5f9; color: #64748b;
-                        {% else %}background: #fee2e2; color: #dc2626;{% endif %}">
-                        {{ k.status | upper }}
-                    </span>
-                </td>
-                <td style="padding: 16px 12px;">
-                    {% if k.waktu_scan and k.waktu_scan != '-' %}
-                        <span style="font-size: 11px; font-weight: 600; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 8px; border-radius: 6px; display: inline-block;">
-                            <i class="far fa-clock" style="color: #64748b; margin-right: 4px;"></i> {{ k.waktu_scan }}
-                        </span>
-                    {% else %}
-                        <span style="font-size: 11px; color: #94a3b8;">-</span>
-                    {% endif %}
-                </td>
-                <td style="padding: 16px 12px; color: var(--text-gray); font-size: 13px;">{{ k.keterangan if k.keterangan else '-' }}</td>
-                
-                {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-                <td style="padding: 16px 12px; text-align: center;">
-                    <button class="btn-icon" onclick="openEditModal('{{ k.id }}', '{{ k.username }}', '{{ k.nama }}', '{{ k.tanggal }}', '{{ k.kegiatan }}', '{{ k.status }}', '{{ k.keterangan }}')" style="color: var(--primary-blue); background: none; border: none; cursor: pointer; margin-right: 8px; font-size: 16px;">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    
-                    {% if 'j_' not in k.id|string %}
-                    <form action="{{ url_for('kehadiran') }}" method="POST" style="display: inline;" onsubmit="return confirm('Hapus data kehadiran manual ini secara permanen?');">
-                        <input type="hidden" name="action" value="hapus">
-                        <input type="hidden" name="id" value="{{ k.id }}">
-                        <button type="submit" class="btn-icon" style="color: #ef4444; background: none; border: none; cursor: pointer; font-size: 16px;">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </form>
-                    {% endif %}
-                </td>
-                {% endif %}
-            </tr>
-            {% else %}
-            <tr><td colspan="7" style="padding: 60px 20px; text-align: center; color: var(--text-gray);">Belum ada data kehadiran.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-{% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
-<div id="kehadiranModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
-    <div style="background: white; border-radius: 16px; width: 100%; max-width: 450px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden;">
-        <div style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-            <h3 id="modalTitle" style="margin: 0; color: var(--text-dark); font-size: 18px;"><i class="fas fa-edit" style="color: var(--primary-blue);"></i> Kelola Kehadiran</h3>
-            <button onclick="document.getElementById('kehadiranModal').style.display='none'" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #94a3b8;">&times;</button>
-        </div>
-        <form action="{{ url_for('kehadiran') }}" method="POST" style="padding: 24px;">
-            <input type="hidden" name="action" id="actionField" value="tambah">
-            <input type="hidden" name="id" id="idField">
-            <input type="hidden" name="username_hidden" id="hiddenUsername">
-            <input type="hidden" name="nama_hidden" id="hiddenNama">
+<!-- Modal Edit Absen Manual -->
+<div id="editAbsenModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: var(--white); padding: 24px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: var(--shadow);">
+        <h3 style="margin-top:0; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">Edit Status Kehadiran</h3>
+        <form action="{{ url_for('kehadiran') }}" method="POST">
+            <input type="hidden" name="action" value="edit">
+            <input type="hidden" name="id" id="edit_id">
+            <input type="hidden" name="username_hidden" id="edit_username">
+            <input type="hidden" name="tanggal" id="edit_tanggal">
+            <input type="hidden" name="kegiatan" id="edit_kegiatan">
+            
             <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Pilih Anggota</label>
-                <select name="username" id="usernameField" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; font-family: inherit;">
-                    {% for u in users %}
-                    <option value="{{ u.username }}">{{ u.nama }}</option>
-                    {% endfor %}
-                </select>
-                <p id="usernameHelp" style="display: none; margin: 6px 0 0 0; font-size: 11px; color: #ef4444;"><i>*Nama tidak dapat diubah di mode edit (terkunci).</i></p>
-            </div>
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Tanggal</label>
-                <input type="date" name="tanggal" id="tanggalField" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
-            </div>
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Kegiatan / Misa</label>
-                <input type="text" name="kegiatan" id="kegiatanField" placeholder="Contoh: Misa Paskah 08:00" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
-            </div>
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Status Kehadiran</label>
-                <select name="status" id="statusField" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; font-family: inherit;">
+                <label style="font-size: 13px; font-weight: bold;">Ubah Status</label>
+                <select name="status" id="edit_status" required style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
                     <option value="Hadir">Hadir</option>
-                    <option value="Izin">Izin / Sakit</option>
                     <option value="Tidak Hadir">Tidak Hadir (Alpa)</option>
+                    <option value="Izin">Izin</option>
                 </select>
+                <small style="color: #ef4444; font-size: 11px;">*Mengubah menjadi 'Tidak Hadir' akan otomatis memberikan sanksi sesuai pengaturan.</small>
             </div>
             <div style="margin-bottom: 24px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Keterangan / Alasan</label>
-                <input type="text" name="keterangan" id="keteranganField" placeholder="Alasan izin / telat (opsional)" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit;">
+                <label style="font-size: 13px; font-weight: bold;">Keterangan Tambahan</label>
+                <input type="text" name="keterangan" id="edit_keterangan" placeholder="Alasan..." style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
             </div>
-            <button type="submit" style="background: var(--primary-blue); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 14px; transition: 0.2s;">Simpan Data</button>
+            
+            <div style="display: flex; gap: 12px;">
+                <button type="button" onclick="document.getElementById('editAbsenModal').style.display='none'" class="btn-outline" style="flex:1;">Batal</button>
+                <button type="submit" class="btn-primary" style="flex:1;">Simpan</button>
+            </div>
         </form>
     </div>
 </div>
 
 <script>
-function openAddModal() {
-    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus-circle" style="color: var(--primary-blue);"></i> Tambah Manual';
-    document.getElementById('actionField').value = 'tambah';
-    document.getElementById('idField').value = '';
-    document.getElementById('kegiatanField').value = '';
-    document.getElementById('keteranganField').value = '';
-    document.getElementById('statusField').value = 'Hadir';
-    let userField = document.getElementById('usernameField'); userField.style.pointerEvents = 'auto'; userField.style.background = 'white';
-    let tglField = document.getElementById('tanggalField'); tglField.removeAttribute('readonly'); tglField.style.background = 'white';
-    let kegField = document.getElementById('kegiatanField'); kegField.removeAttribute('readonly'); kegField.style.background = 'white';
-    document.getElementById('usernameHelp').style.display = 'none';
-    document.getElementById('kehadiranModal').style.display = 'flex';
+function switchTab(tab) {
+    document.getElementById('content-absensi').style.display = 'none';
+    document.getElementById('content-izin').style.display = 'none';
+    document.getElementById('tab-absensi').className = 'btn-outline';
+    document.getElementById('tab-izin').className = 'btn-outline';
+    
+    document.getElementById('content-' + tab).style.display = 'block';
+    document.getElementById('tab-' + tab).className = 'btn-primary';
 }
 
-function openEditModal(id, username, nama, tanggal, kegiatan, status, keterangan) {
-    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit" style="color: var(--primary-blue);"></i> Edit Status';
-    document.getElementById('actionField').value = 'edit';
-    document.getElementById('idField').value = id;
-    document.getElementById('usernameField').value = username;
-    document.getElementById('hiddenUsername').value = username; 
-    document.getElementById('hiddenNama').value = nama; 
-    document.getElementById('tanggalField').value = tanggal;
-    document.getElementById('kegiatanField').value = kegiatan;
-    document.getElementById('keteranganField').value = (keterangan !== 'None' && keterangan !== '-') ? keterangan : '';
-    if(status === 'Belum Absen') { document.getElementById('statusField').value = 'Tidak Hadir'; } 
-    else { document.getElementById('statusField').value = status; }
-    
-    let userField = document.getElementById('usernameField'); userField.style.pointerEvents = 'none'; userField.style.background = '#f1f5f9';
-    let tglField = document.getElementById('tanggalField'); tglField.setAttribute('readonly', 'true'); tglField.style.background = '#f1f5f9';
-    let kegField = document.getElementById('kegiatanField'); kegField.setAttribute('readonly', 'true'); kegField.style.background = '#f1f5f9';
-    document.getElementById('usernameHelp').style.display = 'block';
-    document.getElementById('kehadiranModal').style.display = 'flex';
+function bukaTanggapan(id, nama, acara, pengganti) {
+    document.getElementById('tanggapan_izin_id').value = id;
+    document.getElementById('nama_pengaju').innerText = nama;
+    document.getElementById('tanggapanModal').style.display = 'flex';
 }
-window.onclick = function(event) {
-    if (event.target == document.getElementById('kehadiranModal')) document.getElementById('kehadiranModal').style.display = "none";
-    if (event.target == document.getElementById('responIzinModal')) document.getElementById('responIzinModal').style.display = "none";
+
+function bukaEditAbsen(id, username, tgl, keg, status, ket) {
+    document.getElementById('edit_id').value = id;
+    document.getElementById('edit_username').value = username;
+    document.getElementById('edit_tanggal').value = tgl;
+    document.getElementById('edit_kegiatan').value = keg;
+    document.getElementById('edit_status').value = status !== 'Belum Absen' ? status : 'Hadir';
+    document.getElementById('edit_keterangan').value = ket !== '-' ? ket : '';
+    document.getElementById('editAbsenModal').style.display = 'flex';
 }
 </script>
 {% endif %}
