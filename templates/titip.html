@@ -1,116 +1,272 @@
 {% extends "base.html" %}
 
-{% block title %}Titip Absen - MISDINAR{% endblock %}
+{% block title %}Titip Jadwal & Misa Khusus - MISDINAR{% endblock %}
 
 {% block content %}
-<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+<style>
+    /* Tabs */
+    .titip-tabs { display: flex; gap: 12px; margin-bottom: 24px; border-bottom: 2px solid var(--border-color); padding-bottom: 12px; overflow-x: auto;}
+    .titip-tab { background: transparent; border: none; font-size: 14px; font-weight: bold; color: var(--text-gray); padding: 8px 16px; cursor: pointer; transition: 0.2s; border-radius: 20px;}
+    .titip-tab.active { background: var(--primary-blue); color: white; }
+    .titip-tab:hover:not(.active) { background: var(--background); color: var(--text-dark); }
+    
+    .titip-panel { display: none; }
+    .titip-panel.active { display: block; animation: fadeIn 0.3s; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Cards Misa Khusus */
+    .grid-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+    .slot-card { background: var(--white); border-radius: 12px; box-shadow: var(--shadow); border: 1px solid var(--border-color); overflow: hidden; display: flex; flex-direction: column;}
+    .slot-header { padding: 16px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-color); }
+    .slot-header.rebutan { background: linear-gradient(135deg, #d97706, #f59e0b); color: white; }
+    
+    .date-box { background: rgba(255,255,255,0.2); border-radius: 8px; padding: 8px 12px; text-align: center; min-width: 60px; backdrop-filter: blur(4px);}
+    .date-box span { display: block; line-height: 1; }
+    
+    .slot-body { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 12px;}
+    .slot-footer { padding: 16px; background: var(--background); border-top: 1px solid var(--border-color); }
+</style>
+
+<div class="page-header" style="margin-bottom: 20px;">
     <div>
-        <h2>Titip Absen (Open Slot)</h2>
-        <p>Ambil slot kosong yang dibuka pengurus untuk mendapatkan poin tambahan.</p>
+        <h2>Titip Jadwal & Misa Khusus</h2>
+        <p>Pengisian ketersediaan jadwal rutin dan pendaftaran cepat Misa Khusus.</p>
     </div>
+</div>
+
+<!-- TABS CONTROL -->
+<div class="titip-tabs">
+    <button class="titip-tab active" onclick="switchPanel('ketersediaan')" id="btn-ketersediaan"><i class="fas fa-calendar-check"></i> Pengisian Ketersediaan</button>
+    <button class="titip-tab" onclick="switchPanel('rebutan')" id="btn-rebutan"><i class="fas fa-bolt"></i> Rebutan Misa Khusus</button>
+</div>
+
+<!-- PANEL 1: KETERSEDIAAN JADWAL -->
+<div id="panel-ketersediaan" class="titip-panel active">
+    
     {% if role in ['super admin', 'penjadwalan', 'bph'] %}
-    <button onclick="document.getElementById('bukaSlotModal').style.display='flex'" class="btn-primary" style="border-radius: 8px; font-weight: bold;">
-        <i class="fas fa-plus"></i> Buka Slot Baru
-    </button>
+        {% if not periode %}
+        <div class="card" style="padding: 24px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 24px; border-left: 4px solid var(--primary-blue);">
+            <h3 style="margin-top: 0; color: var(--primary-blue);"><i class="fas fa-folder-open"></i> Buka Periode Pengisian Jadwal</h3>
+            <p style="font-size: 13px; color: var(--text-gray); margin-bottom: 16px;">Aktifkan mode ini agar anggota bisa mulai mengisi tanggal dan shift luang mereka.</p>
+            
+            <form action="{{ url_for('titip') }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                <input type="hidden" name="action" value="buka_periode">
+                <div style="grid-column: 1 / -1;">
+                    <label style="font-size: 12px; font-weight: bold; color: var(--text-dark);">Judul Periode (Misal: Jadwal 15-21 Juni 2026)</label>
+                    <input type="text" name="judul" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--background); color: var(--text-dark);">
+                </div>
+                <div>
+                    <label style="font-size: 12px; font-weight: bold; color: var(--text-dark);">Tanggal Mulai Tersedia</label>
+                    <input type="date" name="tanggal_mulai" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--background); color: var(--text-dark);">
+                </div>
+                <div>
+                    <label style="font-size: 12px; font-weight: bold; color: var(--text-dark);">Tanggal Selesai Tersedia</label>
+                    <input type="date" name="tanggal_selesai" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--background); color: var(--text-dark);">
+                </div>
+                <div style="display: flex; align-items: flex-end;">
+                    <button type="submit" class="btn-primary" style="width: 100%;"><i class="fas fa-check"></i> Buka Periode Sekarang</button>
+                </div>
+            </form>
+        </div>
+        {% else %}
+        <div class="card" style="padding: 24px; background: #e0f2fe; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 24px; border: 1px solid #bae6fd; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div>
+                <h3 style="margin: 0 0 4px 0; color: #0369a1;"><i class="fas fa-broadcast-tower"></i> Periode Aktif: {{ periode.judul }}</h3>
+                <p style="margin: 0; font-size: 13px; color: #0c4a6e;">Anggota saat ini dapat mengisi jadwal luang untuk tanggal <strong>{{ periode.tanggal_mulai }} s/d {{ periode.tanggal_selesai }}</strong>.</p>
+            </div>
+            <form action="{{ url_for('titip') }}" method="POST" style="margin: 0;" onsubmit="return confirm('Tutup periode ini? Anggota tidak bisa lagi mengirim ketersediaan.');">
+                <input type="hidden" name="action" value="tutup_periode">
+                <button type="submit" class="btn-outline" style="border-color: #ef4444; color: #ef4444; background: white;"><i class="fas fa-times-circle"></i> Tutup Periode</button>
+            </form>
+        </div>
+        {% endif %}
+    {% endif %}
+
+    {% if periode %}
+        <div class="card" style="padding: 24px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 24px;">
+            <h3 style="margin-top: 0;"><i class="fas fa-pen"></i> Isi Ketersediaan Tugas Anda</h3>
+            <p style="font-size: 13px; color: var(--text-gray); margin-bottom: 16px;">Periode Pengisian: <strong>{{ periode.judul }}</strong></p>
+            
+            <form action="{{ url_for('titip') }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px;">
+                <input type="hidden" name="action" value="ajukan_titip">
+                <input type="hidden" name="periode_id" value="{{ periode.id }}">
+                
+                <div>
+                    <label style="font-size: 12px; font-weight: bold; color: var(--text-dark);">Tanggal Luang</label>
+                    <input type="date" name="tanggal" min="{{ periode.tanggal_mulai }}" max="{{ periode.tanggal_selesai }}" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--background); color: var(--text-dark);">
+                </div>
+                <div>
+                    <label style="font-size: 12px; font-weight: bold; color: var(--text-dark);">Pilih Shift/Waktu</label>
+                    <select name="waktu" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--background); color: var(--text-dark);">
+                        <option value="Pagi">Misa Pagi</option>
+                        <option value="Siang">Misa Siang</option>
+                        <option value="Sore">Misa Sore</option>
+                        <option value="Bebas">Bebas (Kapan Saja)</option>
+                    </select>
+                </div>
+                <div style="grid-column: 1 / -1;">
+                    <label style="font-size: 12px; font-weight: bold; color: var(--text-dark);">Keterangan Tambahan (Opsional)</label>
+                    <input type="text" name="keterangan" placeholder="Cth: Hanya bisa kalau bertugas bersama budi" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--background); color: var(--text-dark);">
+                </div>
+                <div style="grid-column: 1 / -1;">
+                    <button type="submit" class="btn-primary" style="background: #10b981; border-color: #10b981;"><i class="fas fa-paper-plane"></i> Kirim Ketersediaan</button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="card" style="padding: 24px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow); overflow-x: auto;">
+            <h3 style="margin-top: 0; margin-bottom: 16px;"><i class="fas fa-list"></i> Data Ketersediaan {% if role in ['super admin', 'penjadwalan', 'bph'] %}Seluruh Anggota{% else %}Saya{% endif %}</h3>
+            
+            <table style="width: 100%; border-collapse: collapse; min-width: 600px; font-size: 14px;">
+                <thead>
+                    <tr style="background: var(--background); color: var(--text-dark); text-align: left;">
+                        <th style="padding: 12px; border-bottom: 2px solid var(--border-color);">Tanggal & Waktu</th>
+                        <th style="padding: 12px; border-bottom: 2px solid var(--border-color);">Nama Anggota</th>
+                        <th style="padding: 12px; border-bottom: 2px solid var(--border-color);">Keterangan</th>
+                        <th style="padding: 12px; border-bottom: 2px solid var(--border-color); text-align: center;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in pengajuan %}
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 12px;"><strong>{{ p.tanggal }}</strong> <span style="background: var(--light-blue); color: var(--primary-blue); font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">{{ p.waktu }}</span></td>
+                        <td style="padding: 12px; color: var(--text-dark);">{{ p.nama }}</td>
+                        <td style="padding: 12px; color: var(--text-gray);">{{ p.keterangan if p.keterangan else '-' }}</td>
+                        <td style="padding: 12px; text-align: center;">
+                            {% if p.username == session.get('user_id') or role in ['super admin', 'penjadwalan', 'bph'] %}
+                            <form action="{{ url_for('titip') }}" method="POST" style="margin: 0;" onsubmit="return confirm('Hapus data ketersediaan ini?');">
+                                <input type="hidden" name="action" value="hapus_pengajuan">
+                                <input type="hidden" name="req_id" value="{{ p.id }}">
+                                <button type="submit" class="btn-outline" style="color: #ef4444; border-color: #ef4444; padding: 4px 8px; font-size: 12px;"><i class="fas fa-trash"></i></button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not pengajuan %}
+                    <tr><td colspan="4" style="text-align: center; padding: 30px; color: var(--text-gray);">Belum ada anggota yang mengirim data ketersediaan.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+    {% else %}
+        <div style="background: var(--white); padding: 40px 20px; border-radius: 12px; text-align: center; border: 1px dashed var(--border-color);">
+            <i class="fas fa-calendar-times" style="font-size: 48px; color: var(--border-color); margin-bottom: 16px;"></i>
+            <h3 style="margin: 0 0 8px 0; color: var(--text-dark);">Tidak Ada Periode Pengisian Aktif</h3>
+            <p style="color: var(--text-gray); margin: 0; font-size: 14px;">Pengurus belum membuka periode untuk mengisi ketersediaan jadwal rutin saat ini.</p>
+        </div>
     {% endif %}
 </div>
 
-<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
-    {% for s in slots %}
-    <div class="card" style="background: white; border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; {% if s.is_past %}opacity: 0.6; filter: grayscale(100%);{% endif %}">
-        <div style="background: {% if s.is_past %}#94a3b8{% elif s.sisa == 0 %}#ef4444{% else %}#10b981{% endif %}; color: white; padding: 16px 20px;">
-            <h3 style="margin: 0; font-size: 18px;">{{ s.acara }}</h3>
-            <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;"><i class="far fa-calendar-alt"></i> {{ s.tanggal }} | <i class="far fa-clock"></i> {{ s.waktu }}</p>
-        </div>
+<!-- PANEL 2: REBUTAN SLOT MISA KHUSUS -->
+<div id="panel-rebutan" class="titip-panel">
+    
+    {% if role in ['super admin', 'penjadwalan', 'bph'] %}
+    <div class="card" style="padding: 24px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 24px; border-left: 4px solid #f59e0b;">
+        <h3 style="margin-top: 0; color: #d97706;"><i class="fas fa-bullhorn"></i> Buka Slot Rebutan Misa Khusus</h3>
+        <p style="font-size: 13px; color: var(--text-gray); margin-bottom: 16px;">Buat kuota slot kosong agar anggota bisa cepat-cepatan mendaftar untuk Misa Khusus (Manten, Arwah, dll).</p>
         
-        <div style="padding: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 13px;">
-                <span style="color: var(--text-gray); font-weight: bold;">Status Kuota:</span>
-                <span style="font-weight: 800; padding: 4px 10px; border-radius: 20px; {% if s.sisa > 0 %}background: #dcfce7; color: #059669;{% else %}background: #fee2e2; color: #dc2626;{% endif %}">
-                    {{ s.terisi }} / {{ s.kuota }} Terisi
-                </span>
-            </div>
-            
-            <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 20px;">
-                <p style="margin: 0 0 8px 0; font-size: 11px; color: var(--text-gray); font-weight: bold;">Peserta Bergabung:</p>
-                {% if s.peserta %}
-                    {% for p in s.peserta %}
-                        <span style="display: inline-block; background: white; border: 1px solid #e2e8f0; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin: 0 4px 4px 0; font-weight: bold; color: var(--primary-blue);">{{ p }}</span>
-                    {% endfor %}
-                {% else %}
-                    <span style="font-size: 12px; color: #94a3b8;"><i>Belum ada yang mengambil slot ini.</i></span>
-                {% endif %}
-            </div>
-            
-            <div style="display: flex; gap: 10px;">
-                {% if s.sudah_join %}
-                    <button disabled style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: #e2e8f0; color: #64748b; font-weight: bold; cursor: not-allowed;">Anda Sudah Bergabung</button>
-                {% elif s.is_past %}
-                    <button disabled style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: #e2e8f0; color: #64748b; font-weight: bold; cursor: not-allowed;">Slot Ditutup (Waktu Lewat)</button>
-                {% elif s.sisa == 0 %}
-                    <button disabled style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: #fee2e2; color: #dc2626; font-weight: bold; cursor: not-allowed;">Slot Penuh</button>
-                {% else %}
-                    <form action="{{ url_for('titip') }}" method="POST" style="flex: 1; margin: 0;">
-                        <input type="hidden" name="action" value="ambil_slot">
-                        <input type="hidden" name="slot_id" value="{{ s.id }}">
-                        <button type="submit" style="width: 100%; padding: 12px; border-radius: 8px; border: none; background: #0ea5e9; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(14, 165, 233, 0.2);">Ambil Slot Sekarang</button>
-                    </form>
-                {% endif %}
-                
-                {% if role in ['super admin', 'penjadwalan'] %}
-                    <form action="{{ url_for('titip') }}" method="POST" style="margin: 0;" onsubmit="return confirm('Hapus slot ini permanen?');">
-                        <input type="hidden" name="action" value="hapus_slot">
-                        <input type="hidden" name="id" value="{{ s.id }}">
-                        <button type="submit" style="padding: 12px; border-radius: 8px; border: 1px solid #ef4444; background: white; color: #ef4444; cursor: pointer;"><i class="fas fa-trash"></i></button>
-                    </form>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    {% else %}
-    <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
-        <i class="fas fa-box-open" style="font-size: 48px; color: #cbd5e1; margin-bottom: 16px;"></i>
-        <h3 style="color: var(--text-dark);">Belum Ada Slot Titip Absen</h3>
-        <p style="color: var(--text-gray);">Pengurus belum membuka slot kekosongan jadwal.</p>
-    </div>
-    {% endfor %}
-</div>
-
-<!-- MODAL BUKA SLOT ADMIN -->
-{% if role in ['super admin', 'penjadwalan', 'bph'] %}
-<div id="bukaSlotModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
-    <div style="background: white; padding: 24px; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
-        <h3 style="margin-top:0; color: var(--text-dark); border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;"><i class="fas fa-plus-circle" style="color: #10b981;"></i> Buka Slot Titip Absen</h3>
-        
-        <form action="{{ url_for('titip') }}" method="POST">
+        <form action="{{ url_for('titip') }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
             <input type="hidden" name="action" value="buka_slot">
-            
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Tanggal</label>
-                <input type="date" name="tanggal" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; font-family: inherit;">
+            <div>
+                <label style="font-size: 12px; font-weight: bold; color: var(--text-dark);">Tanggal Misa</label>
+                <input type="date" name="tanggal" required style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--background); color: var(--text-dark);">
             </div>
-            
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Waktu</label>
-                <input type="time" name="waktu" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; font-family: inherit;">
+            <div>
+                <label style="font-size: 12px; font-weight: bold; color: var(--text-dark);">Waktu (Jam)</label>
+                <input type="time" name="waktu" required style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--background); color: var(--text-dark);">
             </div>
-            
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Nama Misa / Kegiatan</label>
-                <input type="text" name="acara" required placeholder="Contoh: Misa Pagi" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; font-family: inherit;">
+            <div style="grid-column: 1 / -1;">
+                <label style="font-size: 12px; font-weight: bold; color: var(--text-dark);">Nama / Keterangan Misa</label>
+                <input type="text" name="acara" placeholder="Cth: Misa Pemberkatan Nikah" required style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--background); color: var(--text-dark);">
             </div>
-            
-            <div style="margin-bottom: 24px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Kuota Maksimal (Rebutan)</label>
-                <input type="number" name="kuota" required min="1" value="1" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; font-family: inherit;">
+            <div>
+                <label style="font-size: 12px; font-weight: bold; color: var(--text-dark);">Jumlah Kuota Petugas</label>
+                <input type="number" name="kuota" value="1" min="1" required style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--background); color: var(--text-dark);">
             </div>
-            
-            <div style="display: flex; gap: 12px;">
-                <button type="button" onclick="document.getElementById('bukaSlotModal').style.display='none'" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; font-weight: bold; cursor: pointer;">Batal</button>
-                <button type="submit" style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: #10b981; color: white; font-weight: bold; cursor: pointer;">Buka Slot</button>
+            <div style="display: flex; align-items: flex-end;">
+                <button type="submit" class="btn-primary" style="width: 100%; background: #f59e0b; border-color: #f59e0b;"><i class="fas fa-paper-plane"></i> Umumkan Slot</button>
             </div>
         </form>
     </div>
+    {% endif %}
+
+    <div class="grid-slots">
+        {% for s in rebutan_slots %}
+        <div class="slot-card">
+            <div class="slot-header rebutan">
+                <div class="date-box">
+                    <span style="font-size: 20px; font-weight: 800;">{{ s.tanggal.split('-')[2] }}</span>
+                    <span style="font-size: 11px; font-weight: bold; text-transform: uppercase;">{{ s.tanggal.split('-')[1] }}</span>
+                </div>
+                <div style="text-align: right;">
+                    <h4 style="margin: 0 0 4px 0; font-size: 15px;">Pkl {{ s.waktu }}</h4>
+                    <span style="font-size: 11px; font-weight: bold; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px;">Sisa: {{ s.sisa }} Slot</span>
+                </div>
+            </div>
+            
+            <div class="slot-body">
+                <p style="margin: 0; font-weight: bold; font-size: 15px; color: var(--text-dark);">{{ s.acara }}</p>
+                
+                <div style="margin-top: 8px; font-size: 12px;">
+                    <p style="margin: 0 0 4px 0; color: var(--text-gray); font-weight: bold;">Telah Bergabung ({{ s.terisi }}/{{ s.kuota }}):</p>
+                    {% if s.peserta %}
+                        <ul style="margin: 0; padding-left: 16px; color: var(--text-dark);">
+                            {% for p in s.peserta %}
+                            <li>{{ p }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <span style="color: #94a3b8; font-style: italic;">Belum ada yang mendaftar.</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="slot-footer">
+                {% if s.sudah_join %}
+                    <button disabled class="btn-outline" style="width: 100%; border-color: #10b981; color: #10b981; background: rgba(16, 185, 129, 0.1); opacity: 1;"><i class="fas fa-check"></i> Anda Sudah Terdaftar</button>
+                {% elif s.sisa > 0 and not s.is_past %}
+                    <form action="{{ url_for('titip') }}" method="POST" style="margin: 0;" onsubmit="return confirm('Ambil slot tugas ini?');">
+                        <input type="hidden" name="action" value="ambil_slot">
+                        <input type="hidden" name="slot_id" value="{{ s.id }}">
+                        <button type="submit" class="btn-primary" style="width: 100%; background: #f59e0b; border-color: #f59e0b;"><i class="fas fa-bolt"></i> Ambil Slot Cepat</button>
+                    </form>
+                {% elif s.is_past %}
+                    <button disabled class="btn-outline" style="width: 100%; cursor: not-allowed; border-color: var(--border-color); color: var(--text-gray);"><i class="fas fa-history"></i> Waktu Telah Lewat</button>
+                {% else %}
+                    <button disabled class="btn-outline" style="width: 100%; border-color: #ef4444; color: #ef4444; cursor: not-allowed;"><i class="fas fa-ban"></i> Kuota Penuh</button>
+                {% endif %}
+                
+                {% if role in ['super admin', 'penjadwalan', 'bph'] %}
+                <form action="{{ url_for('titip') }}" method="POST" style="margin-top: 8px;" onsubmit="return confirm('Tutup paksa dan hapus pengumuman slot ini?');">
+                    <input type="hidden" name="action" value="hapus_slot">
+                    <input type="hidden" name="id" value="{{ s.id }}">
+                    <button type="submit" class="btn-outline" style="width: 100%; border-color: #ef4444; color: #ef4444; padding: 6px;"><i class="fas fa-trash"></i> Hapus Slot</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        
+        {% if not rebutan_slots %}
+        <div style="grid-column: 1 / -1; background: var(--white); padding: 30px; border-radius: 12px; text-align: center; border: 1px dashed var(--border-color);">
+            <i class="fas fa-bed" style="font-size: 32px; color: var(--border-color); margin-bottom: 12px;"></i>
+            <p style="color: var(--text-gray); margin: 0; font-size: 14px;">Belum ada pengumuman slot Misa Khusus dari pengurus saat ini.</p>
+        </div>
+        {% endif %}
+    </div>
 </div>
-{% endif %}
+
+<script>
+    function switchPanel(panelId) {
+        document.getElementById('btn-ketersediaan').classList.remove('active');
+        document.getElementById('btn-rebutan').classList.remove('active');
+        document.getElementById('panel-ketersediaan').classList.remove('active');
+        document.getElementById('panel-rebutan').classList.remove('active');
+        
+        document.getElementById('btn-' + panelId).classList.add('active');
+        document.getElementById('panel-' + panelId).classList.add('active');
+    }
+</script>
 {% endblock %}

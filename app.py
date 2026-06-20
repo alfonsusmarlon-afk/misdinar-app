@@ -7,14 +7,25 @@ import re
 from functools import wraps
 from datetime import datetime, timedelta
 
-# Tambahkan make_response di sini
 from flask import Flask, render_template, request, session, redirect, url_for, flash, make_response
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 
+# PENGAMANAN: Jika library pywebpush belum diinstal, aplikasi tidak akan crash
+try:
+    from pywebpush import webpush, WebPushException
+    WEBPUSH_AVAILABLE = True
+except ImportError:
+    WEBPUSH_AVAILABLE = False
+
 app = Flask(__name__)
-app.secret_key = 'misdinar-secure-key-2026-production' 
-app.permanent_session_lifetime = timedelta(days=7) 
+app.secret_key = 'misdinar-secure-key-2026-production'
+app.permanent_session_lifetime = timedelta(days=7)
+
+# KUNCI VAPID UNTUK NOTIFIKASI HP
+VAPID_PUBLIC_KEY = "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuB-5bNd_5qUjG2lM2DcdK1Bcw"
+VAPID_PRIVATE_KEY = "wL2-UGEPXXp1kZfI1K9Y_XN_A0vWkVm_Ea59Hj0i9iM"
+VAPID_CLAIMS = {"sub": "mailto:admin@misdinar.com"}
 
 DB_NAME = 'misdinar.db'
 UPLOAD_DOKUMEN = 'static/uploads/dokumen'
@@ -39,7 +50,7 @@ def init_db():
     new_user_columns = {
         'no_hp': 'TEXT', 'nama_panggilan': 'TEXT', 'email': 'TEXT',
         'tanggal_lahir': 'TEXT', 'no_hp_ortu': 'TEXT', 'nama_ortu': 'TEXT',
-        'alamat': 'TEXT', 'foto_profil': 'TEXT'
+        'alamat': 'TEXT', 'foto_profil': 'TEXT', 'push_sub': 'TEXT'
     }
     existing_columns = [col[1] for col in conn.execute('PRAGMA table_info(users)').fetchall()]
     for col_name, col_type in new_user_columns.items():
@@ -64,12 +75,11 @@ def init_db():
     conn.execute('''CREATE TABLE IF NOT EXISTS hukuman (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, nama TEXT NOT NULL, tanggal TEXT NOT NULL, pelanggaran TEXT NOT NULL, tindakan TEXT NOT NULL, status TEXT NOT NULL)''')
     conn.execute('''CREATE TABLE IF NOT EXISTS notifikasi (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, pesan TEXT NOT NULL, waktu TEXT NOT NULL, status_baca INTEGER DEFAULT 0, link TEXT)''')
     conn.execute('''CREATE TABLE IF NOT EXISTS izin_jadwal (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, nama TEXT NOT NULL, jadwal_id INTEGER NOT NULL, tanggal_misa TEXT NOT NULL, acara TEXT NOT NULL, alasan TEXT NOT NULL, pengganti TEXT DEFAULT "-", status TEXT DEFAULT "Menunggu", waktu_pengajuan TEXT NOT NULL, tanggapan_admin TEXT DEFAULT "-", jenis_izin TEXT DEFAULT "Jadwal")''')
+    
+    # === TABEL UNTUK FUNGSI TITIP JADWAL DAN REBUTAN ===
     conn.execute('''CREATE TABLE IF NOT EXISTS buka_titip (id INTEGER PRIMARY KEY AUTOINCREMENT, tanggal TEXT NOT NULL, waktu TEXT NOT NULL, acara TEXT NOT NULL, kuota INTEGER DEFAULT 1, pembuat TEXT NOT NULL, waktu_dibuat TEXT NOT NULL)''')
-
-    izin_cols = [col[1] for col in conn.execute('PRAGMA table_info(izin_jadwal)').fetchall()]
-    if izin_cols and 'jenis_izin' not in izin_cols:
-        try: conn.execute('ALTER TABLE izin_jadwal ADD COLUMN jenis_izin TEXT DEFAULT "Jadwal"')
-        except: pass
+    conn.execute('''CREATE TABLE IF NOT EXISTS periode_titip (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, tanggal_mulai TEXT NOT NULL, tanggal_selesai TEXT NOT NULL, status TEXT DEFAULT 'Buka', pembuat TEXT, waktu_dibuat TEXT)''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS request_titip (id INTEGER PRIMARY KEY AUTOINCREMENT, periode_id INTEGER, username TEXT, nama TEXT, tanggal TEXT, waktu TEXT, keterangan TEXT, waktu_submit TEXT)''')
 
     conn.execute('''CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)''')
     
@@ -104,6 +114,7 @@ def init_db():
         hashed_pw = generate_password_hash('super123')
         conn.execute('INSERT INTO users (username, password, nama, role, no_hp, nama_panggilan) VALUES (?, ?, ?, ?, ?, ?)', ('superadmin', hashed_pw, 'Super Admin', 'super admin', '081234567890', 'Admin'))
     
+    # SYSTEM GOOGLE FORM CLONE
     conn.execute('''CREATE TABLE IF NOT EXISTS formulir (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, deskripsi TEXT, schema_data TEXT NOT NULL, is_active INTEGER DEFAULT 1, is_default INTEGER DEFAULT 0)''')
     conn.execute('''CREATE TABLE IF NOT EXISTS pendaftaran (id INTEGER PRIMARY KEY AUTOINCREMENT, tanggal TEXT NOT NULL, data_respon TEXT NOT NULL, status TEXT DEFAULT 'Menunggu', form_id INTEGER DEFAULT 1)''')
     
@@ -116,9 +127,9 @@ def init_db():
             "title": "Pendaftaran Calon Misdinar Baru", 
             "description": "Isi formulir ini dengan data yang benar. Setelah submit, Anda akan otomatis mendapatkan Username dan Password untuk login ke Dashboard.", 
             "questions": [
-                {"id": 1, "type": "short", "question": "Nama Lengkap", "options": [], "required": True},
-                {"id": 2, "type": "short", "question": "Nomor WhatsApp (Aktif)", "options": [], "required": True},
-                {"id": 3, "type": "paragraph", "question": "Alasan ingin bergabung menjadi Misdinar?", "options": [], "required": True}
+                {"id": 1, "type": "short", "question": "Nama Lengkap", "options": [], "required": True, "size": "Large"},
+                {"id": 2, "type": "short", "question": "Nomor WhatsApp (Aktif)", "options": [], "required": True, "size": "Medium"},
+                {"id": 3, "type": "paragraph", "question": "Alasan ingin bergabung menjadi Misdinar?", "options": [], "required": True, "size": "Large"}
             ]
         })
         conn.execute("INSERT INTO formulir (id, judul, deskripsi, schema_data, is_active, is_default) VALUES (1, ?, ?, ?, 1, 1)", 
@@ -130,11 +141,10 @@ def init_db():
 init_db()
 
 # ==========================================
-# RUTING PWA (PROGRESSIVE WEB APP)
+# RUTING PWA & PUSH NOTIFICATION
 # ==========================================
 @app.route('/manifest.json')
 def manifest():
-    # File ini memberi tahu HP bahwa web ini adalah "Aplikasi"
     data = {
         "name": "MISDINAR App",
         "short_name": "Misdinar",
@@ -144,16 +154,8 @@ def manifest():
         "background_color": "#f8fafc",
         "theme_color": "#1e40af",
         "icons": [
-            {
-                "src": "https://cdn-icons-png.flaticon.com/512/3075/3075908.png", # Ikon Default
-                "sizes": "512x512",
-                "type": "image/png"
-            },
-            {
-                "src": "https://cdn-icons-png.flaticon.com/192/3075/3075908.png", # Ikon Default
-                "sizes": "192x192",
-                "type": "image/png"
-            }
+            {"src": "https://cdn-icons-png.flaticon.com/512/3075/3075908.png", "sizes": "512x512", "type": "image/png"},
+            {"src": "https://cdn-icons-png.flaticon.com/192/3075/3075908.png", "sizes": "192x192", "type": "image/png"}
         ]
     }
     response = make_response(json.dumps(data))
@@ -162,22 +164,81 @@ def manifest():
 
 @app.route('/sw.js')
 def service_worker():
-    # Pekerja latar belakang agar HP memunculkan opsi "Install"
     js = """
-    self.addEventListener('install', function(e) {
-        self.skipWaiting();
+    self.addEventListener('install', function(e) { self.skipWaiting(); });
+    self.addEventListener('activate', function(e) { e.waitUntil(clients.claim()); });
+    self.addEventListener('fetch', function(e) { e.respondWith(fetch(e.request)); });
+    self.addEventListener('push', function(event) {
+        if (event.data) {
+            const data = event.data.json();
+            const options = {
+                body: data.body,
+                icon: 'https://cdn-icons-png.flaticon.com/512/3075/3075908.png',
+                badge: 'https://cdn-icons-png.flaticon.com/512/3075/3075908.png',
+                vibrate: [100, 50, 100],
+                data: { url: data.url }
+            };
+            event.waitUntil(self.registration.showNotification(data.title, options));
+        }
     });
-    self.addEventListener('fetch', function(e) {
-        // Bypass caching for dynamic app
-        e.respondWith(fetch(e.request));
+    self.addEventListener('notificationclick', function(event) {
+        event.notification.close();
+        event.waitUntil(clients.openWindow(event.notification.data.url));
     });
     """
     response = make_response(js)
     response.headers['Content-Type'] = 'application/javascript'
     return response
+
+@app.route('/subscribe-push', methods=['POST'])
+def subscribe_push():
+    if 'user_id' not in session: return json.dumps({"success": False})
+    subscription_info = request.json
+    if subscription_info:
+        conn = get_db_connection()
+        conn.execute("UPDATE users SET push_sub=? WHERE username=?", (json.dumps(subscription_info), session['user_id']))
+        conn.commit()
+        conn.close()
+        return json.dumps({"success": True})
+    return json.dumps({"success": False})
+
+@app.route('/vapid-public-key')
+def vapid_public_key():
+    return VAPID_PUBLIC_KEY
+
+def send_web_push(subscription_info, message_body):
+    if not WEBPUSH_AVAILABLE:
+        return
+    try:
+        webpush(
+            subscription_info=json.loads(subscription_info),
+            data=json.dumps(message_body),
+            vapid_private_key=VAPID_PRIVATE_KEY,
+            vapid_claims=VAPID_CLAIMS
+        )
+    except Exception as ex:
+        print("Web Push Error:", repr(ex))
+
+def create_notification(conn, target_str, pesan, link_url):
+    waktu_sekarang = datetime.now().strftime('%d %b %Y, %H:%M')
+    target_list = [t.strip() for t in target_str.split(',')]
+    push_payload = {"title": "Notifikasi MISDINAR", "body": pesan, "url": link_url}
+    
+    if 'semua' in target_list:
+        users = conn.execute("SELECT username, push_sub FROM users").fetchall()
+        for u in users: 
+            conn.execute('INSERT INTO notifikasi (username, pesan, waktu, link) VALUES (?, ?, ?, ?)', (u['username'], pesan, waktu_sekarang, link_url))
+            if u['push_sub']: send_web_push(u['push_sub'], push_payload)
+    else:
+        users = conn.execute("SELECT username, role, push_sub FROM users").fetchall()
+        for u in users:
+            if u['username'] in target_list or u['role'] in target_list:
+                conn.execute('INSERT INTO notifikasi (username, pesan, waktu, link) VALUES (?, ?, ?, ?)', (u['username'], pesan, waktu_sekarang, link_url))
+                if u['push_sub']: send_web_push(u['push_sub'], push_payload)
+
 # ==========================================
-
-
+# RUTING UTAMA
+# ==========================================
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -256,18 +317,6 @@ def process_auto_absent(conn):
                             conn.execute('INSERT INTO hukuman (username, nama, tanggal, pelanggaran, tindakan, status) VALUES (?, ?, ?, ?, ?, ?)',
                                          (username, nama, tanggal, pelanggaran, f"{weight} Kali Berlutut", 'Belum Selesai'))
     conn.commit()
-
-def create_notification(conn, target_str, pesan, link_url):
-    waktu_sekarang = datetime.now().strftime('%d %b %Y, %H:%M')
-    target_list = [t.strip() for t in target_str.split(',')]
-    if 'semua' in target_list:
-        users = conn.execute("SELECT username FROM users").fetchall()
-        for u in users: conn.execute('INSERT INTO notifikasi (username, pesan, waktu, link) VALUES (?, ?, ?, ?)', (u['username'], pesan, waktu_sekarang, link_url))
-    else:
-        users = conn.execute("SELECT username, role FROM users").fetchall()
-        for u in users:
-            if u['username'] in target_list or u['role'] in target_list:
-                conn.execute('INSERT INTO notifikasi (username, pesan, waktu, link) VALUES (?, ?, ?, ?)', (u['username'], pesan, waktu_sekarang, link_url))
 
 @app.context_processor
 def inject_notifications():
@@ -456,28 +505,63 @@ def titip():
     if request.method == 'POST':
         action = request.form.get('action')
         
-        if action == 'buka_slot' and user_role in ['super admin', 'penjadwalan', 'bph']:
+        if action == 'buka_periode' and user_role in ['super admin', 'penjadwalan', 'bph']:
+            judul = request.form.get('judul')
+            tgl_mulai = request.form.get('tanggal_mulai')
+            tgl_selesai = request.form.get('tanggal_selesai')
+            conn.execute("UPDATE periode_titip SET status='Tutup'")
+            conn.execute("INSERT INTO periode_titip (judul, tanggal_mulai, tanggal_selesai, status, pembuat, waktu_dibuat) VALUES (?, ?, ?, 'Buka', ?, ?)", 
+                         (judul, tgl_mulai, tgl_selesai, user_id, now_str))
+            create_notification(conn, 'semua', f"Periode Titip Ketersediaan Jadwal '{judul}' telah dibuka. Silakan isi form jika ada request jadwal.", url_for('titip'))
+            conn.commit()
+            flash("Periode Pengisian Jadwal berhasil dibuka!", "success")
+            
+        elif action == 'tutup_periode' and user_role in ['super admin', 'penjadwalan', 'bph']:
+            conn.execute("UPDATE periode_titip SET status='Tutup' WHERE status='Buka'")
+            conn.commit()
+            flash("Periode Pengisian Jadwal berhasil ditutup.", "success")
+            
+        elif action == 'ajukan_titip':
+            periode_id = request.form.get('periode_id')
+            tanggal = request.form.get('tanggal')
+            waktu = request.form.get('waktu')
+            keterangan = request.form.get('keterangan', '')
+            exist = conn.execute("SELECT 1 FROM request_titip WHERE periode_id=? AND username=? AND tanggal=?", (periode_id, user_id, tanggal)).fetchone()
+            if exist:
+                flash(f"Anda sudah membuat pengajuan untuk tanggal {tanggal}.", "error")
+            else:
+                conn.execute("INSERT INTO request_titip (periode_id, username, nama, tanggal, waktu, keterangan, waktu_submit) VALUES (?, ?, ?, ?, ?, ?, ?)", 
+                             (periode_id, user_id, session.get('nama_user'), tanggal, waktu, keterangan, now_str))
+                conn.commit()
+                flash("Ketersediaan jadwal Anda berhasil diajukan ke pengurus.", "success")
+                
+        elif action == 'hapus_pengajuan':
+            req_id = request.form.get('req_id')
+            conn.execute("DELETE FROM request_titip WHERE id=?", (req_id,))
+            conn.commit()
+            flash("Pengajuan jadwal dibatalkan.", "success")
+            
+        elif action == 'buka_slot' and user_role in ['super admin', 'penjadwalan', 'bph']:
             tgl = request.form.get('tanggal')
             wkt = request.form.get('waktu')
             acara = request.form.get('acara')
             kuota = int(request.form.get('kuota', 1))
             conn.execute("INSERT INTO buka_titip (tanggal, waktu, acara, kuota, pembuat, waktu_dibuat) VALUES (?, ?, ?, ?, ?, ?)",
                          (tgl, wkt, acara, kuota, user_id, now_str))
-            create_notification(conn, 'semua', f"Slot Titip Absen baru dibuka untuk {acara} tgl {tgl}! Cepat ambil sebelum penuh.", url_for('titip'))
+            create_notification(conn, 'semua', f"Slot Misa Khusus baru dibuka untuk {acara} tgl {tgl}! Cepat ambil sebelum penuh.", url_for('titip'))
             conn.commit()
-            flash("Slot titip absen berhasil dibuka dan diumumkan!", "success")
+            flash("Slot Misa Khusus berhasil dibuka dan diumumkan!", "success")
             
         elif action == 'hapus_slot' and user_role in ['super admin', 'penjadwalan', 'bph']:
             conn.execute("DELETE FROM buka_titip WHERE id=?", (request.form.get('id'),))
             conn.commit()
-            flash("Slot titip absen telah ditutup/dihapus.", "success")
+            flash("Slot Misa Khusus telah ditutup/dihapus.", "success")
             
         elif action == 'ambil_slot':
             slot_id = request.form.get('slot_id')
             slot = conn.execute("SELECT * FROM buka_titip WHERE id=?", (slot_id,)).fetchone()
             if slot:
                 dt_str = f"{slot['tanggal']} {slot['waktu']}:00"
-                
                 terisi = conn.execute("SELECT COUNT(*) FROM jadwal WHERE jadwal_datetime=? AND acara=? AND jenis='Titip'", (dt_str, slot['acara'])).fetchone()[0]
                 if terisi < slot['kuota']:
                     sudah = conn.execute("SELECT 1 FROM jadwal WHERE jadwal_datetime=? AND acara=? AND pengguna=?", (dt_str, slot['acara'], user_id)).fetchone()
@@ -485,20 +569,29 @@ def titip():
                         dt = datetime.strptime(slot['tanggal'], '%Y-%m-%d')
                         months_id = {1: 'JAN', 2: 'FEB', 3: 'MAR', 4: 'APR', 5: 'MEI', 6: 'JUNI', 7: 'JULI', 8: 'AGUST', 9: 'SEPT', 10: 'OKT', 11: 'NOV', 12: 'DES'}
                         days_id = {0: 'Senin', 1: 'Selasa', 2: 'Rabu', 3: 'Kamis', 4: 'Jumat', 5: 'Sabtu', 6: 'Minggu'}
-                        
                         waktu_dot = slot['waktu'].replace(':', '.')
                         conn.execute('INSERT INTO jadwal (jadwal_datetime, tanggal, bulan, hari, waktu, acara, status, pengguna, nama_pengguna, jenis, kategori_misa) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "Titip", "Harian")', 
                                      (dt_str, dt.strftime('%d'), months_id[dt.month], days_id[dt.weekday()], waktu_dot, slot['acara'], 'Bertugas', user_id, session.get('nama_user')))
                         conn.commit()
-                        flash("Selamat! Anda berhasil mengamankan slot titip absen.", "success")
+                        flash("Selamat! Anda berhasil mengamankan slot Misa Khusus.", "success")
                     else:
                         flash("Anda sudah terdaftar di jadwal tersebut.", "error")
                 else:
                     flash("Maaf, slot sudah penuh! Anda kalah cepat.", "error")
         return redirect(url_for('titip'))
+
+    periode_aktif = conn.execute("SELECT * FROM periode_titip WHERE status='Buka' ORDER BY id DESC LIMIT 1").fetchone()
+    pengajuan_list = []
+    
+    if periode_aktif:
+        if user_role in ['super admin', 'penjadwalan', 'bph']:
+            reqs = conn.execute("SELECT * FROM request_titip WHERE periode_id=? ORDER BY tanggal ASC, waktu ASC", (periode_aktif['id'],)).fetchall()
+        else:
+            reqs = conn.execute("SELECT * FROM request_titip WHERE periode_id=? AND username=? ORDER BY tanggal ASC, waktu ASC", (periode_aktif['id'], user_id)).fetchall()
+        pengajuan_list = [dict(r) for r in reqs]
         
     slots = conn.execute("SELECT * FROM buka_titip ORDER BY tanggal DESC, waktu DESC LIMIT 50").fetchall()
-    slot_data = []
+    rebutan_slots = []
     for s in slots:
         d = dict(s)
         dt_str = f"{d['tanggal']} {d['waktu']}:00"
@@ -508,10 +601,10 @@ def titip():
         d['peserta'] = [p['nama_pengguna'] for p in terisi]
         d['sudah_join'] = user_id in [p['pengguna'] for p in terisi]
         d['is_past'] = datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S') < datetime.now()
-        slot_data.append(d)
+        rebutan_slots.append(d)
         
     conn.close()
-    return render_template('titip.html', slots=slot_data, role=user_role)
+    return render_template('titip.html', role=user_role, periode=dict(periode_aktif) if periode_aktif else None, pengajuan=pengajuan_list, rebutan_slots=rebutan_slots)
 
 @app.route('/scan-absen')
 @login_required
@@ -881,8 +974,6 @@ def hapus_anggota():
         conn.close()
     return redirect(url_for('anggota'))
 
-
-# --- FITUR FORMULIR DINAMIS ALA GOOGLE FORM ---
 @app.route('/formulir/<int:form_id>', methods=['GET', 'POST'])
 def isi_formulir(form_id):
     conn = get_db_connection()
@@ -904,14 +995,12 @@ def isi_formulir(form_id):
         nama_pendaftar, no_hp_pendaftar = "User Baru", ""
         
         for q in form_schema.get('questions', []):
-            # Abaikan blok media
-            if q['type'] in ['image', 'video']:
+            if q['type'] in ['image', 'video', 'section', 'page']:
                 continue
                 
             q_id = str(q['id'])
             val = ""
             
-            # Pengolahan Multi-tipe Data Baru
             if q['type'] == 'checkbox':
                 val = ", ".join(request.form.getlist(f'q_{q_id}'))
             elif q['type'] == 'file':
@@ -921,7 +1010,6 @@ def isi_formulir(form_id):
                     file.save(os.path.join(UPLOAD_FORM, filename))
                     val = f"uploads/form_files/{filename}"
             elif q['type'] in ['grid_radio', 'grid_checkbox']:
-                # Menggabungkan data grid/kisi
                 grid_responses = {}
                 for r_idx, row in enumerate(q.get('rows', [])):
                     if q['type'] == 'grid_radio':
@@ -934,7 +1022,6 @@ def isi_formulir(form_id):
                 
             respon_data[q['question']] = val
             
-            # Deteksi otomatis khusus Form Utama
             lbl_lower = q['question'].lower()
             if 'nama' in lbl_lower and nama_pendaftar == "User Baru" and val:
                 nama_pendaftar = val
@@ -944,7 +1031,6 @@ def isi_formulir(form_id):
         new_username = None
         random_password = None
         
-        # Logika Autocreate Akun khusus Formulir Pendaftaran Utama
         if form_dict['is_default'] == 1:
             base_username = "".join(e for e in nama_pendaftar.split()[0].lower() if e.isalnum())
             if not base_username: base_username = "user"
@@ -970,9 +1056,8 @@ def isi_formulir(form_id):
     conn.close()
     return render_template('pendaftaran.html', schema=form_schema, closed=False)
 
-# KEMBALIKAN NAMA FUNGSI PENDAFTARAN AGAR TIDAK ERROR BUILD URL
 @app.route('/pendaftaran')
-def pendaftaran():
+def route_pendaftaran_lama():
     return redirect(url_for('isi_formulir', form_id=1))
 
 @app.route('/kelola-pendaftaran', methods=['GET', 'POST'])

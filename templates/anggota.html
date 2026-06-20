@@ -19,6 +19,20 @@
 
 <div class="anggota-grid" id="anggotaGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; width: 100%;">
     {% for u in users %}
+
+    {# --- Tentukan CSS class untuk badge role --- #}
+    {% if u.role == 'super admin' %}
+        {% set role_class = 'badge-super-admin' %}
+    {% elif u.role == 'bph' %}
+        {% set role_class = 'badge-bph' %}
+    {% elif u.role == 'penjadwalan' %}
+        {% set role_class = 'badge-penjadwalan' %}
+    {% elif u.role == 'pelatihan' %}
+        {% set role_class = 'badge-pelatihan' %}
+    {% else %}
+        {% set role_class = 'badge-user' %}
+    {% endif %}
+
     <div class="anggota-card" style="background: var(--white); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.04); position: relative; border: 1px solid var(--border-color); display: flex; flex-direction: column; transition: 0.3s;">
         <div style="background: linear-gradient(135deg, var(--primary-blue) 0%, #3b82f6 100%); height: 80px; width: 100%;"></div>
         
@@ -32,16 +46,13 @@
         
         <div style="text-align: center; padding: 0 20px 20px 20px; flex: 1;">
             <h3 class="search-target-name" style="margin: 0 0 8px 0; color: var(--text-dark); font-size: 18px; font-weight: 800;">{{ u.nama }}</h3>
-            <div class="search-target-role" style="display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 16px;
-                {% if u.role == 'super admin' %}background: #fee2e2; color: #dc2626;
-                {% elif u.role == 'bph' %}background: #fef3c7; color: #d97706;
-                {% elif u.role == 'penjadwalan' %}background: #e0e7ff; color: #4338ca;
-                {% elif u.role == 'pelatihan' %}background: #dcfce7; color: #059669;
-                {% else %}background: #f1f5f9; color: #475569;{% endif %}">
+
+            {# --- Gunakan class CSS, tidak ada lagi {% if %} di dalam style="" --- #}
+            <div class="search-target-role role-badge {{ role_class }}">
                 {{ u.role | upper }}
             </div>
             
-            <div style="display: flex; flex-direction: column; gap: 8px; align-items: center;">
+            <div style="display: flex; flex-direction: column; gap: 8px; align-items: center; margin-top: 16px;">
                 <p class="search-target-user" style="margin: 0; font-size: 13px; color: var(--text-gray); display: flex; align-items: center; gap: 8px;"><i class="fas fa-id-badge" style="color: var(--primary-blue); opacity: 0.7;"></i> {{ u.username }}</p>
                 <p class="search-target-hp" style="margin: 0; font-size: 13px; color: var(--text-gray); display: flex; align-items: center; gap: 8px;"><i class="fas fa-phone-alt" style="color: var(--primary-blue); opacity: 0.7;"></i> {{ u.no_hp if u.no_hp else 'Belum diisi' }}</p>
                 <span class="search-target-email" style="display: none;">{{ u.email }}</span>
@@ -50,13 +61,24 @@
         
         <div style="display: flex; padding: 16px 20px; background: #f8fafc; border-top: 1px solid var(--border-color); gap: 10px; justify-content: center;">
             <button type="button" class="btn-detail" style="flex: 1; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; background: white; color: var(--text-dark);"
-                data-username="{{ u.username }}" data-nama="{{ u.nama }}" data-role="{{ u.role }}" data-panggilan="{{ u.nama_panggilan or '-' }}" data-tgllahir="{{ u.tanggal_lahir or '-' }}" data-email="{{ u.email or '-' }}" data-nohp="{{ u.no_hp or '-' }}" data-alamat="{{ u.alamat or '-' }}" data-namaortu="{{ u.nama_ortu or '-' }}" data-nohportu="{{ u.no_hp_ortu or '-' }}">
+                data-username="{{ u.username }}"
+                data-nama="{{ u.nama }}"
+                data-role="{{ u.role }}"
+                data-panggilan="{{ u.nama_panggilan or '-' }}"
+                data-tgllahir="{{ u.tanggal_lahir or '-' }}"
+                data-email="{{ u.email or '-' }}"
+                data-nohp="{{ u.no_hp or '-' }}"
+                data-alamat="{{ u.alamat or '-' }}"
+                data-namaortu="{{ u.nama_ortu or '-' }}"
+                data-nohportu="{{ u.no_hp_ortu or '-' }}">
                 <i class="fas fa-info-circle"></i> Info
             </button>
             
             {% if current_role in ['super admin', 'bph'] %}
             <button type="button" class="btn-edit" style="flex: 1; border: none; border-radius: 8px; padding: 10px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--primary-blue); color: white;" 
-                data-username="{{ u.username }}" data-role="{{ u.role }}" data-nama="{{ u.nama }}">
+                data-username="{{ u.username }}"
+                data-role="{{ u.role }}"
+                data-nama="{{ u.nama }}">
                 <i class="fas fa-user-cog"></i> Akses
             </button>
             
@@ -71,32 +93,91 @@
 </div>
 
 <style>
-.anggota-card:hover { transform: translateY(-5px); box-shadow: 0 12px 25px rgba(0,0,0,0.1) !important; border-color: var(--primary-blue) !important; }
-.modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
-.modal-box { background-color: white; border-radius: 16px; width: 100%; max-width: 500px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: modalPop 0.3s ease-out; }
-@keyframes modalPop { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #e2e8f0; }
+/* === Role Badge === */
+.role-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    margin-bottom: 0;
+}
+.badge-super-admin { background: #fee2e2; color: #dc2626; }
+.badge-bph         { background: #fef3c7; color: #d97706; }
+.badge-penjadwalan { background: #e0e7ff; color: #4338ca; }
+.badge-pelatihan   { background: #dcfce7; color: #059669; }
+.badge-user        { background: #f1f5f9; color: #475569; }
+
+/* === Card === */
+.anggota-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 25px rgba(0,0,0,0.1) !important;
+    border-color: var(--primary-blue) !important;
+}
+
+/* === Modal === */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(4px);
+}
+.modal-box {
+    background-color: white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+    animation: modalPop 0.3s ease-out;
+}
+@keyframes modalPop {
+    0%   { transform: scale(0.95); opacity: 0; }
+    100% { transform: scale(1);    opacity: 1; }
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+}
 .modal-header h3 { margin: 0; color: var(--text-dark); font-size: 18px; }
 .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #94a3b8; }
 .modal-close:hover { color: #ef4444; }
 .modal-body { padding: 24px; max-height: 70vh; overflow-y: auto; }
+
+/* === Detail Table === */
 .detail-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .detail-table tr { border-bottom: 1px solid #f1f5f9; }
 .detail-table td { padding: 12px 0; }
 .detail-table td:first-child { width: 40%; color: var(--text-gray); font-weight: 500; }
-.detail-table td:last-child { font-weight: 700; color: var(--text-dark); text-align: right; }
+.detail-table td:last-child  { font-weight: 700; color: var(--text-dark); text-align: right; }
 </style>
 
+<!-- Modal Detail -->
 <div id="detailModal" class="modal-overlay">
     <div class="modal-box">
-        <div class="modal-header"><h3><i class="fas fa-address-card" style="color: var(--primary-blue); margin-right: 8px;"></i> Profil Anggota</h3><button class="modal-close" onclick="document.getElementById('detailModal').style.display='none'">&times;</button></div>
+        <div class="modal-header">
+            <h3><i class="fas fa-address-card" style="color: var(--primary-blue); margin-right: 8px;"></i> Profil Anggota</h3>
+            <button class="modal-close" onclick="document.getElementById('detailModal').style.display='none'">&times;</button>
+        </div>
         <div class="modal-body" id="detailBody"></div>
     </div>
 </div>
 
+<!-- Modal Edit Role -->
 <div id="editRoleModal" class="modal-overlay">
     <div class="modal-box" style="max-width: 400px;">
-        <div class="modal-header"><h3><i class="fas fa-user-cog" style="color: var(--primary-blue); margin-right: 8px;"></i> Ubah Hak Akses</h3><button class="modal-close" onclick="document.getElementById('editRoleModal').style.display='none'">&times;</button></div>
+        <div class="modal-header">
+            <h3><i class="fas fa-user-cog" style="color: var(--primary-blue); margin-right: 8px;"></i> Ubah Hak Akses</h3>
+            <button class="modal-close" onclick="document.getElementById('editRoleModal').style.display='none'">&times;</button>
+        </div>
         <div class="modal-body">
             <p id="editRoleName" style="margin-bottom: 20px; font-weight: 700; color: var(--primary-blue); text-align: center; font-size: 16px;"></p>
             <form action="{{ url_for('ubah_role') }}" method="POST">
@@ -108,7 +189,9 @@
                         <option value="pelatihan">Divisi Pelatihan</option>
                         <option value="penjadwalan">Divisi Penjadwalan</option>
                         <option value="bph">Pengurus Inti (BPH)</option>
-                        {% if current_role == 'super admin' %}<option value="super admin">Super Admin</option>{% endif %}
+                        {% if current_role == 'super admin' %}
+                        <option value="super admin">Super Admin</option>
+                        {% endif %}
                     </select>
                 </div>
                 {% if current_role == 'super admin' %}
@@ -125,57 +208,61 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+
+    // === Search ===
     const searchInput = document.getElementById('searchAnggota');
     if (searchInput) {
         searchInput.addEventListener('keyup', function() {
-            let filter = this.value.toLowerCase();
-            let cards = document.querySelectorAll('.anggota-card');
-            
-            cards.forEach(card => {
-                let name = card.querySelector('.search-target-name').innerText.toLowerCase();
-                let user = card.querySelector('.search-target-user').innerText.toLowerCase();
-                let role = card.querySelector('.search-target-role').innerText.toLowerCase();
-                let hp = card.querySelector('.search-target-hp').innerText.toLowerCase();
-                let email = card.querySelector('.search-target-email').innerText.toLowerCase();
-                
-                if (name.includes(filter) || user.includes(filter) || role.includes(filter) || hp.includes(filter) || email.includes(filter)) {
-                    card.style.display = 'flex'; 
-                } else {
-                    card.style.display = 'none';
-                }
+            const filter = this.value.toLowerCase();
+            document.querySelectorAll('.anggota-card').forEach(card => {
+                const name  = card.querySelector('.search-target-name').innerText.toLowerCase();
+                const user  = card.querySelector('.search-target-user').innerText.toLowerCase();
+                const role  = card.querySelector('.search-target-role').innerText.toLowerCase();
+                const hp    = card.querySelector('.search-target-hp').innerText.toLowerCase();
+                const email = card.querySelector('.search-target-email').innerText.toLowerCase();
+                card.style.display = (name.includes(filter) || user.includes(filter) || role.includes(filter) || hp.includes(filter) || email.includes(filter))
+                    ? 'flex' : 'none';
             });
         });
     }
 
+    // === Modal Detail ===
     document.querySelectorAll('.btn-detail').forEach(btn => {
         btn.addEventListener('click', function() {
-            let data = this.dataset;
-            let html = `<table class="detail-table">
-                    <tr><td>Nama Lengkap</td><td>${data.nama}</td></tr>
-                    <tr><td>Nama Panggilan</td><td>${data.panggilan}</td></tr>
-                    <tr><td>Username</td><td>${data.username}</td></tr>
-                    <tr><td>Hak Akses</td><td style="color: var(--primary-blue); text-transform: uppercase;">${data.role}</td></tr>
-                    <tr><td>Tanggal Lahir</td><td>${data.tgllahir}</td></tr>
-                    <tr><td>No. HP/WA</td><td>${data.nohp}</td></tr>
-                    <tr><td>Email</td><td>${data.email}</td></tr>
-                    <tr><td>Alamat</td><td>${data.alamat}</td></tr>
-                    <tr><td>Nama Orang Tua</td><td>${data.namaortu}</td></tr>
-                    <tr style="border-bottom:none;"><td>No. HP Ortu</td><td>${data.nohportu}</td></tr>
+            const d = this.dataset;
+            document.getElementById('detailBody').innerHTML = `
+                <table class="detail-table">
+                    <tr><td>Nama Lengkap</td><td>${d.nama}</td></tr>
+                    <tr><td>Nama Panggilan</td><td>${d.panggilan}</td></tr>
+                    <tr><td>Username</td><td>${d.username}</td></tr>
+                    <tr><td>Hak Akses</td><td style="color: var(--primary-blue); text-transform: uppercase;">${d.role}</td></tr>
+                    <tr><td>Tanggal Lahir</td><td>${d.tgllahir}</td></tr>
+                    <tr><td>No. HP/WA</td><td>${d.nohp}</td></tr>
+                    <tr><td>Email</td><td>${d.email}</td></tr>
+                    <tr><td>Alamat</td><td>${d.alamat}</td></tr>
+                    <tr><td>Nama Orang Tua</td><td>${d.namaortu}</td></tr>
+                    <tr style="border-bottom:none;"><td>No. HP Ortu</td><td>${d.nohportu}</td></tr>
                 </table>`;
-            document.getElementById('detailBody').innerHTML = html;
             document.getElementById('detailModal').style.display = 'flex';
         });
     });
 
+    // === Modal Edit Role ===
     document.querySelectorAll('.btn-edit').forEach(btn => {
         btn.addEventListener('click', function() {
-            document.getElementById('editRoleUsername').value = this.dataset.username;
-            document.getElementById('editRoleSelect').value = this.dataset.role;
-            document.getElementById('editRoleName').innerText = this.dataset.nama;
+            document.getElementById('editRoleUsername').value    = this.dataset.username;
+            document.getElementById('editRoleSelect').value     = this.dataset.role;
+            document.getElementById('editRoleName').innerText   = this.dataset.nama;
             document.getElementById('editRoleModal').style.display = 'flex';
         });
     });
+
+    // === Tutup modal klik di luar ===
+    window.addEventListener('click', function(e) {
+        if (e.target.classList.contains('modal-overlay')) {
+            e.target.style.display = 'none';
+        }
+    });
 });
-window.onclick = function(event) { if (event.target.classList.contains('modal-overlay')) { event.target.style.display = "none"; } }
 </script>
 {% endblock %}

@@ -5,213 +5,446 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ schema.title }}</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #f0ebf8; font-family: 'Roboto', sans-serif; margin: 0; padding: 0; color: #202124; }
-        .gf-wrapper { max-width: 640px; margin: 0 auto; padding: 30px 16px; }
-        .gf-card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 12px; border: 1px solid #dadce0; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .header-card { border-top: 8px solid #673ab7; border-top-left-radius: 8px; border-top-right-radius: 8px; }
-        .gf-title { font-size: 32px; margin: 0 0 12px 0; font-weight: 400; }
-        .gf-desc { font-size: 14px; margin: 0; line-height: 1.5; color: #202124; }
-        .gf-q-title { font-size: 16px; font-weight: 500; margin: 0 0 16px 0; }
+        /* Desain Klasik ala Wufoo Form */
+        body { 
+            font-family: "Lucida Grande", Tahoma, Arial, sans-serif; 
+            background-color: #ffffff; 
+            color: #222222; 
+            margin: 0; 
+            padding: 40px 20px; 
+        }
         
-        .gf-public-input { border: none; border-bottom: 1px solid #dadce0; width: 100%; padding: 8px 0; font-size: 14px; outline: none; transition: 0.2s; font-family: inherit; background: transparent; }
-        .gf-public-input:focus { border-bottom: 2px solid #673ab7; padding-bottom: 7px; }
+        .form-container { 
+            max-width: 680px; 
+            margin: 0 auto; 
+        }
+
+        /* Header */
+        .form-header { margin-bottom: 20px; }
+        .form-header h1 { 
+            font-size: 28px; 
+            font-weight: normal; 
+            color: #222; 
+            margin: 0 0 12px 0; 
+        }
+        .form-header p { 
+            font-size: 16px; 
+            color: #222; 
+            margin: 0; 
+        }
         
-        .gf-btn-publish { background: #673ab7; color: white; border: none; padding: 10px 24px; border-radius: 4px; font-weight: 500; font-family: inherit; cursor: pointer; transition: 0.2s; font-size: 14px; }
-        .gf-btn-publish:hover { background: #5e35b1; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .divider { 
+            border: 0; 
+            border-top: 1px solid #cccccc; 
+            margin: 25px 0; 
+        }
+
+        /* Field Row */
+        .field-row { 
+            padding: 12px 15px; 
+            margin-bottom: 10px; 
+            transition: background-color 0.2s ease; 
+            border-radius: 2px;
+        }
+        .field-row:hover, .field-row:focus-within { 
+            background-color: #fff9c4; 
+        }
+
+        /* Label Pertanyaan & Instruksi */
+        .field-label { 
+            display: block; 
+            font-size: 14px; 
+            color: #222; 
+            margin-bottom: 4px; 
+            font-weight: bold; 
+        }
+        .req-mark { color: #d93025; font-weight: bold; margin-left: 2px; }
+        .instruction-text {
+            display: block;
+            font-size: 12px;
+            color: #555;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        /* Inputs */
+        .classic-input { 
+            background: #ffffff; 
+            border: 1px solid #999999; 
+            padding: 5px 6px; 
+            font-size: 13px; 
+            font-family: inherit; 
+            color: #333;
+            border-radius: 2px;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .classic-input:focus { border-color: #666; outline: none; }
         
-        .gf-radio-group { display: flex; flex-direction: column; gap: 16px; }
-        .gf-radio-label { display: flex; align-items: center; gap: 12px; cursor: pointer; font-size: 14px; }
-        .gf-radio-label input { width: 20px; height: 20px; cursor: pointer; accent-color: #673ab7; }
-        
-        textarea.gf-public-input { resize: none; overflow: hidden; }
-        
-        /* Styles untuk Tipe Pertanyaan Baru */
-        .rating-group { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: 8px; }
-        .rating-group input { display: none; }
-        .rating-group label { cursor: pointer; font-size: 32px; color: #dadce0; transition: 0.2s; }
-        .rating-group label:hover, .rating-group label:hover ~ label, .rating-group input:checked ~ label { color: #fbbc04; }
-        
-        .linear-scale { display: flex; align-items: flex-end; gap: 16px; margin-top: 12px; flex-wrap: wrap; justify-content: center;}
-        .scale-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-        .scale-item span { font-size: 14px; color: #5f6368; }
-        
-        .grid-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-        .grid-table th { padding: 12px; color: #5f6368; font-weight: 400; font-size: 14px; text-align: center; }
-        .grid-table td { padding: 12px; border-top: 1px solid #dadce0; text-align: center; }
-        .grid-table td:first-child { text-align: left; background: #f8f9fa; border-radius: 8px 0 0 8px; font-size: 14px; }
-        
-        /* Media Block Styles */
-        .media-block { text-align: center; margin-bottom: 24px; }
-        .media-block img { max-width: 100%; border-radius: 8px; }
-        .media-block iframe { width: 100%; height: 350px; border-radius: 8px; border: none; }
+        /* Ukuran Input */
+        .sz-small { width: 30%; }
+        .sz-medium { width: 50%; }
+        .sz-large { width: 95%; }
+        textarea.classic-input { resize: vertical; height: 80px; }
+
+        /* Keterangan Batas Range Bawah Input */
+        .field-instructions { 
+            font-size: 11px; 
+            color: #666; 
+            margin-top: 4px; 
+            display: flex;
+            justify-content: space-between;
+            width: 50%; 
+        }
+        .sz-large + .field-instructions { width: 95%; }
+        .sz-small + .field-instructions { width: 30%; }
+
+        /* Multiple Choice & Checkbox */
+        .choice-group { display: flex; flex-direction: column; gap: 6px; margin-top: 6px;}
+        .choice-label { font-size: 13px; color: #222; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+        .choice-label input { margin: 0; }
+
+        /* Linear Scale & Grid */
+        .scale-group { display: flex; gap: 15px; align-items: flex-end; margin-top: 8px;}
+        .scale-item { display: flex; flex-direction: column; align-items: center; font-size: 12px; gap: 4px;}
+        .grid-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+        .grid-table th { padding: 8px; font-weight: normal; color: #222; text-align: center; border-bottom: 1px solid #ccc;}
+        .grid-table td { padding: 8px; text-align: center; border-bottom: 1px dotted #ccc;}
+        .grid-table td:first-child { text-align: left; background: transparent; }
+
+        /* Media */
+        .media-block { margin-bottom: 20px; }
+        .media-block img { max-width: 100%; border: 1px solid #ccc; padding: 4px; background: #fff;}
+        .media-block iframe { width: 100%; height: 350px; border: 1px solid #ccc; }
+
+        /* Tombol Submit */
+        .form-footer { margin-top: 30px; text-align: right; }
+        .btn-submit { 
+            background-color: #007da5; 
+            color: white; 
+            border: none; 
+            padding: 10px 30px; 
+            font-size: 14px; 
+            cursor: pointer; 
+            border-radius: 2px;
+            font-family: inherit;
+        }
+        .btn-submit:hover { background-color: #005f7d; }
+
+        /* Report Abuse & System Message */
+        .report-abuse { text-align: center; margin-top: 60px; font-size: 11px; }
+        .report-abuse a { color: #0000ff; text-decoration: underline; }
+        .msg-box { padding: 20px 0; }
+        .msg-box h2 { margin-top: 0; color: #222; font-weight: normal;}
+        .sys-account { background: #ffffe0; border: 1px solid #e6db55; padding: 15px; margin-top: 20px; border-radius: 3px;}
     </style>
 </head>
 <body>
-    <div class="gf-wrapper">
+    <div class="form-container">
+        
         {% if closed %}
-        <div class="gf-card header-card">
-            <h1 class="gf-title">{{ schema.title }}</h1>
-            <p class="gf-desc">Formulir ini sudah ditutup dan tidak menerima tanggapan lagi.</p>
-        </div>
+            <div class="form-header">
+                <h1>{{ schema.title }}</h1>
+            </div>
+            <hr class="divider">
+            <div class="msg-box">
+                <p>Formulir ini sudah ditutup dan tidak menerima tanggapan lagi.</p>
+            </div>
         
         {% elif success %}
-        <div class="gf-card header-card">
-            <h1 class="gf-title">{{ schema.title }}</h1>
-            <p class="gf-desc">Tanggapan Anda telah direkam.</p>
-            
-            {% if is_default == 1 and new_username %}
-                <div style="margin-top: 24px; padding: 20px; background: #e8f0fe; border-radius: 8px; border: 1px solid #d2e3fc;">
-                    <h3 style="color: #1967d2; margin-top: 0;">Akun Sistem Anda Berhasil Dibuat!</h3>
-                    <p style="margin: 8px 0; font-size: 15px;"><strong>Username:</strong> {{ new_username }}</p>
-                    <p style="margin: 8px 0; font-size: 15px;"><strong>Password:</strong> <span style="font-family: monospace; background: #fff; padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc;">{{ new_password }}</span></p>
-                    <p style="margin: 16px 0 0; font-size: 13px; color: #5f6368;">Silakan simpan informasi login ini dengan baik. Anda sekarang dapat masuk ke dalam dashboard sistem.</p>
-                    <a href="{{ url_for('login') }}" class="gf-btn-publish" style="margin-top: 16px; display: inline-block; text-decoration: none;">Login Sekarang</a>
-                </div>
-            {% else %}
-                <a href="{{ url_for('isi_formulir', form_id=request.path.split('/')[-1]) }}" style="display: inline-block; margin-top: 24px; color: #1a73e8; text-decoration: none; font-size: 14px;">Kirim tanggapan lain</a>
-            {% endif %}
-        </div>
+            <div class="form-header">
+                <h1>{{ schema.title }}</h1>
+            </div>
+            <hr class="divider">
+            <div class="msg-box">
+                <h2>Berhasil!</h2>
+                <p>Tanggapan Anda telah direkam oleh sistem.</p>
+                
+                {% if is_default == 1 and new_username %}
+                    <div class="sys-account">
+                        <h3 style="margin-top: 0; color: #d05300;">Akun Sistem Anda Berhasil Dibuat!</h3>
+                        <p style="margin: 6px 0; font-size: 14px;"><strong>Username:</strong> {{ new_username }}</p>
+                        <p style="margin: 6px 0; font-size: 14px;"><strong>Password:</strong> <span style="font-family: monospace; background: #fff; padding: 2px 6px; border: 1px solid #ccc;">{{ new_password }}</span></p>
+                        <p style="margin: 12px 0 0; font-size: 12px; color: #555;">Silakan simpan informasi login ini. Anda sekarang dapat masuk ke dalam dashboard sistem pelayanan.</p>
+                        <a href="{{ url_for('login') }}" style="display: inline-block; margin-top: 15px; color: #007da5; font-weight: bold; text-decoration: none;">&rarr; Login Sekarang</a>
+                    </div>
+                {% else %}
+                    <br>
+                    <a href="{{ url_for('isi_formulir', form_id=request.path.split('/')[-1]) }}" style="color: #007da5; text-decoration: none;">Kirim tanggapan lain</a>
+                {% endif %}
+            </div>
         
         {% else %}
-        <!-- Diperbarui agar mendukung multipart/form-data (Upload File) -->
-        <form action="{{ url_for('isi_formulir', form_id=request.path.split('/')[-1]) }}" method="POST" enctype="multipart/form-data">
-            <div class="gf-card header-card">
-                <h1 class="gf-title">{{ schema.title }}</h1>
-                <!-- Deskripsi diformat menggunakan filter "safe" agar Rich Text/HTML tampil -->
-                <div class="gf-desc">{{ schema.description | safe }}</div>
-                <hr style="border: 0; border-bottom: 1px solid #dadce0; margin: 16px 0;">
-                <p style="color: #d93025; font-size: 13px; margin: 0;">* Menunjukkan pertanyaan yang wajib diisi</p>
+            <div class="form-header">
+                <h1>{{ schema.title }}</h1>
+                <p>{{ schema.description | safe }}</p>
             </div>
             
-            {% for q in schema.questions %}
-                {% if q.type == 'image' %}
-                <!-- BLOK MEDIA: GAMBAR -->
-                <div class="gf-card" style="padding: 16px;">
-                    <h3 class="gf-q-title" style="margin-bottom: 16px;">{{ q.question }}</h3>
-                    <div class="media-block">
-                        <img src="{{ q.url }}" alt="Gambar Formulir" onerror="this.src='https://via.placeholder.com/600x300?text=Gambar+Tidak+Ditemukan'">
-                    </div>
-                </div>
+            <hr class="divider">
+            
+            <form action="{{ url_for('isi_formulir', form_id=request.path.split('/')[-1]) }}" method="POST" enctype="multipart/form-data">
                 
-                {% elif q.type == 'video' %}
-                <!-- BLOK MEDIA: VIDEO -->
-                <div class="gf-card" style="padding: 16px;">
-                    <h3 class="gf-q-title" style="margin-bottom: 16px;">{{ q.question }}</h3>
-                    <div class="media-block">
-                        {% set video_id = q.url.split('v=')[-1].split('&')[0] if 'v=' in q.url else q.url.split('/')[-1] %}
-                        <iframe src="https://www.youtube.com/embed/{{ video_id }}" allowfullscreen></iframe>
+                {% for q in schema.questions %}
+                    
+                    {% if q.type == 'image' %}
+                    <div class="field-row">
+                        <label class="field-label">{{ q.question }}</label>
+                        <div class="media-block"><img src="{{ q.url }}"></div>
                     </div>
-                </div>
-                
-                {% else %}
-                <!-- BLOK PERTANYAAN STANDAR -->
-                <div class="gf-card">
-                    <h3 class="gf-q-title">{{ q.question }} {% if q.required %}<span style="color:#d93025;">*</span>{% endif %}</h3>
-                    
-                    {% if q.type == 'short' %}
-                        <input type="text" name="q_{{ q.id }}" class="gf-public-input" style="max-width: 300px;" placeholder="Jawaban Anda" {% if q.required %}required{% endif %}>
-                    
-                    {% elif q.type == 'paragraph' %}
-                        <textarea name="q_{{ q.id }}" class="gf-public-input" placeholder="Jawaban Anda" rows="1" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'" {% if q.required %}required{% endif %}></textarea>
-                    
-                    {% elif q.type == 'radio' %}
-                        <div class="gf-radio-group">
-                            {% for opt in q.options %}
-                            <label class="gf-radio-label">
-                                <input type="radio" name="q_{{ q.id }}" value="{{ opt }}" {% if q.required %}required{% endif %}>
-                                <span>{{ opt }}</span>
-                            </label>
-                            {% endfor %}
+                    {% elif q.type == 'video' %}
+                    <div class="field-row">
+                        <label class="field-label">{{ q.question }}</label>
+                        <div class="media-block">
+                            {% set video_id = q.url.split('v=')[-1].split('&')[0] if 'v=' in q.url else q.url.split('/')[-1] %}
+                            <iframe src="https://www.youtube.com/embed/{{ video_id }}" allowfullscreen></iframe>
                         </div>
+                    </div>
+                    {% else %}
+                    <div class="field-row">
+                        <label class="field-label">
+                            {{ q.question }} 
+                            {% if q.required %}<span class="req-mark">*</span>{% endif %}
+                        </label>
                         
-                    {% elif q.type == 'checkbox' %}
-                        <div class="gf-radio-group">
-                            {% for opt in q.options %}
-                            <label class="gf-radio-label">
-                                <input type="checkbox" name="q_{{ q.id }}" value="{{ opt }}">
-                                <span>{{ opt }}</span>
-                            </label>
-                            {% endfor %}
-                        </div>
+                        {% if q.instructions %}
+                            <span class="instruction-text">{{ q.instructions }}</span>
+                        {% endif %}
                         
-                    {% elif q.type == 'dropdown' %}
-                        <select name="q_{{ q.id }}" class="gf-public-input" style="max-width: 300px; padding: 12px; border: 1px solid #dadce0; border-radius: 4px;" {% if q.required %}required{% endif %}>
-                            <option value="">Pilih</option>
-                            {% for opt in q.options %}
-                            <option value="{{ opt }}">{{ opt }}</option>
-                            {% endfor %}
-                        </select>
+                        {% set sz = 'sz-medium' %}
+                        {% if q.size == 'Small' %}{% set sz = 'sz-small' %}{% endif %}
+                        {% if q.size == 'Large' %}{% set sz = 'sz-large' %}{% endif %}
+
+                        {% if q.type == 'short' or q.type == 'number' %}
+                            <input type="{{ 'number' if q.type == 'number' else 'text' }}" 
+                                   name="q_{{ q.id }}" 
+                                   class="classic-input {{ sz }}" 
+                                   placeholder="{{ q.placeholder if q.placeholder else '' }}" 
+                                   value="{{ q.predefinedValue if q.predefinedValue else '' }}" 
+                                   {% if q.required %}required{% endif %}
+                                   
+                                   {% if q.type == 'number' %}
+                                       {% if q.rangeFormat == 'Digits' %}
+                                            oninput="enforceDigitLimit(this, '{{ q.rangeMax }}')"
+                                       {% else %}
+                                            {% if q.rangeMin %}min="{{ q.rangeMin }}"{% endif %}
+                                            {% if q.rangeMax %}max="{{ q.rangeMax }}"{% endif %}
+                                            oninput="enforceNumberLimit(this, '{{ q.rangeMin }}', '{{ q.rangeMax }}')"
+                                       {% endif %}
+                                   {% else %}
+                                       {% if q.rangeFormat == 'Characters' or not q.rangeFormat %}
+                                           {% if q.rangeMin %}minlength="{{ q.rangeMin }}"{% endif %}
+                                           {% if q.rangeMax %}maxlength="{{ q.rangeMax }}" oninput="enforceCharacterLimit(this, {{ q.rangeMax }})"{% endif %}
+                                       {% elif q.rangeFormat == 'Words' and q.rangeMax %}
+                                           oninput="enforceWordLimit(this, {{ q.rangeMax }})"
+                                       {% endif %}
+                                   {% endif %}
+                            >
+                            {% if q.rangeMin or q.rangeMax %}
+                                <div class="field-instructions">
+                                    {% if q.type == 'number' %}
+                                        {% if q.rangeFormat == 'Digits' %}
+                                            {% if q.rangeMin and q.rangeMax %}<span>Panjang angka harus antara {{ q.rangeMin }} dan {{ q.rangeMax }} digit.</span>
+                                            {% elif q.rangeMax %}<span>Panjang angka maksimal {{ q.rangeMax }} digit.</span>{% endif %}
+                                        {% else %}
+                                            {% if q.rangeMin and q.rangeMax %}<span>Nilai angka harus antara {{ q.rangeMin }} dan {{ q.rangeMax }}.</span>
+                                            {% elif q.rangeMax %}<span>Nilai angka maksimal {{ q.rangeMax }}.</span>
+                                            {% elif q.rangeMin %}<span>Nilai angka minimal {{ q.rangeMin }}.</span>{% endif %}
+                                        {% endif %}
+                                    {% else %}
+                                        {% set fmt = 'kata' if q.rangeFormat == 'Words' else 'karakter' %}
+                                        {% if q.rangeMin and q.rangeMax %}<span>Harus berisi antara {{ q.rangeMin }} dan {{ q.rangeMax }} {{ fmt }}.</span>
+                                        {% elif q.rangeMax %}<span>Maksimal {{ q.rangeMax }} {{ fmt }}.</span>
+                                        {% elif q.rangeMin %}<span>Minimal {{ q.rangeMin }} {{ fmt }}.</span>{% endif %}
+                                    {% endif %}
+                                </div>
+                            {% endif %}
                         
-                    {% elif q.type == 'file' %}
-                        <div style="padding: 12px; border: 1px solid #dadce0; border-radius: 4px; display: inline-block;">
-                            <input type="file" name="q_{{ q.id }}" {% if q.required %}required{% endif %} style="font-family: inherit;">
-                        </div>
+                        {% elif q.type == 'paragraph' %}
+                            <textarea name="q_{{ q.id }}" 
+                                      class="classic-input {{ sz }}" 
+                                      placeholder="{{ q.placeholder if q.placeholder else '' }}" 
+                                      {% if q.required %}required{% endif %}
+                                      {% if q.rangeFormat == 'Characters' or not q.rangeFormat %}
+                                          {% if q.rangeMin %}minlength="{{ q.rangeMin }}"{% endif %}
+                                          {% if q.rangeMax %}maxlength="{{ q.rangeMax }}" oninput="enforceCharacterLimit(this, {{ q.rangeMax }})"{% endif %}
+                                      {% elif q.rangeFormat == 'Words' and q.rangeMax %}
+                                          oninput="enforceWordLimit(this, {{ q.rangeMax }})"
+                                      {% endif %}
+                            >{{ q.predefinedValue if q.predefinedValue else '' }}</textarea>
+                            {% if q.rangeMin or q.rangeMax %}
+                                {% set fmt = 'kata' if q.rangeFormat == 'Words' else 'karakter' %}
+                                <div class="field-instructions">
+                                    {% if q.rangeMin and q.rangeMax %}<span>Harus berisi antara {{ q.rangeMin }} dan {{ q.rangeMax }} {{ fmt }}.</span>
+                                    {% elif q.rangeMax %}<span>Maksimal {{ q.rangeMax }} {{ fmt }}.</span>
+                                    {% elif q.rangeMin %}<span>Minimal {{ q.rangeMin }} {{ fmt }}.</span>{% endif %}
+                                </div>
+                            {% endif %}
                         
-                    {% elif q.type == 'linear_scale' %}
-                        <div class="linear-scale">
-                            <span style="padding-bottom: 24px; font-size: 14px; color: #202124;">(Buruk)</span>
-                            {% for i in range(1, 6) %}
-                            <div class="scale-item">
-                                <span>{{ i }}</span>
-                                <input type="radio" name="q_{{ q.id }}" value="{{ i }}" style="width:20px; height:20px; accent-color: #673ab7;" {% if q.required %}required{% endif %}>
+                        {% elif q.type == 'radio' %}
+                            {% set layoutStyle = 'display:flex;flex-direction:column;gap:8px;' %}
+                            {% if q.layout == 'Two Columns' %}{% set layoutStyle = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;' %}{% endif %}
+                            {% if q.layout == 'Three Columns' %}{% set layoutStyle = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;' %}{% endif %}
+                            {% if q.layout == 'Side by Side' %}{% set layoutStyle = 'display:flex;flex-wrap:wrap;gap:15px;' %}{% endif %}
+                            
+                            <div style="{{ layoutStyle }} margin-top: 6px;">
+                                {% for opt in q.options %}
+                                {% set o_idx = loop.index0 %}
+                                <label class="choice-label">
+                                    <input type="radio" name="q_{{ q.id }}" value="{{ opt }}" {% if q.required %}required{% endif %} {% if q.predefinedValue == opt %}checked{% endif %}>
+                                    <span>{{ opt }} 
+                                        {% if q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] %}
+                                        <span style="font-size:11px; color:#d93025; font-weight:normal; margin-left:4px;">(Sisa: {{ q.optionLimits[o_idx] }})</span>
+                                        {% endif %}
+                                    </span>
+                                </label>
+                                {% endfor %}
+                                {% if q.allowOther %}
+                                <label class="choice-label">
+                                    <input type="radio" name="q_{{ q.id }}" value="__other__" {% if q.required %}required{% endif %}>
+                                    <span>Lainnya:</span> <input type="text" name="q_{{ q.id }}_other" class="classic-input sz-small" style="padding:2px 4px; height:20px;">
+                                </label>
+                                {% endif %}
                             </div>
-                            {% endfor %}
-                            <span style="padding-bottom: 24px; font-size: 14px; color: #202124;">(Sangat Baik)</span>
-                        </div>
-                        
-                    {% elif q.type == 'rating' %}
-                        <div class="rating-group">
-                            <input type="radio" id="star5_{{ q.id }}" name="q_{{ q.id }}" value="5" {% if q.required %}required{% endif %}><label for="star5_{{ q.id }}"><i class="fas fa-star"></i></label>
-                            <input type="radio" id="star4_{{ q.id }}" name="q_{{ q.id }}" value="4"><label for="star4_{{ q.id }}"><i class="fas fa-star"></i></label>
-                            <input type="radio" id="star3_{{ q.id }}" name="q_{{ q.id }}" value="3"><label for="star3_{{ q.id }}"><i class="fas fa-star"></i></label>
-                            <input type="radio" id="star2_{{ q.id }}" name="q_{{ q.id }}" value="2"><label for="star2_{{ q.id }}"><i class="fas fa-star"></i></label>
-                            <input type="radio" id="star1_{{ q.id }}" name="q_{{ q.id }}" value="1"><label for="star1_{{ q.id }}"><i class="fas fa-star"></i></label>
-                        </div>
-                        
-                    {% elif q.type == 'grid_radio' or q.type == 'grid_checkbox' %}
-                        <div style="overflow-x: auto;">
-                            <table class="grid-table">
-                                <thead>
-                                    <tr>
-                                        <th></th>
-                                        {% for col in q.columns %}
-                                        <th>{{ col }}</th>
+                            
+                        {% elif q.type == 'checkbox' %}
+                            {% set layoutStyle = 'display:flex;flex-direction:column;gap:8px;' %}
+                            {% if q.layout == 'Two Columns' %}{% set layoutStyle = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;' %}{% endif %}
+                            {% if q.layout == 'Three Columns' %}{% set layoutStyle = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;' %}{% endif %}
+                            {% if q.layout == 'Side by Side' %}{% set layoutStyle = 'display:flex;flex-wrap:wrap;gap:15px;' %}{% endif %}
+                            
+                            <div style="{{ layoutStyle }} margin-top: 6px;">
+                                {% for opt in q.options %}
+                                {% set o_idx = loop.index0 %}
+                                <label class="choice-label">
+                                    <input type="checkbox" name="q_{{ q.id }}" value="{{ opt }}" {% if q.predefinedValue and opt in q.predefinedValue %}checked{% endif %}>
+                                    <span>{{ opt }}
+                                        {% if q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] %}
+                                        <span style="font-size:11px; color:#d93025; font-weight:normal; margin-left:4px;">(Sisa: {{ q.optionLimits[o_idx] }})</span>
+                                        {% endif %}
+                                    </span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                            
+                        {% elif q.type == 'dropdown' %}
+                            <select name="q_{{ q.id }}" class="classic-input {{ sz }}" {% if q.required %}required{% endif %}>
+                                <option value="">Pilih salah satu</option>
+                                {% for opt in q.options %}
+                                {% set o_idx = loop.index0 %}
+                                    <option value="{{ opt }}">
+                                        {{ opt }} 
+                                        {% if q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] %}
+                                        (Sisa: {{ q.optionLimits[o_idx] }})
+                                        {% endif %}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            
+                        {% elif q.type == 'file' %}
+                            <input type="file" name="q_{{ q.id }}" class="classic-input {{ sz }}" style="padding: 2px;" {% if q.required %}required{% endif %}>
+                            
+                        {% elif q.type == 'linear_scale' %}
+                            <div class="scale-group">
+                                <span>{{ q.rangeMin if q.rangeMin else 0 }}</span>
+                                {% for i in range( (q.rangeMin|int if q.rangeMin else 0), (q.rangeMax|int if q.rangeMax else 5) + 1 ) %}
+                                <div class="scale-item">
+                                    <span>{{ i }}</span>
+                                    <input type="radio" name="q_{{ q.id }}" value="{{ i }}" {% if q.required %}required{% endif %}>
+                                </div>
+                                {% endfor %}
+                                <span>{{ q.rangeMax if q.rangeMax else 5 }}</span>
+                            </div>
+                            
+                        {% elif q.type == 'rating' %}
+                            <div style="color:#f59e0b;font-size:20px;letter-spacing:5px;">
+                                <input type="radio" name="q_{{ q.id }}" value="1" required style="margin:0;"> 1 
+                                <input type="radio" name="q_{{ q.id }}" value="2" style="margin:0; margin-left:10px;"> 2 
+                                <input type="radio" name="q_{{ q.id }}" value="3" style="margin:0; margin-left:10px;"> 3 
+                                <input type="radio" name="q_{{ q.id }}" value="4" style="margin:0; margin-left:10px;"> 4 
+                                <input type="radio" name="q_{{ q.id }}" value="5" style="margin:0; margin-left:10px;"> 5
+                            </div>
+                            
+                        {% elif q.type == 'grid_radio' or q.type == 'grid_checkbox' %}
+                            <div style="overflow-x: auto;">
+                                <table class="grid-table">
+                                    <thead>
+                                        <tr>
+                                            <th></th>
+                                            {% for col in q.columns %}
+                                            <th>{{ col }}</th>
+                                            {% endfor %}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for row in q.rows %}
+                                        {% set r_idx = loop.index0 %}
+                                        <tr>
+                                            <td>{{ row }}</td>
+                                            {% for col in q.columns %}
+                                            <td>
+                                                <input type="{{ 'radio' if q.type == 'grid_radio' else 'checkbox' }}" name="q_{{ q.id }}_r{{ r_idx }}" value="{{ col }}" {% if q.type == 'grid_radio' and q.required %}required{% endif %}>
+                                            </td>
+                                            {% endfor %}
+                                        </tr>
                                         {% endfor %}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for row in q.rows %}
-                                    {% set r_idx = loop.index0 %}
-                                    <tr>
-                                        <td>{{ row }}</td>
-                                        {% for col in q.columns %}
-                                        <td>
-                                            <input type="{{ 'radio' if q.type == 'grid_radio' else 'checkbox' }}" name="q_{{ q.id }}_r{{ r_idx }}" value="{{ col }}" style="width: 18px; height: 18px; accent-color: #673ab7;" {% if q.type == 'grid_radio' and q.required %}required{% endif %}>
-                                        </td>
-                                        {% endfor %}
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                    {% elif q.type == 'date' %}
-                        <input type="date" name="q_{{ q.id }}" class="gf-public-input" style="max-width: 200px; padding: 10px; border: 1px solid #dadce0; border-radius: 4px;" {% if q.required %}required{% endif %}>
-                    {% elif q.type == 'time' %}
-                        <input type="time" name="q_{{ q.id }}" class="gf-public-input" style="max-width: 150px; padding: 10px; border: 1px solid #dadce0; border-radius: 4px;" {% if q.required %}required{% endif %}>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                        {% elif q.type == 'date' %}
+                            <input type="date" name="q_{{ q.id }}" class="classic-input sz-small" {% if q.required %}required{% endif %}>
+                        {% elif q.type == 'time' %}
+                            <input type="time" name="q_{{ q.id }}" class="classic-input sz-small" {% if q.required %}required{% endif %}>
+                        {% endif %}
+                    </div>
                     {% endif %}
+                {% endfor %}
+                
+                <div class="form-footer">
+                    <button type="submit" class="btn-submit">Kirim</button>
                 </div>
-                {% endif %}
-            {% endfor %}
-            
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 16px;">
-                <button type="submit" class="gf-btn-publish">Kirim</button>
-                <span style="color:#5f6368; font-size:12px;">Kosongkan sandi. Jangan pernah mengirimkan sandi Anda.</span>
-            </div>
-        </form>
+            </form>
         {% endif %}
+        
+        <div class="report-abuse">
+            <a href="#">Laporkan Penyalahgunaan</a>
+        </div>
     </div>
+
+    <script>
+        function enforceWordLimit(field, maxWords) {
+            let text = field.value;
+            let words = text.trim().split(/\s+/).filter(w => w.length > 0);
+            if (words.length > maxWords) {
+                field.value = words.slice(0, maxWords).join(" ") + " ";
+            }
+        }
+        
+        function enforceCharacterLimit(field, maxChars) {
+            if (field.value.length > maxChars) {
+                field.value = field.value.substring(0, maxChars);
+            }
+        }
+
+        function enforceNumberLimit(field, minStr, maxStr) {
+            let val = parseFloat(field.value);
+            if (isNaN(val)) return;
+            
+            if (maxStr !== '') {
+                let maxVal = parseFloat(maxStr);
+                if (val > maxVal) {
+                    field.value = maxVal; 
+                }
+            }
+        }
+
+        function enforceDigitLimit(field, maxDigits) {
+            if (!maxDigits) return;
+            let val = field.value.toString();
+            if (val.length > parseInt(maxDigits)) {
+                field.value = val.substring(0, parseInt(maxDigits)); 
+            }
+        }
+    </script>
 </body>
 </html>
