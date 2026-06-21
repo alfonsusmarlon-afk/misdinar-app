@@ -118,7 +118,7 @@
         .media-block iframe { width: 100%; height: 350px; border: 1px solid #ccc; }
 
         /* Tombol Submit */
-        .form-footer { margin-top: 30px; text-align: right; }
+        .form-footer { margin-top: 30px; display: flex; justify-content: space-between; border-top: 1px dotted #ccc; padding-top: 20px; }
         .btn-submit { 
             background-color: #007da5; 
             color: white; 
@@ -130,6 +130,8 @@
             font-family: inherit;
         }
         .btn-submit:hover { background-color: #005f7d; }
+        .btn-prev { background-color: transparent; color: blue; text-decoration: underline; border: none; padding: 0; font-size: 13px; cursor: pointer; font-weight: normal; }
+        .btn-prev:hover { color: darkblue; }
 
         /* Report Abuse & System Message */
         .report-abuse { text-align: center; margin-top: 60px; font-size: 11px; }
@@ -175,276 +177,401 @@
             </div>
         
         {% else %}
-            <div class="form-header">
-                <h1>{{ schema.title }}</h1>
-                <p>{{ schema.description | safe }}</p>
-            </div>
             
-            <hr class="divider">
+            {% set titleAlign = 'left' %}
+            {% if schema.titleAlignment == 'Center Aligned' %}{% set titleAlign = 'center' %}{% endif %}
+            {% if schema.titleAlignment == 'Right Aligned' %}{% set titleAlign = 'right' %}{% endif %}
+            
+            {% set descAlign = 'left' %}
+            {% if schema.descAlignment == 'Center Aligned' %}{% set descAlign = 'center' %}{% endif %}
+            {% if schema.descAlignment == 'Right Aligned' %}{% set descAlign = 'right' %}{% endif %}
+            
+            <div class="form-header" style="text-align: {{ titleAlign }};">
+                <h1 style="text-align: {{ titleAlign }};">{{ schema.title }}</h1>
+                <p style="text-align: {{ descAlign }};">{{ schema.description | safe }}</p>
+            </div>
+
+            {% set ns = namespace(p_idx=0) %}
+            {% set pages_list = [[]] %}
+            {% set page_titles_list = [schema.firstPageTitle if schema.firstPageTitle else 'Untitled Page'] %}
+            {% set next_btn_list = [] %}
+            
+            {% for q in schema.questions %}
+                {% if q.type == 'page' %}
+                    {% set _ = pages_list.append([]) %}
+                    {% set _ = page_titles_list.append(q.pageTitle if q.pageTitle else 'Untitled Page') %}
+                    {% set _ = next_btn_list.append(q.btnText if q.btnText else 'Next Page') %}
+                    {% set ns.p_idx = ns.p_idx + 1 %}
+                {% else %}
+                    {% set _ = pages_list[ns.p_idx].append(q) %}
+                {% endif %}
+            {% endfor %}
+
+            {% if pages_list|length > 1 %}
+                {% set pgType = schema.paginationType|default('Steps') %}
+                
+                {% if pgType == 'Percentage' %}
+                    <div style="background:#eef7d5; border-top:1px dashed #9ca683; border-bottom:1px dashed #9ca683; padding:10px; margin-bottom:20px;">
+                        <div style="background:#fff; border:1px solid #ccc; height:24px; border-radius:12px; position:relative; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); overflow:hidden;">
+                            <div id="progressBar" style="background:#c5e1a5; height:100%; width:0%; transition:0.3s; position:absolute; left:0; top:0;"></div>
+                            <div id="progressText" style="position:absolute; left:15px; top:0; bottom:0; display:flex; align-items:center; font-weight:bold; font-size:12px; color:#222; z-index:2;">
+                                0%
+                            </div>
+                        </div>
+                    </div>
+                {% elif pgType == 'Steps' %}
+                    <div style="background:#eef7d5; border-top:1px dashed #9ca683; border-bottom:1px dashed #9ca683; padding:15px 0; margin-bottom:20px; display:flex; justify-content:space-around; position:relative;">
+                        <div style="position:absolute; top:27px; left:20px; right:20px; height:0px; border-top:1px dotted #9ca683; z-index:1;"></div>
+                        {% for p in pages_list %}
+                            <div style="display:flex; align-items:center; position:relative; z-index:2; background:#eef7d5; padding: 0 10px;">
+                                <div class="step-circle" id="step-circle-{{ loop.index }}" style="width:24px; height:24px; border-radius:50%; background:{% if loop.first %}#fff7c0{% else %}#fff{% endif %}; color:{% if loop.first %}#333{% else %}#666{% endif %}; display:flex; align-items:center; justify-content:center; font-size:12px; border:1px solid {% if loop.first %}#e6c35c{% else %}#ccc{% endif %}; box-shadow: 0 1px 2px rgba(0,0,0,0.1); transition:0.3s;">
+                                    {{ loop.index }}
+                                </div>
+                                {% if schema.showPageTitles %}
+                                    <span style="font-size:12px; color:#444; margin-left:8px;">{{ page_titles_list[loop.index0] }}</span>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% else %}
+                <hr class="divider">
+            {% endif %}
             
             <form action="{{ url_for('isi_formulir', form_id=request.path.split('/')[-1]) }}" method="POST" enctype="multipart/form-data">
                 
-                {% for q in schema.questions %}
+                {% set isSideLabel = schema.labelPlacement != 'Top Aligned' %}
+                {% set labelPlacementAlign = 'right' if schema.labelPlacement == 'Right Aligned' else 'left' %}
+                
+                {% for page in pages_list %}
+                <div class="form-page" id="page-{{ loop.index }}" {% if not loop.first %}style="display:none;"{% endif %}>
                     
-                    {% if q.type == 'image' %}
-                    <div class="field-row">
-                        <label class="field-label">{{ q.question }}</label>
-                        <div class="media-block"><img src="{{ q.url }}"></div>
-                    </div>
-                    {% elif q.type == 'video' %}
-                    <div class="field-row">
-                        <label class="field-label">{{ q.question }}</label>
-                        <div class="media-block">
-                            {% set video_id = q.url.split('v=')[-1].split('&')[0] if 'v=' in q.url else q.url.split('/')[-1] %}
-                            <iframe src="https://www.youtube.com/embed/{{ video_id }}" allowfullscreen></iframe>
-                        </div>
-                    </div>
-                    {% else %}
-                    <div class="field-row">
-                        <label class="field-label">
-                            {{ q.question }} 
-                            {% if q.required %}<span class="req-mark">*</span>{% endif %}
-                        </label>
+                    {% for q in page %}
                         
-                        {% if q.instructions %}
-                            <span class="instruction-text">{{ q.instructions }}</span>
+                        {% if q.type == 'image' %}
+                        <div class="field-row">
+                            <label class="field-label">{{ q.question }}</label>
+                            <div class="media-block"><img src="{{ q.url }}"></div>
+                        </div>
+                        {% elif q.type == 'video' %}
+                        <div class="field-row">
+                            <label class="field-label">{{ q.question }}</label>
+                            <div class="media-block">
+                                {% set video_id = q.url.split('v=')[-1].split('&')[0] if 'v=' in q.url else q.url.split('/')[-1] %}
+                                <iframe src="https://www.youtube.com/embed/{{ video_id }}" allowfullscreen></iframe>
+                            </div>
+                        </div>
+                        {% elif q.type == 'section' %}
+                        <div class="field-row section-break" style="background: transparent; border-bottom: 2px dotted #ccc; padding: 0 0 10px 0; margin: 20px 0;">
+                            <h2 style="margin: 0 0 5px 0; font-size: 16px; color: #222;">{{ q.question }}</h2>
+                            {% if q.instructions %}<p style="margin: 0; font-size: 12px; color: #666;">{{ q.instructions }}</p>{% endif %}
+                        </div>
+                        {% else %}
+                        
+                        {% set labelFlex = '' %}
+                        {% set labelWidth = '' %}
+                        {% set inputWidth = '' %}
+                        {% if isSideLabel %}
+                            {% set labelFlex = 'display:flex; gap:20px; align-items:flex-start;' %}
+                            {% set labelWidth = 'width: 30%; text-align: ' ~ labelPlacementAlign ~ ';' %}
+                            {% set inputWidth = 'flex: 1;' %}
                         {% endif %}
                         
-                        {% set sz = 'sz-medium' %}
-                        {% if q.size == 'Small' %}{% set sz = 'sz-small' %}{% endif %}
-                        {% if q.size == 'Large' %}{% set sz = 'sz-large' %}{% endif %}
-
-                        {% if q.type == 'short' or q.type == 'number' %}
-                            <input type="{{ 'number' if q.type == 'number' else 'text' }}" 
-                                   name="q_{{ q.id }}" 
-                                   class="classic-input {{ sz }}" 
-                                   placeholder="{{ q.placeholder if q.placeholder else '' }}" 
-                                   value="{{ q.predefinedValue if q.predefinedValue else '' }}" 
-                                   {% if q.required %}required{% endif %}
-                                   
-                                   {% if q.type == 'number' %}
-                                       {% if q.rangeFormat == 'Digits' %}
-                                            oninput="enforceDigitLimit(this, '{{ q.rangeMax }}')"
-                                       {% else %}
-                                            {% if q.rangeMin %}min="{{ q.rangeMin }}"{% endif %}
-                                            {% if q.rangeMax %}max="{{ q.rangeMax }}"{% endif %}
-                                            oninput="enforceNumberLimit(this, '{{ q.rangeMin }}', '{{ q.rangeMax }}')"
-                                       {% endif %}
-                                   {% else %}
-                                       {% if q.rangeFormat == 'Characters' or not q.rangeFormat %}
-                                           {% if q.rangeMin %}minlength="{{ q.rangeMin }}"{% endif %}
-                                           {% if q.rangeMax %}maxlength="{{ q.rangeMax }}" oninput="enforceCharacterLimit(this, {{ q.rangeMax }})"{% endif %}
-                                       {% elif q.rangeFormat == 'Words' and q.rangeMax %}
-                                           oninput="enforceWordLimit(this, {{ q.rangeMax }})"
-                                       {% endif %}
-                                   {% endif %}
-                            >
-                            {% if q.rangeMin or q.rangeMax %}
-                                <div class="field-instructions">
-                                    {% if q.type == 'number' %}
-                                        {% if q.rangeFormat == 'Digits' %}
-                                            {% if q.rangeMin and q.rangeMax %}<span>Panjang angka harus antara {{ q.rangeMin }} dan {{ q.rangeMax }} digit.</span>
-                                            {% elif q.rangeMax %}<span>Panjang angka maksimal {{ q.rangeMax }} digit.</span>{% endif %}
-                                        {% else %}
-                                            {% if q.rangeMin and q.rangeMax %}<span>Nilai angka harus antara {{ q.rangeMin }} dan {{ q.rangeMax }}.</span>
-                                            {% elif q.rangeMax %}<span>Nilai angka maksimal {{ q.rangeMax }}.</span>
-                                            {% elif q.rangeMin %}<span>Nilai angka minimal {{ q.rangeMin }}.</span>{% endif %}
-                                        {% endif %}
-                                    {% else %}
-                                        {% set fmt = 'kata' if q.rangeFormat == 'Words' else 'karakter' %}
-                                        {% if q.rangeMin and q.rangeMax %}<span>Harus berisi antara {{ q.rangeMin }} dan {{ q.rangeMax }} {{ fmt }}.</span>
-                                        {% elif q.rangeMax %}<span>Maksimal {{ q.rangeMax }} {{ fmt }}.</span>
-                                        {% elif q.rangeMin %}<span>Minimal {{ q.rangeMin }} {{ fmt }}.</span>{% endif %}
-                                    {% endif %}
-                                </div>
-                            {% endif %}
-                        
-                        {% elif q.type == 'paragraph' %}
-                            <textarea name="q_{{ q.id }}" 
-                                      class="classic-input {{ sz }}" 
-                                      placeholder="{{ q.placeholder if q.placeholder else '' }}" 
-                                      {% if q.required %}required{% endif %}
-                                      {% if q.rangeFormat == 'Characters' or not q.rangeFormat %}
-                                          {% if q.rangeMin %}minlength="{{ q.rangeMin }}"{% endif %}
-                                          {% if q.rangeMax %}maxlength="{{ q.rangeMax }}" oninput="enforceCharacterLimit(this, {{ q.rangeMax }})"{% endif %}
-                                      {% elif q.rangeFormat == 'Words' and q.rangeMax %}
-                                          oninput="enforceWordLimit(this, {{ q.rangeMax }})"
-                                      {% endif %}
-                            >{{ q.predefinedValue if q.predefinedValue else '' }}</textarea>
-                            {% if q.rangeMin or q.rangeMax %}
-                                {% set fmt = 'kata' if q.rangeFormat == 'Words' else 'karakter' %}
-                                <div class="field-instructions">
-                                    {% if q.rangeMin and q.rangeMax %}<span>Harus berisi antara {{ q.rangeMin }} dan {{ q.rangeMax }} {{ fmt }}.</span>
-                                    {% elif q.rangeMax %}<span>Maksimal {{ q.rangeMax }} {{ fmt }}.</span>
-                                    {% elif q.rangeMin %}<span>Minimal {{ q.rangeMin }} {{ fmt }}.</span>{% endif %}
-                                </div>
-                            {% endif %}
-                        
-                        {% elif q.type == 'radio' %}
-                            {% set layoutStyle = 'display:flex;flex-direction:column;gap:8px;' %}
-                            {% if q.layout == 'Two Columns' %}{% set layoutStyle = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;' %}{% endif %}
-                            {% if q.layout == 'Three Columns' %}{% set layoutStyle = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;' %}{% endif %}
-                            {% if q.layout == 'Side by Side' %}{% set layoutStyle = 'display:flex;flex-wrap:wrap;gap:15px;' %}{% endif %}
-                            
-                            <div style="{{ layoutStyle }} margin-top: 6px;">
-                                {% for opt in q.options %}
-                                {% set o_idx = loop.index0 %}
-                                <label class="choice-label">
-                                    <input type="radio" name="q_{{ q.id }}" value="{{ opt }}" {% if q.required %}required{% endif %} {% if q.predefinedValue == opt %}checked{% endif %}>
-                                    <span>{{ opt }} 
-                                        {% if q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] %}
-                                        <span style="font-size:11px; color:#d93025; font-weight:normal; margin-left:4px;">(Sisa: {{ q.optionLimits[o_idx] }})</span>
-                                        {% endif %}
-                                    </span>
+                        <div class="field-row" style="{{ labelFlex }}">
+                            <div style="{{ labelWidth }}">
+                                <label class="field-label">
+                                    {{ q.question }} 
+                                    {% if q.required %}<span class="req-mark">*</span>{% endif %}
                                 </label>
-                                {% endfor %}
-                                {% if q.allowOther %}
-                                <label class="choice-label">
-                                    <input type="radio" name="q_{{ q.id }}" value="__other__" {% if q.required %}required{% endif %}>
-                                    <span>Lainnya:</span> <input type="text" name="q_{{ q.id }}_other" class="classic-input sz-small" style="padding:2px 4px; height:20px;">
-                                </label>
+                                {% if q.instructions %}
+                                    <span class="instruction-text">{{ q.instructions }}</span>
                                 {% endif %}
                             </div>
                             
-                        {% elif q.type == 'checkbox' %}
-                            {% set layoutStyle = 'display:flex;flex-direction:column;gap:8px;' %}
-                            {% if q.layout == 'Two Columns' %}{% set layoutStyle = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;' %}{% endif %}
-                            {% if q.layout == 'Three Columns' %}{% set layoutStyle = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;' %}{% endif %}
-                            {% if q.layout == 'Side by Side' %}{% set layoutStyle = 'display:flex;flex-wrap:wrap;gap:15px;' %}{% endif %}
-                            
-                            <div style="{{ layoutStyle }} margin-top: 6px;">
-                                {% for opt in q.options %}
-                                {% set o_idx = loop.index0 %}
-                                <label class="choice-label">
-                                    <input type="checkbox" name="q_{{ q.id }}" value="{{ opt }}" {% if q.predefinedValue and opt in q.predefinedValue %}checked{% endif %}>
-                                    <span>{{ opt }}
-                                        {% if q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] %}
-                                        <span style="font-size:11px; color:#d93025; font-weight:normal; margin-left:4px;">(Sisa: {{ q.optionLimits[o_idx] }})</span>
-                                        {% endif %}
-                                    </span>
-                                </label>
-                                {% endfor %}
-                            </div>
-                            
-                        {% elif q.type == 'dropdown' %}
-                            <select name="q_{{ q.id }}" class="classic-input {{ sz }}" {% if q.required %}required{% endif %}>
-                                <option value="">Pilih salah satu</option>
-                                {% for opt in q.options %}
-                                {% set o_idx = loop.index0 %}
-                                    <option value="{{ opt }}">
-                                        {{ opt }} 
-                                        {% if q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] %}
-                                        (Sisa: {{ q.optionLimits[o_idx] }})
-                                        {% endif %}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                            
-                        {% elif q.type == 'file' %}
-                            <input type="file" name="q_{{ q.id }}" class="classic-input {{ sz }}" style="padding: 2px;" {% if q.required %}required{% endif %}>
-                            
-                        {% elif q.type == 'linear_scale' %}
-                            <div class="scale-group">
-                                <span>{{ q.rangeMin if q.rangeMin else 0 }}</span>
-                                {% for i in range( (q.rangeMin|int if q.rangeMin else 0), (q.rangeMax|int if q.rangeMax else 5) + 1 ) %}
-                                <div class="scale-item">
-                                    <span>{{ i }}</span>
-                                    <input type="radio" name="q_{{ q.id }}" value="{{ i }}" {% if q.required %}required{% endif %}>
-                                </div>
-                                {% endfor %}
-                                <span>{{ q.rangeMax if q.rangeMax else 5 }}</span>
-                            </div>
-                            
-                        {% elif q.type == 'rating' %}
-                            <div style="color:#f59e0b;font-size:20px;letter-spacing:5px;">
-                                <input type="radio" name="q_{{ q.id }}" value="1" required style="margin:0;"> 1 
-                                <input type="radio" name="q_{{ q.id }}" value="2" style="margin:0; margin-left:10px;"> 2 
-                                <input type="radio" name="q_{{ q.id }}" value="3" style="margin:0; margin-left:10px;"> 3 
-                                <input type="radio" name="q_{{ q.id }}" value="4" style="margin:0; margin-left:10px;"> 4 
-                                <input type="radio" name="q_{{ q.id }}" value="5" style="margin:0; margin-left:10px;"> 5
-                            </div>
-                            
-                        {% elif q.type == 'grid_radio' or q.type == 'grid_checkbox' %}
-                            <div style="overflow-x: auto;">
-                                <table class="grid-table">
-                                    <thead>
-                                        <tr>
-                                            <th></th>
-                                            {% for col in q.columns %}
-                                            <th>{{ col }}</th>
-                                            {% endfor %}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for row in q.rows %}
-                                        {% set r_idx = loop.index0 %}
-                                        <tr>
-                                            <td>{{ row }}</td>
-                                            {% for col in q.columns %}
-                                            <td>
-                                                <input type="{{ 'radio' if q.type == 'grid_radio' else 'checkbox' }}" name="q_{{ q.id }}_r{{ r_idx }}" value="{{ col }}" {% if q.type == 'grid_radio' and q.required %}required{% endif %}>
-                                            </td>
-                                            {% endfor %}
-                                        </tr>
+                            <div style="{{ inputWidth }}">
+                                {% set sz = 'sz-medium' %}
+                                {% if q.size == 'Small' %}{% set sz = 'sz-small' %}{% endif %}
+                                {% if q.size == 'Large' %}{% set sz = 'sz-large' %}{% endif %}
+
+                                {% if q.type == 'name' %}
+                                    {% set format = q.nameFormat | default('Normal') %}
+                                    {% if format == 'Extended' %}
+                                        <div style="display: flex; gap: 10px; align-items: flex-end; margin-top:6px;">
+                                            <div style="flex: 0.5;">
+                                                <input type="text" name="q_{{ q.id }}_title" class="classic-input sz-large" placeholder="{{ q.placeholderTitle if q.placeholderTitle else '' }}" style="margin-bottom:4px;">
+                                                <label style="font-size: 11px; color: #666; font-weight: bold; display: block;">Title</label>
+                                            </div>
+                                            <div style="flex: 1.5;">
+                                                <input type="text" name="q_{{ q.id }}_first" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderFirst if q.placeholderFirst else '' }}" style="margin-bottom:4px;">
+                                                <label style="font-size: 11px; color: #666; font-weight: bold; display: block;">First</label>
+                                            </div>
+                                            <div style="flex: 2;">
+                                                <input type="text" name="q_{{ q.id }}_last" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderLast if q.placeholderLast else '' }}" style="margin-bottom:4px;">
+                                                <label style="font-size: 11px; color: #666; font-weight: bold; display: block;">Last</label>
+                                            </div>
+                                            <div style="flex: 0.5;">
+                                                <input type="text" name="q_{{ q.id }}_suffix" class="classic-input sz-large" placeholder="{{ q.placeholderSuffix if q.placeholderSuffix else '' }}" style="margin-bottom:4px;">
+                                                <label style="font-size: 11px; color: #666; font-weight: bold; display: block;">Suffix</label>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <div style="display: flex; gap: 15px; align-items: flex-end; margin-top:6px;">
+                                            <div style="flex: 1;">
+                                                <input type="text" name="q_{{ q.id }}_first" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderFirst if q.placeholderFirst else '' }}" style="margin-bottom:4px;">
+                                                <label style="font-size: 11px; color: #666; font-weight: bold; display: block;">First</label>
+                                            </div>
+                                            <div style="flex: 1;">
+                                                <input type="text" name="q_{{ q.id }}_last" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderLast if q.placeholderLast else '' }}" style="margin-bottom:4px;">
+                                                <label style="font-size: 11px; color: #666; font-weight: bold; display: block;">Last</label>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                
+                                {% elif q.type == 'address' %}
+                                    <div style="display:flex; flex-direction:column; gap:10px; margin-top:6px;">
+                                        <div>
+                                            <input type="text" name="q_{{ q.id }}_street" class="classic-input sz-large" {% if q.required %}required{% endif %} style="margin-bottom:4px;">
+                                            <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Street Address</label>
+                                        </div>
+                                        <div>
+                                            <input type="text" name="q_{{ q.id }}_line2" class="classic-input sz-large" style="margin-bottom:4px;">
+                                            <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Address Line 2</label>
+                                        </div>
+                                        <div style="display:flex; gap:15px;">
+                                            <div style="flex:1;">
+                                                <input type="text" name="q_{{ q.id }}_city" class="classic-input sz-large" {% if q.required %}required{% endif %} style="margin-bottom:4px;">
+                                                <label style="font-size:11px; color:#666; font-weight:bold; display:block;">City</label>
+                                            </div>
+                                            <div style="flex:1;">
+                                                <input type="text" name="q_{{ q.id }}_state" class="classic-input sz-large" {% if q.required %}required{% endif %} style="margin-bottom:4px;">
+                                                <label style="font-size:11px; color:#666; font-weight:bold; display:block;">State / Province</label>
+                                            </div>
+                                        </div>
+                                        <div style="display:flex; gap:15px;">
+                                            <div style="flex:1;">
+                                                <input type="text" name="q_{{ q.id }}_zip" class="classic-input sz-large" {% if q.required %}required{% endif %} style="margin-bottom:4px;">
+                                                <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Postal / Zip Code</label>
+                                            </div>
+                                            <div style="flex:1;">
+                                                <select name="q_{{ q.id }}_country" class="classic-input sz-large" {% if q.required %}required{% endif %} style="margin-bottom:4px; height: 26px;">
+                                                    <option value=""></option>
+                                                    <option value="Indonesia">Indonesia</option>
+                                                    <option value="Malaysia">Malaysia</option>
+                                                    <option value="Singapore">Singapore</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                                <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Country</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                {% elif q.type == 'short' or q.type == 'number' %}
+                                    <input type="{{ 'number' if q.type == 'number' else 'text' }}" 
+                                           name="q_{{ q.id }}" 
+                                           class="classic-input {{ sz }}" 
+                                           placeholder="{{ q.placeholder if q.placeholder else '' }}" 
+                                           value="{{ q.predefinedValue if q.predefinedValue else '' }}" 
+                                           {% if q.required %}required{% endif %}
+                                           
+                                           {% if q.type == 'number' %}
+                                               {% if q.rangeFormat == 'Digits' %}
+                                                    oninput="enforceDigitLimit(this, '{{ q.rangeMax }}')"
+                                               {% else %}
+                                                    {% if q.rangeMin %}min="{{ q.rangeMin }}"{% endif %}
+                                                    {% if q.rangeMax %}max="{{ q.rangeMax }}"{% endif %}
+                                                    oninput="enforceNumberLimit(this, '{{ q.rangeMin }}', '{{ q.rangeMax }}')"
+                                               {% endif %}
+                                           {% else %}
+                                               {% if q.rangeFormat == 'Characters' or not q.rangeFormat %}
+                                                   {% if q.rangeMin %}minlength="{{ q.rangeMin }}"{% endif %}
+                                                   {% if q.rangeMax %}maxlength="{{ q.rangeMax }}" oninput="enforceCharacterLimit(this, {{ q.rangeMax }})"{% endif %}
+                                               {% elif q.rangeFormat == 'Words' and q.rangeMax %}
+                                                   oninput="enforceWordLimit(this, {{ q.rangeMax }})"
+                                               {% endif %}
+                                           {% endif %}
+                                    >
+                                    {% if q.rangeMin or q.rangeMax %}
+                                        <div class="field-instructions">
+                                            {% if q.type == 'number' %}
+                                                {% if q.rangeFormat == 'Digits' %}
+                                                    {% if q.rangeMin and q.rangeMax %}<span>Panjang angka harus antara {{ q.rangeMin }} dan {{ q.rangeMax }} digit.</span>
+                                                    {% elif q.rangeMax %}<span>Panjang angka maksimal {{ q.rangeMax }} digit.</span>{% endif %}
+                                                {% else %}
+                                                    {% if q.rangeMin and q.rangeMax %}<span>Nilai angka harus antara {{ q.rangeMin }} dan {{ q.rangeMax }}.</span>
+                                                    {% elif q.rangeMax %}<span>Nilai angka maksimal {{ q.rangeMax }}.</span>
+                                                    {% elif q.rangeMin %}<span>Nilai angka minimal {{ q.rangeMin }}.</span>{% endif %}
+                                                {% endif %}
+                                            {% else %}
+                                                {% set fmt = 'kata' if q.rangeFormat == 'Words' else 'karakter' %}
+                                                {% if q.rangeMin and q.rangeMax %}<span>Harus berisi antara {{ q.rangeMin }} dan {{ q.rangeMax }} {{ fmt }}.</span>
+                                                {% elif q.rangeMax %}<span>Maksimal {{ q.rangeMax }} {{ fmt }}.</span>
+                                                {% elif q.rangeMin %}<span>Minimal {{ q.rangeMin }} {{ fmt }}.</span>{% endif %}
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                
+                                {% elif q.type == 'paragraph' %}
+                                    <textarea name="q_{{ q.id }}" 
+                                              class="classic-input {{ sz }}" 
+                                              placeholder="{{ q.placeholder if q.placeholder else '' }}" 
+                                              {% if q.required %}required{% endif %}
+                                              {% if q.rangeFormat == 'Characters' or not q.rangeFormat %}
+                                                  {% if q.rangeMin %}minlength="{{ q.rangeMin }}"{% endif %}
+                                                  {% if q.rangeMax %}maxlength="{{ q.rangeMax }}" oninput="enforceCharacterLimit(this, {{ q.rangeMax }})"{% endif %}
+                                              {% elif q.rangeFormat == 'Words' and q.rangeMax %}
+                                                  oninput="enforceWordLimit(this, {{ q.rangeMax }})"
+                                              {% endif %}
+                                    >{{ q.predefinedValue if q.predefinedValue else '' }}</textarea>
+                                    {% if q.rangeMin or q.rangeMax %}
+                                        {% set fmt = 'kata' if q.rangeFormat == 'Words' else 'karakter' %}
+                                        <div class="field-instructions">
+                                            {% if q.rangeMin and q.rangeMax %}<span>Harus berisi antara {{ q.rangeMin }} dan {{ q.rangeMax }} {{ fmt }}.</span>
+                                            {% elif q.rangeMax %}<span>Maksimal {{ q.rangeMax }} {{ fmt }}.</span>
+                                            {% elif q.rangeMin %}<span>Minimal {{ q.rangeMin }} {{ fmt }}.</span>{% endif %}
+                                        </div>
+                                    {% endif %}
+                                
+                                {% elif q.type == 'radio' %}
+                                    {% set layoutStyle = 'display:flex;flex-direction:column;gap:8px;' %}
+                                    {% if q.layout == 'Two Columns' %}{% set layoutStyle = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;' %}{% endif %}
+                                    {% if q.layout == 'Three Columns' %}{% set layoutStyle = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;' %}{% endif %}
+                                    {% if q.layout == 'Side by Side' %}{% set layoutStyle = 'display:flex;flex-wrap:wrap;gap:15px;' %}{% endif %}
+                                    
+                                    <div style="{{ layoutStyle }} margin-top: 6px;">
+                                        {% for opt in q.options %}
+                                        {% set o_idx = loop.index0 %}
+                                        <label class="choice-label">
+                                            <input type="radio" name="q_{{ q.id }}" value="{{ opt }}" {% if q.required %}required{% endif %} {% if q.predefinedValue == opt %}checked{% endif %}>
+                                            <span>{{ opt }} 
+                                                {% if q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] %}
+                                                <span style="font-size:11px; color:#999; font-style:italic; margin-left:4px;">{{ q.optionLimits[o_idx] }} remaining.</span>
+                                                {% endif %}
+                                            </span>
+                                        </label>
                                         {% endfor %}
-                                    </tbody>
-                                </table>
+                                        {% if q.allowOther %}
+                                        <label class="choice-label">
+                                            <input type="radio" name="q_{{ q.id }}" value="__other__" {% if q.required %}required{% endif %}>
+                                            <span>Lainnya:</span> <input type="text" name="q_{{ q.id }}_other" class="classic-input sz-small" style="padding:2px 4px; height:20px;">
+                                            {% if q.maxQuantities and q.otherLimit %}
+                                            <span style="font-size:11px; color:#999; font-style:italic; margin-left:4px;">{{ q.otherLimit }} remaining.</span>
+                                            {% endif %}
+                                        </label>
+                                        {% endif %}
+                                    </div>
+                                    
+                                {% elif q.type == 'checkbox' %}
+                                    {% set layoutStyle = 'display:flex;flex-direction:column;gap:8px;' %}
+                                    {% if q.layout == 'Two Columns' %}{% set layoutStyle = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;' %}{% endif %}
+                                    {% if q.layout == 'Three Columns' %}{% set layoutStyle = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;' %}{% endif %}
+                                    {% if q.layout == 'Side by Side' %}{% set layoutStyle = 'display:flex;flex-wrap:wrap;gap:15px;' %}{% endif %}
+                                    
+                                    <div style="{{ layoutStyle }} margin-top: 6px;">
+                                        {% for opt in q.options %}
+                                        {% set o_idx = loop.index0 %}
+                                        <label class="choice-label">
+                                            <input type="checkbox" name="q_{{ q.id }}" value="{{ opt }}" {% if q.predefinedValue and opt in q.predefinedValue %}checked{% endif %} {% if q.rangeMax %}onchange="enforceCheckboxLimit(this, 'q_{{ q.id }}', {{ q.rangeMax }})"{% endif %}>
+                                            <span>{{ opt }}
+                                                {% if q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] %}
+                                                <span style="font-size:11px; color:#999; font-style:italic; margin-left:4px;">{{ q.optionLimits[o_idx] }} remaining.</span>
+                                                {% endif %}
+                                            </span>
+                                        </label>
+                                        {% endfor %}
+                                        {% if q.allowOther %}
+                                        <label class="choice-label">
+                                            <input type="checkbox" name="q_{{ q.id }}" value="__other__" {% if q.rangeMax %}onchange="enforceCheckboxLimit(this, 'q_{{ q.id }}', {{ q.rangeMax }})"{% endif %}>
+                                            <span>Lainnya:</span> <input type="text" name="q_{{ q.id }}_other" class="classic-input sz-small" style="padding:2px 4px; height:20px;">
+                                            {% if q.maxQuantities and q.otherLimit %}
+                                            <span style="font-size:11px; color:#999; font-style:italic; margin-left:4px;">{{ q.otherLimit }} remaining.</span>
+                                            {% endif %}
+                                        </label>
+                                        {% endif %}
+                                    </div>
+                                    {% if q.rangeMin or q.rangeMax %}
+                                        <div class="field-instructions">
+                                            {% if q.rangeMin and q.rangeMax %}<span>Pilih antara {{ q.rangeMin }} dan {{ q.rangeMax }} pilihan.</span>
+                                            {% elif q.rangeMax %}<span>Pilih maksimal {{ q.rangeMax }} pilihan.</span>
+                                            {% elif q.rangeMin %}<span>Pilih minimal {{ q.rangeMin }} pilihan.</span>{% endif %}
+                                        </div>
+                                    {% endif %}
+                                    
+                                {% elif q.type == 'dropdown' %}
+                                    <select name="q_{{ q.id }}" class="classic-input {{ sz }}" {% if q.required %}required{% endif %}>
+                                        <option value="">Pilih salah satu</option>
+                                        {% for opt in q.options %}
+                                        {% set o_idx = loop.index0 %}
+                                            <option value="{{ opt }}">
+                                                {{ opt }} 
+                                                {% if q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] %}
+                                                -- {{ q.optionLimits[o_idx] }} remaining
+                                                {% endif %}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    
+                                {% elif q.type == 'file' %}
+                                    <input type="file" name="q_{{ q.id }}" class="classic-input {{ sz }}" style="padding: 2px;" {% if q.required %}required{% endif %}>
+                                    
+                                {% elif q.type == 'linear_scale' %}
+                                    <div class="scale-group">
+                                        <span>{{ q.rangeMin if q.rangeMin else 0 }}</span>
+                                        {% for i in range( (q.rangeMin|int if q.rangeMin else 0), (q.rangeMax|int if q.rangeMax else 5) + 1 ) %}
+                                        <div class="scale-item">
+                                            <span>{{ i }}</span>
+                                            <input type="radio" name="q_{{ q.id }}" value="{{ i }}" {% if q.required %}required{% endif %}>
+                                        </div>
+                                        {% endfor %}
+                                        <span>{{ q.rangeMax if q.rangeMax else 5 }}</span>
+                                    </div>
+                                    
+                                {% elif q.type == 'rating' %}
+                                    <div style="color:#f59e0b;font-size:20px;letter-spacing:5px;">
+                                        <input type="radio" name="q_{{ q.id }}" value="1" required style="margin:0;"> 1 
+                                        <input type="radio" name="q_{{ q.id }}" value="2" style="margin:0; margin-left:10px;"> 2 
+                                        <input type="radio" name="q_{{ q.id }}" value="3" style="margin:0; margin-left:10px;"> 3 
+                                        <input type="radio" name="q_{{ q.id }}" value="4" style="margin:0; margin-left:10px;"> 4 
+                                        <input type="radio" name="q_{{ q.id }}" value="5" style="margin:0; margin-left:10px;"> 5
+                                    </div>
+                                    
+                                {% elif q.type == 'grid_radio' or q.type == 'grid_checkbox' %}
+                                    <div style="overflow-x: auto;">
+                                        <table class="grid-table">
+                                            <thead>
+                                                <tr>
+                                                    <th></th>
+                                                    {% for col in q.columns %}
+                                                    <th>{{ col }}</th>
+                                                    {% endfor %}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for row in q.rows %}
+                                                {% set r_idx = loop.index0 %}
+                                                <tr>
+                                                    <td>{{ row }}</td>
+                                                    {% for col in q.columns %}
+                                                    <td>
+                                                        <input type="{{ 'radio' if q.type == 'grid_radio' else 'checkbox' }}" name="q_{{ q.id }}_r{{ r_idx }}" value="{{ col }}" {% if q.type == 'grid_radio' and q.required %}required{% endif %}>
+                                                    </td>
+                                                    {% endfor %}
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                {% elif q.type == 'date' %}
+                                    <input type="date" name="q_{{ q.id }}" class="classic-input sz-small" {% if q.required %}required{% endif %}>
+                                {% elif q.type == 'time' %}
+                                    <input type="time" name="q_{{ q.id }}" class="classic-input sz-small" {% if q.required %}required{% endif %}>
+                                {% endif %}
                             </div>
-                            
-                        {% elif q.type == 'date' %}
-                            <input type="date" name="q_{{ q.id }}" class="classic-input sz-small" {% if q.required %}required{% endif %}>
-                        {% elif q.type == 'time' %}
-                            <input type="time" name="q_{{ q.id }}" class="classic-input sz-small" {% if q.required %}required{% endif %}>
+                        </div>
                         {% endif %}
-                    </div>
-                    {% endif %}
-                {% endfor %}
-                
-                <div class="form-footer">
-                    <button type="submit" class="btn-submit">Kirim</button>
-                </div>
-            </form>
-        {% endif %}
-        
-        <div class="report-abuse">
-            <a href="#">Laporkan Penyalahgunaan</a>
-        </div>
-    </div>
-
-    <script>
-        function enforceWordLimit(field, maxWords) {
-            let text = field.value;
-            let words = text.trim().split(/\s+/).filter(w => w.length > 0);
-            if (words.length > maxWords) {
-                field.value = words.slice(0, maxWords).join(" ") + " ";
-            }
-        }
-        
-        function enforceCharacterLimit(field, maxChars) {
-            if (field.value.length > maxChars) {
-                field.value = field.value.substring(0, maxChars);
-            }
-        }
-
-        function enforceNumberLimit(field, minStr, maxStr) {
-            let val = parseFloat(field.value);
-            if (isNaN(val)) return;
-            
-            if (maxStr !== '') {
-                let maxVal = parseFloat(maxStr);
-                if (val > maxVal) {
-                    field.value = maxVal; 
-                }
-            }
-        }
-
-        function enforceDigitLimit(field, maxDigits) {
-            if (!maxDigits) return;
-            let val = field.value.toString();
-            if (val.length > parseInt(maxDigits)) {
-                field.value = val.substring(0, parseInt(maxDigits)); 
-            }
-        }
-    </script>
-</body>
-</html>
+                    {% endfor %}
+                    
+                    <div class="form-footer">
+                        <div style="flex:1; text-align:left;">
+                            {% if not loop.first %}
+                                <button type="button" class="btn-prev" onclick="changePage({{ loop.

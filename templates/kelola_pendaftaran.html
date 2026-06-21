@@ -36,8 +36,8 @@
     .w-panel { padding: 15px; display: none; flex: 1; }
     .w-panel.active { display: block; }
 
-    .w-section-title { font-size: 11px; font-weight: bold; color: #1e70a6; margin: 15px 0 8px 0; padding-bottom: 4px; }
-    .w-section-title.red { color: #d05300; }
+    .w-section-title { font-size: 13px; font-weight: bold; color: #222; margin: 10px 0 15px 0; padding-bottom: 4px; border-bottom: 2px solid #eef5fc; }
+    .w-section-title.red { color: #d05300; border-bottom-color: #fee2e2; }
 
     /* Tombol Tipe Field */
     .w-field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -51,8 +51,18 @@
     /* Area Preview Kanan */
     .w-preview-area { flex: 1; padding: 30px 40px; overflow-y: auto; background: #fff; }
     
+    /* Header Preview Form */
+    .w-header-preview { padding: 15px; margin: 0 0 10px 0; border: 1px solid transparent; cursor: pointer; transition: 0.2s; border-radius: 4px; }
+    .w-header-preview:hover { background-color: #f5fafd; border: 1px dashed #a7d0e8; }
+    .w-header-preview.active { background-color: #eef7d5; border: 1px solid #cddfc1; }
+    
     .w-header-preview h1 { font-size: 24px; font-weight: normal; margin: 0 0 5px 0; color: #000; }
-    .w-header-preview p { font-size: 13px; color: #444; margin: 0; padding-bottom: 20px; border-bottom: 1px dotted #ccc; }
+    .w-header-preview p { font-size: 13px; color: #444; margin: 0; }
+
+    /* Progress Bar Container */
+    #preview-progress-container { border: 1px solid transparent; cursor: pointer; transition: 0.2s; border-radius: 4px; margin-bottom: 20px;}
+    #preview-progress-container:hover { background-color: #f5fafd; border: 1px dashed #a7d0e8; }
+    #preview-progress-container.active { background-color: #eef7d5; border: 1px solid #cddfc1; }
 
     .w-empty-state { background-color: #fdfae1; border: 1px solid #dcd39e; border-radius: 8px; padding: 20px; text-align: center; margin-top: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .w-empty-state h3 { color: #4fa734; font-size: 18px; margin: 0 0 10px 0; }
@@ -61,7 +71,7 @@
     .w-add-field-btn { background: linear-gradient(to bottom, #ffffff, #e6e6e6); border: 1px solid #ccc; border-radius: 15px; padding: 8px 16px; font-size: 12px; color: #444; cursor: pointer; font-weight: bold; }
 
     /* Field Element di Preview */
-    .w-field-item { padding: 15px; margin-top: 10px; border: 1px solid transparent; cursor: pointer; position: relative; }
+    .w-field-item { padding: 15px; margin-top: 10px; border: 1px solid transparent; cursor: pointer; position: relative; background: transparent; }
     .w-field-item:hover { background-color: #f5fafd; border: 1px dashed #a7d0e8; }
     .w-field-item.active { background-color: #e2f2fc; border: 1px solid #a7d0e8; }
     .w-field-label { display: block; font-size: 13px; font-weight: bold; color: #222; margin-bottom: 6px; }
@@ -74,7 +84,7 @@
     
     .w-textarea-mock { background: #fff; border: 1px solid #999; padding: 6px; font-size: 12px; color: #ccc; height: 60px; border-radius: 2px;}
     
-    .w-action-icons { display: none; position: absolute; right: 10px; top: 10px; gap: 5px; }
+    .w-action-icons { display: none; position: absolute; right: 10px; top: 10px; gap: 5px; z-index: 10; }
     .w-field-item.active .w-action-icons { display: flex; }
     .w-icon-btn { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid #ccc; background: linear-gradient(to bottom, #fff, #eee); font-size: 10px; }
     .w-icon-btn.add { color: #4fa734; }
@@ -82,7 +92,7 @@
 
     /* Form Settings Inputs */
     .s-group { margin-bottom: 15px; }
-    .fs-label { color: #1e70a6; font-size: 11px; font-weight: bold; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
+    .fs-label { color: #222; font-size: 11px; font-weight: bold; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
     .fs-label .help { color: #5a8ab4; font-weight: normal; cursor: help; font-size: 10px;} 
     .fs-number { font-size: 32px; color: #5a8ab4; text-align: right; font-weight: 300;}
     
@@ -150,7 +160,6 @@
     .tt-title { color: #f59e0b; font-weight: bold; font-size: 12px; margin-bottom: 6px; border-bottom: 1px dotted #555; padding-bottom: 6px; }
     .tt-desc { font-size: 11px; line-height: 1.5; font-weight: normal; }
 
-    /* Choice List Button Style */
     .btn-circle {
         width: 24px;
         height: 24px;
@@ -256,15 +265,15 @@
                 <button class="w-btn-type" onclick="addField('checkbox')"><i class="far fa-check-square"></i> Kotak Centang</button>
                 <button class="w-btn-type" onclick="addField('radio')"><i class="far fa-dot-circle"></i> Pilihan Ganda</button>
                 <button class="w-btn-type" onclick="addField('dropdown')"><i class="far fa-caret-square-down"></i> Dropdown</button>
-                <button class="w-btn-type span-2" onclick="alert('Fitur Pemisah Bagian segera hadir!')">Pemisah Bagian</button>
-                <button class="w-btn-type span-2 red-text" onclick="alert('Fitur Pemisah Halaman segera hadir!')">Pemisah Halaman</button>
+                <button class="w-btn-type span-2" onclick="addField('section')">Pemisah Bagian (Section)</button>
+                <button class="w-btn-type span-2 red-text" onclick="addField('page')">Pemisah Halaman (Page)</button>
             </div>
 
             <div class="w-section-title red" style="margin-top: 24px;">Spesial</div>
             <div class="w-field-grid">
-                <button class="w-btn-type" onclick="addField('short')"><i class="far fa-id-badge"></i> Nama Lengkap</button>
+                <button class="w-btn-type" onclick="addField('name')"><i class="far fa-id-badge"></i> Nama Lengkap</button>
+                <button class="w-btn-type" onclick="addField('address')"><i class="fas fa-globe"></i> Alamat</button>
                 <button class="w-btn-type" onclick="addField('file')"><i class="fas fa-file-upload"></i> Unggah File <span class="w-badge-red"><i class="fas fa-star" style="color:white;width:auto;"></i></span></button>
-                <button class="w-btn-type" onclick="addField('paragraph')"><i class="fas fa-globe"></i> Alamat</button>
                 <button class="w-btn-type" onclick="addField('date')"><i class="far fa-calendar-alt"></i> Tanggal</button>
                 <button class="w-btn-type" onclick="addField('short')"><i class="far fa-envelope"></i> Email</button>
                 <button class="w-btn-type" onclick="addField('time')"><i class="far fa-clock"></i> Waktu</button>
@@ -273,9 +282,7 @@
                 <button class="w-btn-type" onclick="addField('short')"><i class="fas fa-dollar-sign"></i> Harga</button>
                 <button class="w-btn-type" onclick="addField('linear_scale')"><i class="fas fa-ellipsis-h"></i> Skala Linier</button>
                 <button class="w-btn-type" onclick="addField('rating')"><i class="fas fa-star" style="color:#f59e0b;"></i> Rating</button>
-                <button class="w-btn-type" onclick="alert('Hanya tersedia di versi Pro!')"><i class="fas fa-file-signature"></i> DocuSign <span class="w-badge-red"><i class="fas fa-star" style="color:white;width:auto;"></i></span></button>
             </div>
-            
         </div>
 
         <div id="panel-field" class="w-panel">
@@ -284,154 +291,67 @@
         </div>
 
         <div id="panel-form" class="w-panel">
-            <div class="s-group">
-                <label class="fs-label">Judul Formulir 
-                    <span class="tooltip-container">
-                        <span class="tooltip-trigger">(?)</span>
-                        <div class="tooltip-box align-left">
-                            <div class="tt-title">Tentang Judul Formulir</div>
-                            <div class="tt-desc">Judul utama yang akan ditampilkan pada bagian atas formulir pendaftaran Anda.</div>
-                        </div>
-                    </span>
-                </label>
-                <input type="text" class="s-input" id="fs-title" oninput="updateFormSettings()">
-            </div>
-            <div class="s-group">
-                <label class="fs-label">Deskripsi Formulir
-                    <span class="tooltip-container">
-                        <span class="tooltip-trigger">(?)</span>
-                        <div class="tooltip-box align-left">
-                            <div class="tt-title">Tentang Deskripsi</div>
-                            <div class="tt-desc">Penjelasan singkat mengenai tujuan formulir ini yang akan ditampilkan di bawah judul.</div>
-                        </div>
-                    </span>
-                </label>
-                <textarea class="s-textarea" id="fs-desc" oninput="updateFormSettings()" style="height: 80px;"></textarea>
-            </div>
-            
-            <div style="display:flex; gap:10px; margin-bottom:15px;">
-                <div style="flex:1;">
-                    <label class="fs-label">Posisi Judul
-                        <span class="tooltip-container">
-                            <span class="tooltip-trigger">(?)</span>
-                            <div class="tooltip-box align-left">
-                                <div class="tt-title">Tentang Perataan Judul</div>
-                                <div class="tt-desc">Mengatur posisi teks (rata kiri, tengah, atau kanan) pada judul formulir.</div>
-                            </div>
-                        </span>
-                    </label>
-                    <select class="s-select"><option>Rata Kiri</option><option>Tengah</option><option>Rata Kanan</option></select>
+            <div id="form-settings-basic" style="display: none;">
+                <div class="w-section-title">Form Properties</div>
+                <div class="s-group">
+                    <label class="fs-label">Judul Formulir</label>
+                    <input type="text" class="s-input" id="fs-title" oninput="updateFormSettings()">
                 </div>
-                <div style="flex:1;">
-                    <label class="fs-label">Posisi Deskripsi
-                        <span class="tooltip-container">
-                            <span class="tooltip-trigger">(?)</span>
-                            <div class="tooltip-box align-right">
-                                <div class="tt-title">Tentang Perataan Deskripsi</div>
-                                <div class="tt-desc">Mengatur posisi teks deskripsi formulir.</div>
-                            </div>
-                        </span>
-                    </label>
-                    <select class="s-select"><option>Rata Kiri</option><option>Tengah</option></select>
+                
+                <div class="s-group">
+                    <label class="fs-label">Deskripsi Formulir</label>
+                    <textarea class="s-textarea" id="fs-desc" oninput="updateFormSettings()" style="height: 80px;"></textarea>
                 </div>
-            </div>
-            
-            <div style="display:flex; gap:10px; margin-bottom:20px;">
-                <div style="flex:1;">
-                    <label class="fs-label">Bahasa
-                        <span class="tooltip-container">
-                            <span class="tooltip-trigger">(?)</span>
-                            <div class="tooltip-box align-left">
-                                <div class="tt-title">Tentang Bahasa</div>
-                                <div class="tt-desc">Menentukan bahasa sistem standar yang akan digunakan pada antarmuka formulir.</div>
-                            </div>
-                        </span>
-                    </label>
-                    <select class="s-select"><option>Indonesian</option><option>English</option></select>
-                </div>
-                <div style="flex:1;">
-                    <label class="fs-label">Posisi Label
-                        <span class="tooltip-container">
-                            <span class="tooltip-trigger">(?)</span>
-                            <div class="tooltip-box align-right">
-                                <div class="tt-title">Tentang Posisi Label</div>
-                                <div class="tt-desc">Menentukan letak label pertanyaan (di atas atau di samping kotak isian).</div>
-                            </div>
-                        </span>
-                    </label>
-                    <select class="s-select"><option>Di Atas</option><option>Di Kiri</option></select>
+                
+                <div style="border-top: 1px dotted #ccc; margin: 20px 0;"></div>
+                
+                <div class="s-group">
+                    <label class="fs-label" style="color:#222;">Opsi Konfirmasi</label>
+                    <div style="margin-top:8px; margin-bottom:8px; display:flex; gap: 15px;">
+                        <label class="s-checkbox-label" style="font-weight:bold;"><input type="radio" name="conf" checked> Tampilkan Teks</label>
+                        <label class="s-checkbox-label"><input type="radio" name="conf"> Alihkan ke Website</label>
+                    </div>
+                    <textarea class="s-textarea" style="height: 60px;">Bagus! Terima kasih telah mengisi formulir ini.</textarea>
+                    <div style="margin-top:12px;">
+                        <label class="s-checkbox-label">
+                            <input type="checkbox" class="s-checkbox"> Kirim Email Konfirmasi ke Pengguna <span style="color:red;font-size:10px;margin-left:2px;"><i class="fas fa-star"></i></span>
+                        </label>
+                    </div>
                 </div>
             </div>
 
-            <div style="background:#e8f4e5; border:1px solid #c5e1a5; padding:12px; border-radius:6px; margin-bottom:20px;">
-                <label class="fs-label" style="color:#3c8227;">Pelacakan (Tracking)</label>
-                <div style="margin-top:8px;">
-                    <label class="s-checkbox-label"><input type="checkbox" class="s-checkbox"> Aktifkan pelacakan Google Analytics <span style="color:red;font-size:10px;margin-left:2px;"><i class="fas fa-star"></i></span>
-                        <span class="tooltip-container">
-                            <span class="tooltip-trigger">(?)</span>
-                            <div class="tooltip-box align-left">
-                                <div class="tt-title">Tentang Pelacakan</div>
-                                <div class="tt-desc">Melacak lalu lintas kunjungan formulir menggunakan Google Analytics (Fitur Pro).</div>
-                            </div>
-                        </span>
-                    </label>
-                </div>
-                <div style="margin-top:8px;">
-                    <label class="s-checkbox-label"><input type="checkbox" class="s-checkbox" checked> Kumpulkan alamat IP responden
-                        <span class="tooltip-container">
-                            <span class="tooltip-trigger">(?)</span>
-                            <div class="tooltip-box align-left">
-                                <div class="tt-title">Tentang Kumpulan IP</div>
-                                <div class="tt-desc">Mengumpulkan alamat IP responden demi tujuan keamanan dan mencegah spam.</div>
-                            </div>
-                        </span>
-                    </label>
+            <div id="form-settings-pagination" style="display: none;">
+                <div class="w-section-title">Pagination Options</div>
+                <div style="background:#eef7d5; border:1px solid #cddfc1; padding:12px; border-radius:6px; margin-bottom:20px;">
+                    <label class="fs-label" style="color:#222; font-size:12px; margin-bottom:8px;">Tipe Penomoran</label>
+                    <div style="margin-top:8px; margin-bottom:12px; display:flex; gap: 12px; font-size:11px; color:#444;">
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:4px;"><input type="radio" name="pg_type" value="Steps" onchange="schema.paginationType=this.value; updatePaginationSettings();" style="accent-color:#1e70a6;"> Langkah (Steps)</label>
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:4px;"><input type="radio" name="pg_type" value="Percentage" onchange="schema.paginationType=this.value; updatePaginationSettings();" style="accent-color:#1e70a6;"> Persentase</label>
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:4px;"><input type="radio" name="pg_type" value="None" onchange="schema.paginationType=this.value; updatePaginationSettings();" style="accent-color:#1e70a6;"> Sembunyikan</label>
+                    </div>
+                    <div style="margin-top:12px; border-top:1px solid #cddfc1; padding-top:10px;">
+                        <label class="s-checkbox-label" style="font-weight:bold;">
+                            <input type="checkbox" class="s-checkbox" id="fs-pg-titles" onchange="schema.showPageTitles=this.checked; updatePaginationSettings();"> Tampilkan Judul Halaman di Progress Bar
+                        </label>
+                    </div>
+                    <div style="margin-top:8px;">
+                        <label class="s-checkbox-label" style="font-weight:bold;">
+                            <input type="checkbox" class="s-checkbox" id="fs-pg-footer" onchange="schema.hideFooterNumbers=this.checked; updatePaginationSettings();"> Sembunyikan Nomor Halaman di Footer
+                        </label>
+                    </div>
                 </div>
             </div>
-
-            <div style="background:#e8f4e5; border:1px solid #c5e1a5; padding:12px; border-radius:6px;">
-                <label class="fs-label" style="color:#3c8227;">Opsi Konfirmasi</label>
-                <div style="margin-top:8px; margin-bottom:12px; display:flex; gap: 12px;">
-                    <label class="s-checkbox-label"><input type="radio" name="conf" checked> Tampilkan Teks
-                        <span class="tooltip-container">
-                            <span class="tooltip-trigger">(?)</span>
-                            <div class="tooltip-box align-left">
-                                <div class="tt-title">Tentang Tampilkan Teks</div>
-                                <div class="tt-desc">Pesan yang akan ditampilkan tepat di layar setelah formulir berhasil dikirim.</div>
-                            </div>
-                        </span>
-                    </label>
-                    <label class="s-checkbox-label"><input type="radio" name="conf"> Alihkan URL <span style="color:red;font-size:10px;margin-left:2px;"><i class="fas fa-star"></i></span>
-                        <span class="tooltip-container">
-                            <span class="tooltip-trigger">(?)</span>
-                            <div class="tooltip-box align-right">
-                                <div class="tt-title">Tentang Alihkan URL</div>
-                                <div class="tt-desc">Pengguna akan otomatis diarahkan ke link website eksternal setelah mengirim formulir.</div>
-                            </div>
-                        </span>
-                    </label>
-                </div>
-                <textarea class="s-textarea" style="height: 60px;">Bagus! Terima kasih telah mengisi formulir ini.</textarea>
-                <div style="margin-top:12px; border-top:1px solid #c5e1a5; padding-top:10px;">
-                    <label class="s-checkbox-label"><input type="checkbox" class="s-checkbox"> Kirim Email Konfirmasi ke Pengguna <span style="color:red;font-size:10px;margin-left:2px;"><i class="fas fa-star"></i></span>
-                        <span class="tooltip-container">
-                            <span class="tooltip-trigger">(?)</span>
-                            <div class="tooltip-box align-left">
-                                <div class="tt-title">Tentang Email Konfirmasi</div>
-                                <div class="tt-desc">Sistem akan mengirim email konfirmasi otomatis kepada responden (Fitur Pro).</div>
-                            </div>
-                        </span>
-                    </label>
-                </div>
-            </div>
-            <div style="height: 40px;"></div> </div>
+        </div>
     </div>
 
     <div class="w-preview-area">
-        <div class="w-header-preview">
+        
+        <div id="header-preview-container" class="w-header-preview" onclick="event.stopPropagation(); selectFormSettings()">
             <h1 id="preview-title">Formulir Tanpa Judul</h1>
             <p id="preview-desc">Ini adalah formulir saya. Silakan diisi.</p>
         </div>
+
+        <div id="preview-progress-container" onclick="event.stopPropagation(); selectPaginationSettings()"></div>
 
         <div id="preview-fields-container">
             </div>
@@ -450,9 +370,18 @@
         schema = { title: "Formulir Tanpa Judul", description: "Ini adalah formulir saya. Silakan diisi.", questions: [] };
     }
     
-    let activeIndex = -1;
+    let activeIndex = -1; // -1 = Basic Form Settings, -2 = Pagination Settings, 0+ = Field Settings
 
-    // Helper function untuk HTML tooltips
+    function selectFormSettings() {
+        activeIndex = -1;
+        switchTab('form');
+    }
+
+    function selectPaginationSettings() {
+        activeIndex = -2;
+        switchTab('form');
+    }
+
     function createTooltip(title, desc, align = 'left') {
         let alignClass = align === 'left' ? 'align-left' : 'align-right';
         return `
@@ -465,29 +394,23 @@
         </span>`;
     }
 
-    // FUNGSI MULTI-TARGET CHECKBOX UNTUK "SHOW FIELD TO"
     function updateTarget(index, val, checked) {
         if(!schema.questions[index].target) schema.questions[index].target = ['semua'];
         let t = schema.questions[index].target;
-        
         if (checked) {
-            if (val === 'semua') {
-                t = ['semua'];
-            } else {
+            if (val === 'semua') t = ['semua'];
+            else {
                 t = t.filter(x => x !== 'semua');
                 t.push(val);
             }
         } else {
             t = t.filter(x => x !== val);
-            if (t.length === 0) {
-                t = ['semua'];
-            }
+            if (t.length === 0) t = ['semua'];
         }
         schema.questions[index].target = t;
         renderFieldSettings(); 
     }
 
-    // FUNGSI UPDATE NILAI DEFAULT UNTUK PILIHAN GANDA / CHECKBOX
     function updatePredefinedChoice(index, val, isChecked) {
         let q = schema.questions[index];
         if(q.type === 'radio') {
@@ -516,14 +439,99 @@
         document.querySelector('#tab-btn-' + tabId + ' i').className = 'fas fa-caret-down';
 
         if(tabId === 'form') {
-            document.getElementById('fs-title').value = schema.title || '';
-            document.getElementById('fs-desc').value = schema.description || '';
-        } else if (tabId === 'field' && activeIndex === -1 && schema.questions.length > 0) {
-            selectField(0);
+            if (activeIndex >= 0) activeIndex = -1; 
+            renderFormSettings();
+            renderPreview();
+        } else if (tabId === 'field') {
+            if (activeIndex < 0 && activeIndex !== -2 && schema.questions.length > 0) {
+                activeIndex = 0;
+            }
+            if (activeIndex >= 0 || activeIndex === -2) {
+                renderFieldSettings();
+            } else {
+                document.getElementById('field-settings-content').innerHTML = '<p style="font-size:12px;color:#777;text-align:center;margin-top:20px;">Silakan pilih atau tambah kolom terlebih dahulu.</p>';
+            }
+            renderPreview();
+        } else if (tabId === 'add') {
+            renderPreview();
         }
     }
 
+    function renderFormSettings() {
+        let divBasic = document.getElementById('form-settings-basic');
+        let divPagination = document.getElementById('form-settings-pagination');
+        
+        if (activeIndex === -2) {
+            divBasic.style.display = 'none';
+            divPagination.style.display = 'block';
+            
+            let pgType = schema.paginationType || 'Steps';
+            let rBtn = document.querySelector(`input[name="pg_type"][value="${pgType}"]`);
+            if(rBtn) rBtn.checked = true;
+            document.getElementById('fs-pg-titles').checked = !!schema.showPageTitles;
+            document.getElementById('fs-pg-footer').checked = !!schema.hideFooterNumbers;
+            
+            let pgTitleInputs = '';
+            if (!!schema.showPageTitles) {
+                let pageCount = 1;
+                pgTitleInputs += `
+                    <div style="margin-top:10px; padding:10px; background:rgba(255,255,255,0.6); border-radius:6px; display:flex; align-items:center; gap:6px;">
+                        <span style="font-size:11px; font-weight:bold; color:#444; width:15px;">1.</span>
+                        <input type="text" class="s-input" value="${schema.firstPageTitle || 'Untitled Page'}" oninput="schema.firstPageTitle=this.value; renderPreview();">
+                    </div>
+                `;
+                
+                schema.questions.forEach((q, idx) => {
+                    if (q.type === 'page') {
+                        pageCount++;
+                        pgTitleInputs += `
+                            <div style="margin-top:6px; padding:10px; background:rgba(255,255,255,0.6); border-radius:6px; display:flex; align-items:center; gap:6px;">
+                                <span style="font-size:11px; font-weight:bold; color:#444; width:15px;">${pageCount}.</span>
+                                <input type="text" class="s-input" value="${q.pageTitle || 'Untitled Page'}" oninput="schema.questions[${idx}].pageTitle=this.value; renderPreview();">
+                            </div>
+                        `;
+                    }
+                });
+            }
+            
+            let oldContainer = document.getElementById('fs-pg-titles-container');
+            if (oldContainer) oldContainer.remove();
+            
+            if (pgTitleInputs !== '') {
+                let newContainer = document.createElement('div');
+                newContainer.id = 'fs-pg-titles-container';
+                newContainer.innerHTML = pgTitleInputs;
+                document.getElementById('fs-pg-titles').parentElement.parentElement.appendChild(newContainer);
+            }
+            
+        } else {
+            divPagination.style.display = 'none';
+            divBasic.style.display = 'block';
+            
+            document.getElementById('fs-title').value = schema.title || '';
+            document.getElementById('fs-desc').value = schema.description || '';
+        }
+    }
+
+    function updateFormSettings() {
+        schema.title = document.getElementById('fs-title').value;
+        schema.description = document.getElementById('fs-desc').value;
+        renderPreview();
+    }
+    
+    function updatePaginationSettings() {
+        renderFormSettings();
+        renderPreview();
+    }
+
     function renderPreview() {
+        let headerContainer = document.getElementById('header-preview-container');
+        if (activeIndex === -1) {
+            headerContainer.classList.add('active');
+        } else {
+            headerContainer.classList.remove('active');
+        }
+
         document.getElementById('preview-title').innerText = schema.title || 'Formulir Tanpa Judul';
         let tmp = document.createElement("DIV");
         tmp.innerHTML = schema.description || '';
@@ -531,18 +539,78 @@
 
         const container = document.getElementById('preview-fields-container');
         const emptyState = document.getElementById('empty-state');
+        const progressContainer = document.getElementById('preview-progress-container');
 
         if (schema.questions.length === 0) {
             container.innerHTML = '';
             emptyState.style.display = 'block';
-            if(document.getElementById('panel-field').classList.contains('active')) {
+            progressContainer.innerHTML = '';
+            if(document.getElementById('panel-field').classList.contains('active') && activeIndex >= 0) {
                 document.getElementById('field-settings-content').innerHTML = '<p style="font-size:12px;color:#777;text-align:center;margin-top:20px;">Silakan pilih atau tambah kolom terlebih dahulu.</p>';
             }
             return;
         }
 
         emptyState.style.display = 'none';
+
+        // PROGRESS BAR RENDERER DI BUILDER
+        let progressHtml = '';
+        let pageCount = 1 + schema.questions.filter(q => q.type === 'page').length;
+        
+        if (pageCount > 1) {
+            let pgType = schema.paginationType || 'Steps';
+            let cursorStyle = activeIndex === -1 ? 'cursor:pointer;' : '';
+            
+            if (pgType === 'Percentage') {
+                progressHtml = `
+                <div style="padding:15px; background:#eef7d5; border:1px dashed #9ca683; border-radius:4px; margin-bottom:20px;">
+                    <div style="background:#fff; border:1px solid #ccc; height:24px; border-radius:12px; position:relative; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); overflow:hidden;">
+                        <div style="background:#c5e1a5; height:100%; width:0%; position:absolute; left:0; top:0;"></div>
+                        <div style="position:absolute; left:15px; top:0; bottom:0; display:flex; align-items:center; font-weight:bold; font-size:12px; color:#222; z-index:2;">0%</div>
+                    </div>
+                </div>`;
+            } else if (pgType === 'Steps') {
+                let stepsHtml = '';
+                let pTitles = [schema.firstPageTitle || 'Untitled Page'];
+                schema.questions.forEach(q => {
+                    if (q.type === 'page') pTitles.push(q.pageTitle || 'Untitled Page');
+                });
+
+                for(let i=1; i<=pageCount; i++) {
+                    let bg = i===1 ? '#fff7c0' : '#f4f4f4';
+                    let br = i===1 ? '#e6c35c' : '#ccc';
+                    let fg = i===1 ? '#333' : '#666';
+                    let title = schema.showPageTitles ? `<span style="font-size:12px; color:#222; margin-left:8px; font-weight:bold;">${pTitles[i-1]}</span>` : '';
+                    
+                    stepsHtml += `
+                    <div style="display:flex; align-items:center; position:relative; z-index:2; background:inherit; padding: 0 10px;">
+                        <div class="step-circle" style="width:24px; height:24px; border-radius:50%; background:${bg}; color:${fg}; display:flex; align-items:center; justify-content:center; font-size:12px; border:1px solid ${br}; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">${i}</div>
+                        ${title}
+                    </div>`;
+                }
+                progressHtml = `
+                <div style="padding:15px 0; display:flex; justify-content:space-around; position:relative; background:#eef7d5; border:1px dashed #9ca683; border-radius:4px; margin-bottom:20px;">
+                    <div style="position:absolute; top:27px; left:20px; right:20px; height:0px; border-top:1px dashed #9ca683; z-index:1;"></div>
+                    ${stepsHtml}
+                </div>`;
+            }
+        }
+        
+        progressContainer.innerHTML = progressHtml;
+        if (activeIndex === -2 && pageCount > 1) {
+            progressContainer.classList.add('active');
+        } else {
+            progressContainer.classList.remove('active');
+        }
+        
+        if(pageCount <= 1) {
+            progressContainer.style.display = 'none';
+        } else {
+            progressContainer.style.display = 'block';
+        }
+
         let html = '';
+        let currentPage = 1;
 
         schema.questions.forEach((q, idx) => {
             const isActive = idx === activeIndex ? 'active' : '';
@@ -554,9 +622,96 @@
             
             let fieldHtml = '';
             let rangeInfo = '';
+            let hideDefaultLabel = false;
 
-            // CEK RANGE (Batas untuk preview)
-            if (['short', 'paragraph', 'number'].includes(q.type)) {
+            if (q.type === 'section') {
+                hideDefaultLabel = true;
+                fieldHtml = `<div style="border-bottom: 1px dotted #ccc; padding-bottom: 10px; margin-top: 10px;">
+                    <h3 style="margin:0; font-size:16px; color:#222;">${q.question || 'Bagian Baru'}</h3>
+                    <p style="margin:5px 0 0 0; font-size:12px; color:#666;">${q.instructions || ''}</p>
+                </div>`;
+            } else if (q.type === 'page') {
+                hideDefaultLabel = true;
+                let footer1 = schema.hideFooterNumbers ? '' : `<span style="font-size: 11px; font-weight: bold; color: #222;">${currentPage} / ${pageCount}</span>`;
+                let footer2 = schema.hideFooterNumbers ? '' : `<span style="font-size: 11px; font-weight: bold; color: #222;">${currentPage + 1} / ${pageCount}</span>`;
+                
+                fieldHtml = `
+                <div style="margin-top: 5px; pointer-events: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <button type="button" style="background: linear-gradient(to bottom, #f9f9f9, #e3e3e3); border: 1px solid #ccc; border-radius: 3px; padding: 4px 10px; font-size: 12px; color: #333; cursor: default;">${q.btnText || 'Next Page'}</button>
+                        ${footer1}
+                    </div>
+                    <div style="text-align: center; border-bottom: 2px dashed #b3c6d3; line-height: 0.1em; margin: 15px 0;">
+                        <span style="background: inherit; padding:0 10px; font-weight:bold; font-size:13px; color:#1e70a6;">Page Break</span>
+                    </div>
+                </div>`;
+                currentPage++;
+            } else if (q.type === 'name') {
+                let format = q.nameFormat || 'Normal';
+                
+                if (format === 'Extended') {
+                    fieldHtml = `<div style="display:flex; gap:10px; align-items:flex-end; margin-top:6px;">
+                        <div style="flex:0.5;">
+                            <input type="text" class="w-input-mock sz-large" disabled style="margin-bottom:4px;" placeholder="${q.placeholderTitle || ''}">
+                            <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Title</label>
+                        </div>
+                        <div style="flex:1.5;">
+                            <input type="text" class="w-input-mock sz-large" disabled style="margin-bottom:4px;" placeholder="${q.placeholderFirst || ''}">
+                            <label style="font-size:11px; color:#666; font-weight:bold; display:block;">First</label>
+                        </div>
+                        <div style="flex:2;">
+                            <input type="text" class="w-input-mock sz-large" disabled style="margin-bottom:4px;" placeholder="${q.placeholderLast || ''}">
+                            <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Last</label>
+                        </div>
+                        <div style="flex:0.5;">
+                            <input type="text" class="w-input-mock sz-large" disabled style="margin-bottom:4px;" placeholder="${q.placeholderSuffix || ''}">
+                            <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Suffix</label>
+                        </div>
+                    </div>`;
+                } else {
+                    fieldHtml = `<div style="display:flex; gap:15px; align-items:flex-end; margin-top:6px;">
+                        <div style="flex:1;">
+                            <input type="text" class="w-input-mock sz-large" disabled style="margin-bottom:4px;" placeholder="${q.placeholderFirst || ''}">
+                            <label style="font-size:11px; color:#666; font-weight:bold; display:block;">First</label>
+                        </div>
+                        <div style="flex:1;">
+                            <input type="text" class="w-input-mock sz-large" disabled style="margin-bottom:4px;" placeholder="${q.placeholderLast || ''}">
+                            <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Last</label>
+                        </div>
+                    </div>`;
+                }
+            } else if (q.type === 'address') {
+                fieldHtml = `<div style="display:flex; flex-direction:column; gap:10px; margin-top:6px;">
+                    <div>
+                        <input type="text" class="w-input-mock sz-large" disabled style="margin-bottom:4px;">
+                        <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Street Address</label>
+                    </div>
+                    <div>
+                        <input type="text" class="w-input-mock sz-large" disabled style="margin-bottom:4px;">
+                        <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Address Line 2</label>
+                    </div>
+                    <div style="display:flex; gap:15px;">
+                        <div style="flex:1;">
+                            <input type="text" class="w-input-mock sz-large" disabled style="margin-bottom:4px;">
+                            <label style="font-size:11px; color:#666; font-weight:bold; display:block;">City</label>
+                        </div>
+                        <div style="flex:1;">
+                            <input type="text" class="w-input-mock sz-large" disabled style="margin-bottom:4px;">
+                            <label style="font-size:11px; color:#666; font-weight:bold; display:block;">State / Province</label>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:15px;">
+                        <div style="flex:1;">
+                            <input type="text" class="w-input-mock sz-large" disabled style="margin-bottom:4px;">
+                            <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Postal / Zip Code</label>
+                        </div>
+                        <div style="flex:1;">
+                            <select class="w-input-mock sz-large" disabled style="margin-bottom:4px; height: 26px;"></select>
+                            <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Country</label>
+                        </div>
+                    </div>
+                </div>`;
+            } else if (['short', 'paragraph', 'number'].includes(q.type)) {
                 if (q.rangeMax || q.rangeMin) {
                     if (q.type === 'number') {
                         if (q.rangeFormat === 'Digits') {
@@ -600,7 +755,7 @@
                     
                     let limitText = '';
                     if (q.maxQuantities && q.optionLimits && q.optionLimits[o_idx]) {
-                        limitText = ` <span style="font-size:11px; color:#d93025; font-weight:normal; margin-left:4px;">(Batas: ${q.optionLimits[o_idx]})</span>`;
+                        limitText = ` <span style="font-size:11px; color:#999; font-style:italic; margin-left:4px;">${q.optionLimits[o_idx]} remaining.</span>`;
                     }
 
                     fieldHtml += `<label style="font-size:13px;color:#222;display:flex;align-items:center;gap:6px;"><input type="${typeAttr}" ${isChecked} disabled style="margin:0;"> <span>${opt}${limitText}</span></label>`;
@@ -609,18 +764,17 @@
                 if (q.allowOther && q.type === 'radio') {
                     let limitTextOther = '';
                     if (q.maxQuantities && q.otherLimit) {
-                        limitTextOther = ` <span style="font-size:11px; color:#d93025; font-weight:normal; margin-left:4px;">(Batas: ${q.otherLimit})</span>`;
+                        limitTextOther = ` <span style="font-size:11px; color:#999; font-style:italic; margin-left:4px;">${q.otherLimit} remaining.</span>`;
                     }
                     fieldHtml += `<label style="font-size:13px;color:#222;display:flex;align-items:center;gap:6px;"><input type="${typeAttr}" disabled style="margin:0;"> <span>Lainnya: <input type="text" class="w-input-mock sz-small" disabled style="padding:2px 4px; height:20px;">${limitTextOther}</span></label>`;
                 }
                 fieldHtml += `</div>`;
-                fieldHtml += rangeInfo;
             } else if (q.type === 'dropdown') {
                 fieldHtml = `<select class="w-input-mock ${sizeClass}" disabled><option>${q.placeholder || 'Pilih salah satu'}</option>`;
                 (q.options || []).forEach((opt, o_idx) => {
                     let limitText = '';
                     if (q.maxQuantities && q.optionLimits && q.optionLimits[o_idx]) {
-                        limitText = ` (Batas: ${q.optionLimits[o_idx]})`;
+                        limitText = ` -- ${q.optionLimits[o_idx]} remaining`;
                     }
                     fieldHtml += `<option>${opt}${limitText}</option>`;
                 });
@@ -643,15 +797,22 @@
                 fieldHtml = `<div style="display:flex; gap:15px; align-items:flex-end;">${scaleRadios}</div>`;
             }
 
+            let labelHtml = '';
+            if (!hideDefaultLabel) {
+                labelHtml = `<label class="w-field-label">${q.question || 'Pertanyaan Tanpa Judul'} ${reqMark}</label>`;
+                if (q.instructions) {
+                    labelHtml += `<div style="color:#666;font-size:11px;margin-bottom:8px;">${q.instructions}</div>`;
+                }
+            }
+
             html += `
-            <div class="w-field-item ${isActive}" onclick="selectField(${idx})">
+            <div class="w-field-item ${isActive}" onclick="event.stopPropagation(); selectField(${idx})">
                 <div class="w-action-icons">
                     <div class="w-icon-btn add" onclick="event.stopPropagation(); duplicateField(${idx})" title="Duplikat"><i class="fas fa-plus"></i></div>
                     <div class="w-icon-btn del" onclick="event.stopPropagation(); deleteField(${idx})" title="Hapus"><i class="fas fa-minus"></i></div>
                 </div>
-                <label class="w-field-label">${q.question || 'Pertanyaan Tanpa Judul'} ${reqMark}</label>
+                ${labelHtml}
                 ${fieldHtml}
-                ${q.instructions ? `<div style="color:#666;font-size:11px;margin-top:6px;">${q.instructions}</div>` : ''}
             </div>
             `;
         });
@@ -663,17 +824,30 @@
         let newField = {
             id: Date.now(),
             type: type,
-            question: 'Pertanyaan Tanpa Judul',
-            required: false,
-            instructions: '',
+            question: type === 'section' ? 'Section Break' : (type === 'page' ? 'Page Break' : 'Untitled Question'),
+            required: type !== 'section' && type !== 'page',
+            instructions: type === 'section' ? 'A description of the section goes here.' : '',
             size: 'Medium',
             target: ['semua'],
             layout: 'One Column'
         };
 
         if (['radio', 'checkbox', 'dropdown'].includes(type)) {
-            newField.options = ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
+            newField.options = ['First Choice', 'Second Choice', 'Third Choice'];
             newField.predefinedValue = type === 'checkbox' ? [] : '';
+        }
+        
+        if (type === 'name') {
+            newField.question = "Name";
+            newField.nameFormat = "Normal";
+        }
+        
+        if (type === 'address') {
+            newField.question = "Address";
+        }
+
+        if (type === 'page') {
+            newField.btnText = 'Next Page';
         }
 
         schema.questions.push(newField);
@@ -707,51 +881,66 @@
         renderFieldSettings();
     }
 
-    function updateFormSettings() {
-        schema.title = document.getElementById('fs-title').value;
-        schema.description = document.getElementById('fs-desc').value;
-        renderPreview();
-    }
-
     function renderFieldSettings() {
         const fsContent = document.getElementById('field-settings-content');
-        if (activeIndex === -1 || !schema.questions[activeIndex]) {
+        
+        if (activeIndex === -1 || activeIndex === -2) {
+            return;
+        }
+
+        if (!schema.questions[activeIndex]) {
             fsContent.innerHTML = '<p style="font-size:12px;color:#777;text-align:center;margin-top:20px;">Silakan pilih sebuah kolom untuk mengedit pengaturannya.</p>';
             return;
         }
 
         const q = schema.questions[activeIndex];
         
+        if (q.type === 'page') {
+            fsContent.innerHTML = `
+                <div class="w-section-title">Primary Action</div>
+                <div class="s-group" style="background:#eef7d5; border:1px solid #cddfc1; padding:12px; border-radius:6px; margin-bottom:15px;">
+                    <label class="fs-label" style="margin-bottom:8px; font-size:12px; color:#222;">What do you want your button to say?</label>
+                    <input type="text" class="s-input" value="${q.btnText || 'Next Page'}" oninput="schema.questions[${activeIndex}].btnText = this.value; renderPreview();">
+                </div>
+                <div class="fs-btn-row">
+                    <button class="fs-action-btn del" onclick="deleteField(${activeIndex})"><i class="fas fa-trash"></i> Hapus Pemisah</button>
+                </div>
+            `;
+            return;
+        }
+
         const typeMap = {
             'short': 'Teks Singkat', 'number': 'Angka', 'paragraph': 'Paragraf',
             'checkbox': 'Kotak Centang', 'radio': 'Pilihan Ganda', 'dropdown': 'Dropdown',
             'file': 'Unggah File', 'date': 'Tanggal', 'time': 'Waktu',
-            'linear_scale': 'Skala Linier', 'rating': 'Peringkat (Rating)'
+            'linear_scale': 'Skala Linier', 'rating': 'Peringkat (Rating)',
+            'name': 'Nama Lengkap', 'section': 'Pemisah Bagian',
+            'address': 'Alamat'
         };
         const displayType = typeMap[q.type] || q.type;
 
-        // TARGET RENDERER (Checkbox Multi Role)
-        if(!q.target) q.target = ['semua'];
-        const roles = [
-            {val: 'semua', label: 'Semua (Publik)'},
-            {val: 'super admin', label: 'Super Admin'},
-            {val: 'bph', label: 'BPH'},
-            {val: 'penjadwalan', label: 'Penjadwalan'},
-            {val: 'pelatihan', label: 'Pelatihan'},
-            {val: 'user', label: 'Anggota (User)'}
-        ];
         let targetHtml = '';
-        roles.forEach(r => {
-            let isChecked = q.target.includes(r.val) ? 'checked' : '';
-            targetHtml += `
-            <div style="margin-bottom:6px;">
-                <label class="s-checkbox-label">
-                    <input type="checkbox" class="s-checkbox" value="${r.val}" ${isChecked} onchange="updateTarget(${activeIndex}, this.value, this.checked)"> ${r.label}
-                </label>
-            </div>`;
-        });
+        if (q.type !== 'section') {
+            if(!q.target) q.target = ['semua'];
+            const roles = [
+                {val: 'semua', label: 'Semua (Publik)'},
+                {val: 'super admin', label: 'Super Admin'},
+                {val: 'bph', label: 'BPH'},
+                {val: 'penjadwalan', label: 'Penjadwalan'},
+                {val: 'pelatihan', label: 'Pelatihan'},
+                {val: 'user', label: 'Anggota (User)'}
+            ];
+            roles.forEach(r => {
+                let isChecked = q.target.includes(r.val) ? 'checked' : '';
+                targetHtml += `
+                <div style="margin-bottom:6px;">
+                    <label class="s-checkbox-label">
+                        <input type="checkbox" class="s-checkbox" value="${r.val}" ${isChecked} onchange="updateTarget(${activeIndex}, this.value, this.checked)"> ${r.label}
+                    </label>
+                </div>`;
+            });
+        }
 
-        // SIZE OR LAYOUT RENDERER
         let sizeOrLayoutLabel = 'Ukuran Kolom';
         let sizeOrLayoutHtml = `
             <select class="s-select" onchange="schema.questions[${activeIndex}].size = this.value; renderPreview();">
@@ -771,39 +960,44 @@
                 <option value="Side by Side" ${q.layout==='Side by Side'?'selected':''}>Berdampingan</option>
             </select>`;
         }
+        
+        if (q.type === 'name') {
+            sizeOrLayoutLabel = 'Name Format';
+            sizeOrLayoutHtml = `
+            <select class="s-select" onchange="schema.questions[${activeIndex}].nameFormat = this.value; renderPreview(); renderFieldSettings();">
+                <option value="Normal" ${(!q.nameFormat || q.nameFormat==='Normal')?'selected':''}>Normal</option>
+                <option value="Extended" ${q.nameFormat==='Extended'?'selected':''}>Extended</option>
+            </select>`;
+        }
 
-        let html = `
+        let html = '';
+        let labelTitle = q.type === 'section' ? 'Judul Bagian' : 'Field Label';
+
+        html += `
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
             <div style="flex:1; margin-right:15px;">
-                <label class="fs-label">Label Pertanyaan 
-                    ${createTooltip('Label Pertanyaan', 'Judul kolom adalah cara langsung untuk memberi tahu pengguna jenis data apa yang harus diisi.', 'left')}
-                </label>
+                <label class="fs-label">${labelTitle}</label>
                 <textarea class="s-textarea" style="height:50px;" oninput="schema.questions[${activeIndex}].question = this.value; renderPreview();">${q.question}</textarea>
             </div>
             <div class="fs-number">${activeIndex + 1}.</div>
         </div>
-
-        <div style="display:flex; gap:10px; margin-bottom:15px;">
-            <div style="flex:1;">
-                <label class="fs-label">Tipe Kolom 
-                    ${createTooltip('Tipe Kolom', 'Menentukan jenis data apa yang dapat dikumpulkan. Hanya dapat diubah saat menambahkan kolom baru.', 'left')}
-                </label>
-                <select class="s-select" disabled style="background:#f1f3f4;">
-                    <option>${displayType}</option>
-                </select>
-            </div>
-            <div style="flex:1;">
-                <label class="fs-label">${sizeOrLayoutLabel} 
-                    ${createTooltip(sizeOrLayoutLabel, 'Mempengaruhi tampilan visual kolom (lebar input atau jumlah kolom pilihan).', 'right')}
-                </label>
-                ${sizeOrLayoutHtml}
-            </div>
-        </div>
         `;
 
-        // MENU RANGE (KHUSUS UNTUK TEKS / ANGKA / LIKERT)
+        if (q.type !== 'section') {
+            html += `
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                <div style="flex:1;">
+                    <label class="fs-label">Tipe Kolom</label>
+                    <select class="s-select" disabled style="background:#f1f3f4;"><option>${displayType}</option></select>
+                </div>
+                <div style="flex:1;">
+                    <label class="fs-label">${sizeOrLayoutLabel}</label>
+                    ${sizeOrLayoutHtml}
+                </div>
+            </div>`;
+        }
+
         if (['short', 'paragraph', 'number', 'linear_scale'].includes(q.type)) {
-            
             let formatHtml = '';
             if (q.type === 'number') {
                 formatHtml = `
@@ -827,9 +1021,7 @@
 
             html += `
             <div class="fs-box" style="margin-bottom:15px; background:#fff3e0; border-color:#ffe0b2;">
-                <span class="fs-box-title" style="color:#e65100; margin-bottom: 10px;">Batasan (Range) 
-                    ${createTooltip('Batasan Range', 'Menentukan batas pada data. Misalnya membatasi rentang nilai angka. Biarkan kosong jika tidak ada batasan.', 'left')}
-                </span>
+                <span class="fs-box-title" style="color:#e65100; margin-bottom: 10px;">Batasan (Range)</span>
                 <div style="display:flex; gap:10px; align-items:flex-end;">
                     <div style="flex:1;">
                         <label style="font-size:10px; color:#444;">Min</label>
@@ -844,13 +1036,10 @@
             </div>`;
         }
 
-        // MENU CHOICES (RADIO / CHECKBOX / DROPDOWN)
         if (['radio', 'checkbox', 'dropdown'].includes(q.type)) {
             html += `
             <div class="fs-box" style="margin-bottom:15px;">
-                <span class="fs-box-title">Pilihan (Choices) 
-                    ${createTooltip('Pilihan', 'Daftar opsi yang dapat dipilih oleh pengguna. Pilih tombol bulat di sebelah kiri untuk menjadikannya pilihan bawaan (default).', 'left')}
-                </span>
+                <span class="fs-box-title">Pilihan (Choices)</span>
                 <div id="choices-wrapper">`;
             
             q.options.forEach((opt, idx) => {
@@ -875,7 +1064,7 @@
                 html += `
                 <div style="margin-bottom:8px;">
                     <div style="display:flex; gap:6px; align-items:center;">
-                        <input type="${inputType}" name="def_val_${activeIndex}" ${isChecked} onchange="updatePredefinedChoice(${activeIndex}, '${opt}', this.checked)" title="Jadikan Pilihan Default">
+                        <input type="${inputType}" name="def_val_${activeIndex}" ${isChecked} onchange="updatePredefinedChoice(${activeIndex}, '${opt}', this.checked)">
                         <input type="text" class="s-input" value="${opt}" oninput="schema.questions[${activeIndex}].options[${idx}] = this.value; renderPreview();" style="flex:1; padding:4px 6px;">
                         <button type="button" class="btn-circle" style="color:#4fa734;" onclick="schema.questions[${activeIndex}].options.splice(${idx+1},0,'Pilihan Baru'); if(schema.questions[${activeIndex}].optionLimits) schema.questions[${activeIndex}].optionLimits.splice(${idx+1},0,''); renderFieldSettings(); renderPreview();"><i class="fas fa-plus"></i></button>
                         <button type="button" class="btn-circle" style="color:#d93025;" onclick="schema.questions[${activeIndex}].options.splice(${idx},1); if(schema.questions[${activeIndex}].optionLimits) schema.questions[${activeIndex}].optionLimits.splice(${idx},1); renderFieldSettings(); renderPreview();"><i class="fas fa-minus"></i></button>
@@ -884,7 +1073,6 @@
                 </div>`;
             });
 
-            // "LAINNYA" (Other) Jika diizinkan (Hanya ada untuk radio sekarang sesuai pembaruan ini)
             if (q.allowOther && q.type === 'radio') {
                 let limitHtmlOther = '';
                 if (q.maxQuantities) {
@@ -906,123 +1094,91 @@
                 </div>`;
             }
 
+            html += `</div></div>`;
+        }
+
+        if (q.type !== 'section') {
+            let optionsHtml = '';
+            if (q.type === 'radio') {
+                optionsHtml = `
+                    <div style="margin-bottom:6px;"><label class="s-checkbox-label"><input type="checkbox" class="s-checkbox" ${q.required ? 'checked' : ''} onchange="schema.questions[${activeIndex}].required = this.checked; renderPreview();"> Wajib Diisi</label></div>
+                    <div style="margin-bottom:6px;"><label class="s-checkbox-label"><input type="checkbox" class="s-checkbox" ${q.randomize ? 'checked' : ''} onchange="schema.questions[${activeIndex}].randomize = this.checked; renderPreview();"> Acak Urutan</label></div>
+                    <div style="margin-bottom:6px;"><label class="s-checkbox-label"><input type="checkbox" class="s-checkbox" ${q.allowOther ? 'checked' : ''} onchange="schema.questions[${activeIndex}].allowOther = this.checked; renderFieldSettings(); renderPreview();"> Izinkan 'Lainnya'</label></div>
+                    <div><label class="s-checkbox-label"><input type="checkbox" class="s-checkbox" ${q.maxQuantities ? 'checked' : ''} onchange="schema.questions[${activeIndex}].maxQuantities = this.checked; renderFieldSettings(); renderPreview();"> Batas Kuantitas</label></div>
+                `;
+            } else if (['checkbox', 'dropdown'].includes(q.type)) {
+                optionsHtml = `
+                    <div style="margin-bottom:6px;"><label class="s-checkbox-label"><input type="checkbox" class="s-checkbox" ${q.required ? 'checked' : ''} onchange="schema.questions[${activeIndex}].required = this.checked; renderPreview();"> Wajib Diisi</label></div>
+                    <div><label class="s-checkbox-label"><input type="checkbox" class="s-checkbox" ${q.maxQuantities ? 'checked' : ''} onchange="schema.questions[${activeIndex}].maxQuantities = this.checked; renderFieldSettings(); renderPreview();"> Batas Kuantitas</label></div>
+                `;
+            } else {
+                optionsHtml = `
+                    <div style="margin-bottom:6px;"><label class="s-checkbox-label"><input type="checkbox" class="s-checkbox" ${q.required ? 'checked' : ''} onchange="schema.questions[${activeIndex}].required = this.checked; renderPreview();"> Wajib Diisi</label></div>
+                    <div style="margin-bottom:6px;"><label class="s-checkbox-label"><input type="checkbox" class="s-checkbox" ${q.noDuplicates ? 'checked' : ''} onchange="schema.questions[${activeIndex}].noDuplicates = this.checked; renderPreview();"> Tanpa Duplikat</label></div>
+                    <div><label class="s-checkbox-label"><input type="checkbox" class="s-checkbox" ${q.encrypted ? 'checked' : ''} onchange="schema.questions[${activeIndex}].encrypted = this.checked; renderPreview();"> Dienkripsi</label></div>
+                `;
+            }
+
             html += `
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                <div class="fs-box" style="flex:1; margin-bottom:0;">
+                    <span class="fs-box-title">Opsi</span>
+                    ${optionsHtml}
+                </div>
+                <div class="fs-box" style="flex:1; margin-bottom:0;">
+                    <span class="fs-box-title">Tampilkan Kolom Untuk:</span>
+                    ${targetHtml}
                 </div>
             </div>`;
         }
 
-        // MENU OPTIONS DINAMIS
-        let optionsHtml = '';
-        if (q.type === 'radio') {
-            optionsHtml = `
-                <div style="margin-bottom:6px;">
-                    <label class="s-checkbox-label">
-                        <input type="checkbox" class="s-checkbox" ${q.required ? 'checked' : ''} onchange="schema.questions[${activeIndex}].required = this.checked; renderPreview();"> Wajib Diisi 
-                        ${createTooltip('Wajib Diisi', 'Memastikan pengguna tidak mengosongkan kolom sebelum submit.', 'left')}
-                    </label>
+        if (q.type === 'name') {
+            let format = q.nameFormat || 'Normal';
+            if (format === 'Extended') {
+                html += `
+                <div class="s-group" style="margin-bottom:15px;">
+                    <label class="fs-label">Placeholder Text</label>
+                    <div style="display:flex; gap:10px; margin-top:4px;">
+                        <div style="flex:1;"><input type="text" class="s-input" value="${q.placeholderTitle || ''}" placeholder="Title" oninput="schema.questions[${activeIndex}].placeholderTitle = this.value; renderPreview();"></div>
+                        <div style="flex:1;"><input type="text" class="s-input" value="${q.placeholderFirst || ''}" placeholder="First" oninput="schema.questions[${activeIndex}].placeholderFirst = this.value; renderPreview();"></div>
+                        <div style="flex:1;"><input type="text" class="s-input" value="${q.placeholderLast || ''}" placeholder="Last" oninput="schema.questions[${activeIndex}].placeholderLast = this.value; renderPreview();"></div>
+                        <div style="flex:1;"><input type="text" class="s-input" value="${q.placeholderSuffix || ''}" placeholder="Suffix" oninput="schema.questions[${activeIndex}].placeholderSuffix = this.value; renderPreview();"></div>
+                    </div>
                 </div>
-                <div style="margin-bottom:6px;">
-                    <label class="s-checkbox-label">
-                        <input type="checkbox" class="s-checkbox" ${q.randomize ? 'checked' : ''} onchange="schema.questions[${activeIndex}].randomize = this.checked; renderPreview();"> Acak Urutan 
-                        ${createTooltip('Acak Urutan', 'Mengacak urutan pilihan setiap kali formulir dimuat oleh responden.', 'left')}
-                    </label>
+                `;
+            } else {
+                html += `
+                <div class="s-group" style="margin-bottom:15px;">
+                    <label class="fs-label">Placeholder Text</label>
+                    <div style="display:flex; gap:10px; margin-top:4px;">
+                        <div style="flex:1;"><input type="text" class="s-input" value="${q.placeholderFirst || ''}" placeholder="First" oninput="schema.questions[${activeIndex}].placeholderFirst = this.value; renderPreview();"></div>
+                        <div style="flex:1;"><input type="text" class="s-input" value="${q.placeholderLast || ''}" placeholder="Last" oninput="schema.questions[${activeIndex}].placeholderLast = this.value; renderPreview();"></div>
+                    </div>
                 </div>
-                <div style="margin-bottom:6px;">
-                    <label class="s-checkbox-label">
-                        <input type="checkbox" class="s-checkbox" ${q.allowOther ? 'checked' : ''} onchange="schema.questions[${activeIndex}].allowOther = this.checked; renderFieldSettings(); renderPreview();"> Izinkan 'Lainnya' 
-                        ${createTooltip('Izinkan Lainnya', 'Menambahkan opsi teks bebas agar responden dapat mengetik jawaban sendiri.', 'left')}
-                    </label>
-                </div>
-                <div>
-                    <label class="s-checkbox-label">
-                        <input type="checkbox" class="s-checkbox" ${q.maxQuantities ? 'checked' : ''} onchange="schema.questions[${activeIndex}].maxQuantities = this.checked; renderFieldSettings(); renderPreview();"> Batas Kuantitas 
-                        ${createTooltip('Batas Kuantitas', 'Membatasi berapa kali suatu pilihan dapat dipilih oleh seluruh responden.', 'left')}
-                    </label>
-                </div>
-            `;
-        } else if (['dropdown', 'checkbox'].includes(q.type)) {
-            optionsHtml = `
-                <div style="margin-bottom:6px;">
-                    <label class="s-checkbox-label">
-                        <input type="checkbox" class="s-checkbox" ${q.required ? 'checked' : ''} onchange="schema.questions[${activeIndex}].required = this.checked; renderPreview();"> Wajib Diisi 
-                        ${createTooltip('Wajib Diisi', 'Memastikan pengguna tidak mengosongkan kolom sebelum submit.', 'left')}
-                    </label>
-                </div>
-                <div>
-                    <label class="s-checkbox-label">
-                        <input type="checkbox" class="s-checkbox" ${q.maxQuantities ? 'checked' : ''} onchange="schema.questions[${activeIndex}].maxQuantities = this.checked; renderFieldSettings(); renderPreview();"> Batas Kuantitas 
-                        ${createTooltip('Batas Kuantitas', 'Membatasi berapa kali suatu pilihan dapat dipilih oleh seluruh responden.', 'left')}
-                    </label>
-                </div>
-            `;
-        } else {
-            optionsHtml = `
-                <div style="margin-bottom:6px;">
-                    <label class="s-checkbox-label">
-                        <input type="checkbox" class="s-checkbox" ${q.required ? 'checked' : ''} onchange="schema.questions[${activeIndex}].required = this.checked; renderPreview();"> Wajib Diisi 
-                        ${createTooltip('Wajib Diisi', 'Memastikan pengguna tidak mengosongkan kolom sebelum submit.', 'left')}
-                    </label>
-                </div>
-                <div style="margin-bottom:6px;">
-                    <label class="s-checkbox-label">
-                        <input type="checkbox" class="s-checkbox" ${q.noDuplicates ? 'checked' : ''} onchange="schema.questions[${activeIndex}].noDuplicates = this.checked; renderPreview();"> Tanpa Duplikat 
-                        ${createTooltip('Tanpa Duplikat', 'Mencegah input yang sama masuk lebih dari sekali.', 'left')}
-                    </label>
-                </div>
-                <div>
-                    <label class="s-checkbox-label">
-                        <input type="checkbox" class="s-checkbox" ${q.encrypted ? 'checked' : ''} onchange="schema.questions[${activeIndex}].encrypted = this.checked; renderPreview();"> Dienkripsi <span style="color:red;font-size:9px;margin-left:2px;"><i class="fas fa-star"></i></span> 
-                        ${createTooltip('Dienkripsi', 'Menyimpan data dengan aman di server.', 'left')}
-                    </label>
-                </div>
-            `;
-        }
-
-        html += `
-        <div style="display:flex; gap:10px; margin-bottom:15px;">
-            <div class="fs-box" style="flex:1; margin-bottom:0;">
-                <span class="fs-box-title">Opsi</span>
-                ${optionsHtml}
-            </div>
-            <div class="fs-box" style="flex:1; margin-bottom:0;">
-                <span class="fs-box-title">Tampilkan Kolom Untuk: 
-                    ${createTooltip('Target Tampilan', 'Pilih siapa saja yang bisa melihat dan mengisi pertanyaan ini. Bisa dicentang lebih dari satu.', 'right')}
-                </span>
-                ${targetHtml}
-            </div>
-        </div>
-        `;
-
-        // TAMPILKAN INPUT DEFAULT VALUE HANYA JIKA BUKAN RADIO/CHECKBOX/DROPDOWN
-        if (!['radio', 'checkbox', 'dropdown'].includes(q.type)) {
+                `;
+            }
+        } else if (q.type === 'address') {
+            // Address placeholders bisa di-hide dulu seperti di wufoo (biasanya tidak ada input placeholder custom di form builder dasar, tapi jika mau bisa ditambahkan)
+        } else if (!['radio', 'checkbox', 'dropdown', 'section'].includes(q.type)) {
             html += `
             <div class="s-group" style="margin-bottom:15px;">
-                <label class="fs-label">Nilai Bawaan (Default) 
-                    ${createTooltip('Nilai Bawaan', 'Kolom akan otomatis terisi dengan teks yang Anda masukkan di sini saat pengguna membuka formulir.', 'left')}
-                </label>
+                <label class="fs-label">Nilai Bawaan (Default)</label>
                 <input type="text" class="s-input" value="${q.predefinedValue || ''}" oninput="schema.questions[${activeIndex}].predefinedValue = this.value; renderPreview();">
             </div>
             `;
-        }
-
-        // TAMPILKAN PLACEHOLDER KECUALI RADIO/CHECKBOX/DROPDOWN
-        if (!['radio', 'checkbox', 'dropdown'].includes(q.type)) {
+            
             html += `
             <div class="s-group" style="margin-bottom:15px;">
-                <label class="fs-label">Teks Placeholder 
-                    ${createTooltip('Placeholder', 'Teks samar di dalam kotak isian yang kosong, digunakan sebagai contoh atau format jawaban yang benar.', 'left')}
-                </label>
+                <label class="fs-label">Teks Placeholder</label>
                 <input type="text" class="s-input" value="${q.placeholder || ''}" oninput="schema.questions[${activeIndex}].placeholder = this.value; renderPreview();">
             </div>
             `;
         }
 
-        // INSTRUCTIONS TETAP ADA DI SEMUA TIPE
+        let instLabel = q.type === 'section' ? 'Deskripsi Bagian' : 'Instructions for User';
         html += `
         <div class="s-group" style="margin-bottom:15px;">
-            <label class="fs-label">Petunjuk Pengisian 
-                ${createTooltip('Petunjuk Pengisian', 'Instruksi tambahan yang akan ditampilkan persis di bawah judul untuk membantu pengguna menjawab.', 'left')}
-            </label>
+            <label class="fs-label">${instLabel}</label>
             <textarea class="s-textarea" style="height:60px;" oninput="schema.questions[${activeIndex}].instructions = this.value; renderPreview();">${q.instructions || ''}</textarea>
         </div>
 

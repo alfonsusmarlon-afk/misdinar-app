@@ -168,7 +168,7 @@ input:checked + .slider:before { transform: translateX(20px); }
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 2px solid var(--primary-blue); padding-bottom: 12px; flex-wrap: wrap; gap: 12px;">
             <h3 style="margin: 0; color: var(--text-dark);">Pengisian Petugas ({{ start }} - {{ end }})</h3>
             <div style="display: flex; gap: 12px;">
-                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan & Lanjut Cetak</button>
+                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan Matriks ke Tabel</button>
             </div>
         </div>
         
@@ -253,10 +253,12 @@ input:checked + .slider:before { transform: translateX(20px); }
     </div>
     
     <div style="display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
-        <!-- TOMBOL APPLY KE WEB DARI RIWAYAT -->
-        <form action="{{ url_for('publikasi_jadwal') }}" method="POST" style="margin: 0;" onsubmit="return confirm('Publikasikan semua jadwal Draf ke Web Anggota?');">
-            <button type="submit" class="btn-primary" style="background: #10b981; border: none; padding: 8px 16px; font-size: 13px;"><i class="fas fa-paper-plane"></i> Apply ke Web (Publikasi Semua Draf)</button>
+        <!-- TOMBOL APPLY KE WEB DARI RIWAYAT (HANYA MUNCUL JIKA ADA DRAFT) -->
+        {% if has_draft %}
+        <form action="{{ url_for('publikasi_jadwal') }}" method="POST" style="margin: 0;" onsubmit="return confirm('Terdapat jadwal yang masih berstatus Draf. Publikasikan perubahan ini ke Web Anggota?');">
+            <button type="submit" class="btn-primary" style="background: #10b981; border: none; padding: 8px 16px; font-size: 13px; animation: pulse 2s infinite;"><i class="fas fa-paper-plane"></i> Publikasikan Perubahan ke Anggota</button>
         </form>
+        {% endif %}
         
         <button type="submit" form="bulkDeleteForm" class="btn-outline" style="color: #ef4444; border-color: #ef4444; padding: 8px 16px; font-size: 13px;"><i class="fas fa-trash"></i> Hapus Terpilih</button>
     </div>
@@ -275,7 +277,7 @@ input:checked + .slider:before { transform: translateX(20px); }
             </thead>
             <tbody>
                 {% for h in history %}
-                <tr style="border-bottom: 1px solid var(--border-color);">
+                <tr style="border-bottom: 1px solid var(--border-color); {% if h.status == 'Draft' %}background: #fffbeb;{% endif %}">
                     <td style="padding: 10px;"><input type="checkbox" name="hapus_items" value="{{ h.jadwal_datetime }}|{{ h.acara }}|{{ h.jenis }}"></td>
                     <td style="padding: 10px;">
                         <strong style="color: var(--text-dark);">{{ h.waktu_format }}</strong><br>
@@ -356,7 +358,7 @@ input:checked + .slider:before { transform: translateX(20px); }
             </div>
             <div style="display: flex; gap: 12px;">
                 <button type="button" onclick="document.getElementById('editJadwalModal').style.display='none'" class="btn-outline" style="flex:1;">Batal</button>
-                <button type="submit" class="btn-primary" style="flex:1;">Simpan Perubahan</button>
+                <button type="submit" class="btn-primary" style="flex:1;">Simpan</button>
             </div>
         </form>
     </div>
@@ -388,6 +390,14 @@ input:checked + .slider:before { transform: translateX(20px); }
         </form>
     </div>
 </div>
+
+<style>
+    @keyframes pulse {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+</style>
 
 <script>
 const allUserNames = [
