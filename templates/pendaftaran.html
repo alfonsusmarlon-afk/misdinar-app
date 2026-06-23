@@ -330,35 +330,35 @@
                                 {% elif q.type == 'address' %}
                                     <div style="display:flex; flex-direction:column; gap:10px; margin-top:6px;">
                                         <div>
-                                            <input type="text" name="q_{{ q.id }}_street" class="classic-input sz-large" {% if q.required %}required{% endif %} style="margin-bottom:4px;">
+                                            <input type="text" name="q_{{ q.id }}_street" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderStreet if q.placeholderStreet else 'Contoh: Jl. Sudirman No. 1' }}" style="margin-bottom:4px;">
                                             <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Street Address</label>
                                         </div>
                                         <div>
-                                            <input type="text" name="q_{{ q.id }}_line2" class="classic-input sz-large" style="margin-bottom:4px;">
+                                            <input type="text" name="q_{{ q.id }}_line2" class="classic-input sz-large" placeholder="{{ q.placeholderLine2 if q.placeholderLine2 else 'Apartemen, suite, gedung, dll. (opsional)' }}" style="margin-bottom:4px;">
                                             <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Address Line 2</label>
                                         </div>
                                         <div style="display:flex; gap:15px;">
                                             <div style="flex:1;">
-                                                <input type="text" name="q_{{ q.id }}_city" class="classic-input sz-large" {% if q.required %}required{% endif %} style="margin-bottom:4px;">
+                                                <input type="text" name="q_{{ q.id }}_city" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderCity if q.placeholderCity else 'Contoh: Jakarta Selatan' }}" style="margin-bottom:4px;">
                                                 <label style="font-size:11px; color:#666; font-weight:bold; display:block;">City</label>
                                             </div>
                                             <div style="flex:1;">
-                                                <input type="text" name="q_{{ q.id }}_state" class="classic-input sz-large" {% if q.required %}required{% endif %} style="margin-bottom:4px;">
+                                                <input type="text" name="q_{{ q.id }}_state" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderState if q.placeholderState else 'Contoh: DKI Jakarta' }}" style="margin-bottom:4px;">
                                                 <label style="font-size:11px; color:#666; font-weight:bold; display:block;">State / Province</label>
                                             </div>
                                         </div>
                                         <div style="display:flex; gap:15px;">
                                             <div style="flex:1;">
-                                                <input type="text" name="q_{{ q.id }}_zip" class="classic-input sz-large" {% if q.required %}required{% endif %} style="margin-bottom:4px;">
+                                                <input type="text" name="q_{{ q.id }}_zip" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderZip if q.placeholderZip else 'Contoh: 12345' }}" style="margin-bottom:4px;">
                                                 <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Postal / Zip Code</label>
                                             </div>
                                             <div style="flex:1;">
                                                 <select name="q_{{ q.id }}_country" class="classic-input sz-large" {% if q.required %}required{% endif %} style="margin-bottom:4px; height: 26px;">
-                                                    <option value=""></option>
-                                                    <option value="Indonesia">Indonesia</option>
-                                                    <option value="Malaysia">Malaysia</option>
-                                                    <option value="Singapore">Singapore</option>
-                                                    <option value="Other">Other</option>
+                                                    <option value="" {% if q.predefinedCountry == 'None' %}selected{% endif %}>-- Pilih Negara --</option>
+                                                    <option value="Indonesia" {% if q.predefinedCountry == 'Indonesia' or not q.predefinedCountry %}selected{% endif %}>Indonesia</option>
+                                                    <option value="Malaysia" {% if q.predefinedCountry == 'Malaysia' %}selected{% endif %}>Malaysia</option>
+                                                    <option value="Singapore" {% if q.predefinedCountry == 'Singapore' %}selected{% endif %}>Singapore</option>
+                                                    <option value="Other" {% if q.predefinedCountry == 'Other' %}selected{% endif %}>Other</option>
                                                 </select>
                                                 <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Country</label>
                                             </div>
@@ -574,4 +574,56 @@
                     <div class="form-footer">
                         <div style="flex:1; text-align:left;">
                             {% if not loop.first %}
-                                <button type="button" class="btn-prev" onclick="changePage({{ loop.
+                                <button type="button" class="btn-prev" onclick="changePage({{ loop.index - 1 }})">&laquo; Sebelumnya</button>
+                            {% endif %}
+                        </div>
+                        <div style="flex:1; text-align:right;">
+                            {% if not loop.last %}
+                                <button type="button" class="btn-submit" onclick="changePage({{ loop.index + 1 }})">{{ next_btn_list[loop.index0] }}</button>
+                            {% else %}
+                                <button type="submit" class="btn-submit">Submit Form</button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                </div>
+                {% endfor %}
+            </form>
+        {% endif %}
+    </div>
+
+    <script>
+        function changePage(pageNum) {
+            // Sembunyikan semua page
+            document.querySelectorAll('.form-page').forEach(function(page) {
+                page.style.display = 'none';
+            });
+            // Tampilkan page target
+            var targetPage = document.getElementById('page-' + pageNum);
+            if(targetPage) {
+                targetPage.style.display = 'block';
+            }
+            
+            // Perbarui step indicator / pagination lingkaran jika ada
+            var circles = document.querySelectorAll('.step-circle');
+            if (circles.length > 0) {
+                circles.forEach(function(circle, index) {
+                    if (index + 1 === pageNum) {
+                        circle.style.background = '#fff7c0';
+                        circle.style.color = '#333';
+                        circle.style.borderColor = '#e6c35c';
+                    } else if (index + 1 < pageNum) {
+                        circle.style.background = '#eef7d5'; 
+                        circle.style.color = '#333';
+                        circle.style.borderColor = '#9ca683';
+                    } else {
+                        circle.style.background = '#fff';
+                        circle.style.color = '#666';
+                        circle.style.borderColor = '#ccc';
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+</html>

@@ -118,48 +118,6 @@
     .w-save-btn { background: #4fa734; color: white; border: 1px solid #3c8227; padding: 8px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; transition: 0.2s;}
     .w-save-btn:hover { background: #45932d; }
 
-    /* TOOLTIP STYLES */
-    .tooltip-container { position: relative; display: inline-flex; align-items: center; margin-left: 4px; }
-    .tooltip-trigger { color: #5a8ab4; cursor: help; font-size: 11px; font-weight: bold; }
-    
-    .tooltip-box {
-        position: absolute;
-        top: 100%;
-        width: 230px;
-        background-color: #222;
-        color: #fff;
-        padding: 12px;
-        border-radius: 6px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.2s ease-in-out;
-        z-index: 99999;
-        pointer-events: none;
-        white-space: normal;
-        margin-top: 5px;
-    }
-    
-    .tooltip-box::after {
-        content: '';
-        position: absolute;
-        bottom: 100%; 
-        border-width: 6px;
-        border-style: solid;
-        border-color: transparent transparent #222 transparent;
-    }
-
-    .tooltip-box.align-left { left: -10px; }
-    .tooltip-container:hover .tooltip-box.align-left { margin-top: 8px; opacity: 1; visibility: visible; }
-    .tooltip-box.align-left::after { left: 15px; }
-
-    .tooltip-box.align-right { right: -10px; left: auto; }
-    .tooltip-container:hover .tooltip-box.align-right { margin-top: 8px; opacity: 1; visibility: visible; }
-    .tooltip-box.align-right::after { right: 15px; left: auto; }
-    
-    .tt-title { color: #f59e0b; font-weight: bold; font-size: 12px; margin-bottom: 6px; border-bottom: 1px dotted #555; padding-bottom: 6px; }
-    .tt-desc { font-size: 11px; line-height: 1.5; font-weight: normal; }
-
     .btn-circle {
         width: 24px;
         height: 24px;
@@ -275,19 +233,18 @@
                 <button class="w-btn-type" onclick="addField('address')"><i class="fas fa-globe"></i> Alamat</button>
                 <button class="w-btn-type" onclick="addField('file')"><i class="fas fa-file-upload"></i> Unggah File <span class="w-badge-red"><i class="fas fa-star" style="color:white;width:auto;"></i></span></button>
                 <button class="w-btn-type" onclick="addField('date')"><i class="far fa-calendar-alt"></i> Tanggal</button>
-                <button class="w-btn-type" onclick="addField('short')"><i class="far fa-envelope"></i> Email</button>
+                <button class="w-btn-type" onclick="addField('email')"><i class="far fa-envelope"></i> Email</button>
                 <button class="w-btn-type" onclick="addField('time')"><i class="far fa-clock"></i> Waktu</button>
-                <button class="w-btn-type" onclick="addField('short')"><i class="fas fa-phone"></i> Nomor Telepon</button>
-                <button class="w-btn-type" onclick="addField('short')"><i class="fas fa-link"></i> Situs Web</button>
-                <button class="w-btn-type" onclick="addField('short')"><i class="fas fa-dollar-sign"></i> Harga</button>
+                <button class="w-btn-type" onclick="addField('phone')"><i class="fas fa-phone"></i> Nomor Telepon</button>
+                <button class="w-btn-type" onclick="addField('url')"><i class="fas fa-link"></i> Situs Web</button>
+                <button class="w-btn-type" onclick="addField('currency')"><i class="fas fa-dollar-sign"></i> Harga</button>
                 <button class="w-btn-type" onclick="addField('linear_scale')"><i class="fas fa-ellipsis-h"></i> Skala Linier</button>
                 <button class="w-btn-type" onclick="addField('rating')"><i class="fas fa-star" style="color:#f59e0b;"></i> Rating</button>
             </div>
         </div>
 
         <div id="panel-field" class="w-panel">
-            <div id="field-settings-content">
-                </div>
+            <div id="field-settings-content"></div>
         </div>
 
         <div id="panel-form" class="w-panel">
@@ -353,8 +310,7 @@
 
         <div id="preview-progress-container" onclick="event.stopPropagation(); selectPaginationSettings()"></div>
 
-        <div id="preview-fields-container">
-            </div>
+        <div id="preview-fields-container"></div>
 
         <div id="empty-state" class="w-empty-state" style="display: none;">
             <h3><span style="color: #d05300; margin-right: 8px;">&larr;</span> Belum ada kolom! <span style="color:#4fa734">Tambahkan kolom pertanyaan.</span></h3>
@@ -370,7 +326,7 @@
         schema = { title: "Formulir Tanpa Judul", description: "Ini adalah formulir saya. Silakan diisi.", questions: [] };
     }
     
-    let activeIndex = -1; // -1 = Basic Form Settings, -2 = Pagination Settings, 0+ = Field Settings
+    let activeIndex = -1; 
 
     function selectFormSettings() {
         activeIndex = -1;
@@ -380,18 +336,6 @@
     function selectPaginationSettings() {
         activeIndex = -2;
         switchTab('form');
-    }
-
-    function createTooltip(title, desc, align = 'left') {
-        let alignClass = align === 'left' ? 'align-left' : 'align-right';
-        return `
-        <span class="tooltip-container">
-            <span class="tooltip-trigger">(?)</span>
-            <div class="tooltip-box ${alignClass}">
-                <div class="tt-title">${title}</div>
-                <div class="tt-desc">${desc}</div>
-            </div>
-        </span>`;
     }
 
     function updateTarget(index, val, checked) {
@@ -477,7 +421,7 @@
                 pgTitleInputs += `
                     <div style="margin-top:10px; padding:10px; background:rgba(255,255,255,0.6); border-radius:6px; display:flex; align-items:center; gap:6px;">
                         <span style="font-size:11px; font-weight:bold; color:#444; width:15px;">1.</span>
-                        <input type="text" class="s-input" value="${schema.firstPageTitle || 'Untitled Page'}" oninput="schema.firstPageTitle=this.value; renderPreview();">
+                        <input type="text" class="s-input" value="${schema.firstPageTitle || 'Halaman Tanpa Judul'}" oninput="schema.firstPageTitle=this.value; renderPreview();">
                     </div>
                 `;
                 
@@ -487,7 +431,7 @@
                         pgTitleInputs += `
                             <div style="margin-top:6px; padding:10px; background:rgba(255,255,255,0.6); border-radius:6px; display:flex; align-items:center; gap:6px;">
                                 <span style="font-size:11px; font-weight:bold; color:#444; width:15px;">${pageCount}.</span>
-                                <input type="text" class="s-input" value="${q.pageTitle || 'Untitled Page'}" oninput="schema.questions[${idx}].pageTitle=this.value; renderPreview();">
+                                <input type="text" class="s-input" value="${q.pageTitle || 'Halaman Tanpa Judul'}" oninput="schema.questions[${idx}].pageTitle=this.value; renderPreview();">
                             </div>
                         `;
                     }
@@ -553,13 +497,11 @@
 
         emptyState.style.display = 'none';
 
-        // PROGRESS BAR RENDERER DI BUILDER
         let progressHtml = '';
         let pageCount = 1 + schema.questions.filter(q => q.type === 'page').length;
         
         if (pageCount > 1) {
             let pgType = schema.paginationType || 'Steps';
-            let cursorStyle = activeIndex === -1 ? 'cursor:pointer;' : '';
             
             if (pgType === 'Percentage') {
                 progressHtml = `
@@ -571,9 +513,9 @@
                 </div>`;
             } else if (pgType === 'Steps') {
                 let stepsHtml = '';
-                let pTitles = [schema.firstPageTitle || 'Untitled Page'];
+                let pTitles = [schema.firstPageTitle || 'Halaman Tanpa Judul'];
                 schema.questions.forEach(q => {
-                    if (q.type === 'page') pTitles.push(q.pageTitle || 'Untitled Page');
+                    if (q.type === 'page') pTitles.push(q.pageTitle || 'Halaman Tanpa Judul');
                 });
 
                 for(let i=1; i<=pageCount; i++) {
@@ -627,18 +569,17 @@
             if (q.type === 'section') {
                 hideDefaultLabel = true;
                 fieldHtml = `<div style="border-bottom: 1px dotted #ccc; padding-bottom: 10px; margin-top: 10px;">
-                    <h3 style="margin:0; font-size:16px; color:#222;">${q.question || 'Bagian Baru'}</h3>
+                    <h3 style="margin:0; font-size:16px; color:#222;">${q.question || 'Pemisah Bagian'}</h3>
                     <p style="margin:5px 0 0 0; font-size:12px; color:#666;">${q.instructions || ''}</p>
                 </div>`;
             } else if (q.type === 'page') {
                 hideDefaultLabel = true;
                 let footer1 = schema.hideFooterNumbers ? '' : `<span style="font-size: 11px; font-weight: bold; color: #222;">${currentPage} / ${pageCount}</span>`;
-                let footer2 = schema.hideFooterNumbers ? '' : `<span style="font-size: 11px; font-weight: bold; color: #222;">${currentPage + 1} / ${pageCount}</span>`;
                 
                 fieldHtml = `
                 <div style="margin-top: 5px; pointer-events: none;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <button type="button" style="background: linear-gradient(to bottom, #f9f9f9, #e3e3e3); border: 1px solid #ccc; border-radius: 3px; padding: 4px 10px; font-size: 12px; color: #333; cursor: default;">${q.btnText || 'Next Page'}</button>
+                        <button type="button" style="background: linear-gradient(to bottom, #f9f9f9, #e3e3e3); border: 1px solid #ccc; border-radius: 3px; padding: 4px 10px; font-size: 12px; color: #333; cursor: default;">${q.btnText || 'Selanjutnya'}</button>
                         ${footer1}
                     </div>
                     <div style="text-align: center; border-bottom: 2px dashed #b3c6d3; line-height: 0.1em; margin: 15px 0;">
@@ -648,7 +589,6 @@
                 currentPage++;
             } else if (q.type === 'name') {
                 let format = q.nameFormat || 'Normal';
-                
                 if (format === 'Extended') {
                     fieldHtml = `<div style="display:flex; gap:10px; align-items:flex-end; margin-top:6px;">
                         <div style="flex:0.5;">
@@ -681,37 +621,40 @@
                     </div>`;
                 }
             } else if (q.type === 'address') {
+                let defCountry = q.predefinedCountry || 'Indonesia';
+                let cOpt = defCountry !== 'None' ? `<option>${defCountry}</option>` : `<option></option>`;
+
                 fieldHtml = `<div style="display:flex; flex-direction:column; gap:10px; margin-top:6px;">
                     <div>
-                        <input type="text" class="w-input-mock sz-large" disabled style="margin-bottom:4px;">
+                        <input type="text" class="w-input-mock sz-large" placeholder="${q.placeholderStreet || ''}" disabled style="margin-bottom:4px;">
                         <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Street Address</label>
                     </div>
                     <div>
-                        <input type="text" class="w-input-mock sz-large" disabled style="margin-bottom:4px;">
+                        <input type="text" class="w-input-mock sz-large" placeholder="${q.placeholderLine2 || ''}" disabled style="margin-bottom:4px;">
                         <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Address Line 2</label>
                     </div>
                     <div style="display:flex; gap:15px;">
                         <div style="flex:1;">
-                            <input type="text" class="w-input-mock sz-large" disabled style="margin-bottom:4px;">
+                            <input type="text" class="w-input-mock sz-large" placeholder="${q.placeholderCity || ''}" disabled style="margin-bottom:4px;">
                             <label style="font-size:11px; color:#666; font-weight:bold; display:block;">City</label>
                         </div>
                         <div style="flex:1;">
-                            <input type="text" class="w-input-mock sz-large" disabled style="margin-bottom:4px;">
+                            <input type="text" class="w-input-mock sz-large" placeholder="${q.placeholderState || ''}" disabled style="margin-bottom:4px;">
                             <label style="font-size:11px; color:#666; font-weight:bold; display:block;">State / Province</label>
                         </div>
                     </div>
                     <div style="display:flex; gap:15px;">
                         <div style="flex:1;">
-                            <input type="text" class="w-input-mock sz-large" disabled style="margin-bottom:4px;">
+                            <input type="text" class="w-input-mock sz-large" placeholder="${q.placeholderZip || ''}" disabled style="margin-bottom:4px;">
                             <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Postal / Zip Code</label>
                         </div>
                         <div style="flex:1;">
-                            <select class="w-input-mock sz-large" disabled style="margin-bottom:4px; height: 26px;"></select>
+                            <select class="w-input-mock sz-large" disabled style="margin-bottom:4px; height: 26px;">${cOpt}</select>
                             <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Country</label>
                         </div>
                     </div>
                 </div>`;
-            } else if (['short', 'paragraph', 'number'].includes(q.type)) {
+            } else if (['short', 'paragraph', 'number', 'linear_scale'].includes(q.type)) {
                 if (q.rangeMax || q.rangeMin) {
                     if (q.type === 'number') {
                         if (q.rangeFormat === 'Digits') {
@@ -731,9 +674,66 @@
                 }
             }
 
-            if(q.type === 'short' || q.type === 'number') {
+            if(['short', 'number', 'email', 'url'].includes(q.type)) {
                 fieldHtml = `<input type="text" class="w-input-mock ${sizeClass}" placeholder="${q.placeholder || ''}" value="${q.predefinedValue || ''}" disabled>`;
                 fieldHtml += rangeInfo;
+            } else if (q.type === 'phone') {
+                if (q.phoneFormat === '3box') {
+                    fieldHtml = `<div style="display:flex; align-items:center; gap:5px; margin-top:4px;">
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <input type="text" class="w-input-mock" placeholder="${q.place1 || ''}" value="${q.predef1 || ''}" disabled style="width:45px; text-align:center; padding:6px 2px;">
+                            <span style="font-size:10px; color:#999; font-family:monospace; text-align:center;">###</span>
+                        </div>
+                        <span style="color:#666; margin-top:-14px;">-</span>
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <input type="text" class="w-input-mock" placeholder="${q.place2 || ''}" value="${q.predef2 || ''}" disabled style="width:45px; text-align:center; padding:6px 2px;">
+                            <span style="font-size:10px; color:#999; font-family:monospace; text-align:center;">###</span>
+                        </div>
+                        <span style="margin-top:-14px;">-</span>
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <input type="text" class="w-input-mock" placeholder="${q.place3 || ''}" value="${q.predef3 || ''}" disabled style="width:60px; text-align:center; padding:6px 2px;">
+                            <span style="font-size:10px; color:#999; font-family:monospace; text-align:center;">####</span>
+                        </div>
+                    </div>`;
+                } else if (q.phoneFormat === 'Intl') {
+                    fieldHtml = `<input type="text" class="w-input-mock ${sizeClass}" placeholder="${q.placeholder || ''}" value="${q.predefinedValue || ''}" disabled>`;
+                } else {
+                    let wSize = sizeClass === 'sz-small' ? '30%' : (sizeClass === 'sz-medium' ? '60%' : '100%');
+                    fieldHtml = `<div style="display:flex; align-items:center; gap:0;">
+                        <span style="background:#f0f0f0; border:1px solid #999; border-right:none; padding:5px 8px; border-radius:2px 0 0 2px; font-size:12px; color:#555;">+62</span>
+                        <input type="text" class="w-input-mock" placeholder="${q.placeholder || ''}" value="${q.predefinedValue || ''}" disabled style="flex:1; max-width: calc(${wSize} - 40px); border-radius:0 2px 2px 0;">
+                    </div>`;
+                }
+            } else if (q.type === 'currency') {
+                let symbol = 'Rp';
+                let mainLabel = 'Rupiah';
+                let centLabel = 'Sen';
+                
+                if (q.currencyFormat === 'Dollars') {
+                    symbol = '$';
+                    mainLabel = 'Dollars';
+                    centLabel = 'Cents';
+                } else if (q.currencyFormat === 'Ringgit') {
+                    symbol = 'RM';
+                    mainLabel = 'Ringgit';
+                    centLabel = 'Sen';
+                }
+                
+                let valMain = q.predefinedValue ? q.predefinedValue.split('.')[0] : '';
+                let valCent = q.predefinedValue && q.predefinedValue.includes('.') ? q.predefinedValue.split('.')[1] : '';
+
+                fieldHtml = `<div style="display:flex; align-items:flex-start; gap:4px; margin-top:4px;">
+                    <span style="font-size:13px; color:#222; margin-top:5px;">${symbol}</span>
+                    <div style="display:flex; flex-direction:column; gap:2px;">
+                        <input type="text" class="w-input-mock" value="${valMain}" disabled style="width: 120px;">
+                        <label style="font-size:10px; color:#666; font-weight:bold;">${mainLabel}</label>
+                    </div>
+                    <span style="font-size:13px; color:#222; margin-top:5px; font-weight:bold;">.</span>
+                    <div style="display:flex; flex-direction:column; gap:2px;">
+                        <input type="text" class="w-input-mock" value="${valCent}" disabled style="width: 40px;" maxlength="2">
+                        <label style="font-size:10px; color:#666; font-weight:bold;">${centLabel}</label>
+                    </div>
+                </div>`;
             } else if (q.type === 'paragraph') {
                 fieldHtml = `<textarea class="w-textarea-mock ${sizeClass}" placeholder="${q.placeholder || ''}" disabled>${q.predefinedValue || ''}</textarea>`;
                 fieldHtml += rangeInfo;
@@ -750,7 +750,7 @@
                     if (q.type === 'radio') {
                         isChecked = q.predefinedValue === opt ? 'checked' : '';
                     } else {
-                        isChecked = Array.isArray(q.predefinedValue) && q.predefinedValue.includes(opt) ? 'checked' : '';
+                        isChecked = (Array.isArray(q.predefinedValue) && q.predefinedValue.includes(opt)) ? 'checked' : '';
                     }
                     
                     let limitText = '';
@@ -770,7 +770,7 @@
                 }
                 fieldHtml += `</div>`;
             } else if (q.type === 'dropdown') {
-                fieldHtml = `<select class="w-input-mock ${sizeClass}" disabled><option>${q.placeholder || 'Pilih salah satu'}</option>`;
+                fieldHtml = `<select class="w-input-mock ${sizeClass}" disabled><option>${q.placeholder || ''}</option>`;
                 (q.options || []).forEach((opt, o_idx) => {
                     let limitText = '';
                     if (q.maxQuantities && q.optionLimits && q.optionLimits[o_idx]) {
@@ -820,34 +820,57 @@
         container.innerHTML = html;
     }
 
-    function addField(type) {
+    function addField(type, overrideLabel) {
+        const defaultLabels = {
+            'short': 'Teks Singkat',
+            'number': 'Angka',
+            'paragraph': 'Paragraf',
+            'checkbox': 'Kotak Centang',
+            'radio': 'Pilihan Ganda',
+            'dropdown': 'Dropdown',
+            'file': 'Unggah File',
+            'date': 'Tanggal',
+            'time': 'Waktu',
+            'linear_scale': 'Skala Linier',
+            'rating': 'Rating',
+            'name': 'Nama Lengkap',
+            'section': 'Pemisah Bagian',
+            'address': 'Alamat',
+            'page': 'Pemisah Halaman',
+            'email': 'Email',
+            'phone': 'Nomor Telepon',
+            'url': 'Situs Web',
+            'currency': 'Harga'
+        };
+        
+        let defaultQuestion = overrideLabel ? overrideLabel : (defaultLabels[type] || 'Pertanyaan Baru');
+
         let newField = {
             id: Date.now(),
             type: type,
-            question: type === 'section' ? 'Section Break' : (type === 'page' ? 'Page Break' : 'Untitled Question'),
+            question: defaultQuestion,
             required: type !== 'section' && type !== 'page',
-            instructions: type === 'section' ? 'A description of the section goes here.' : '',
+            instructions: type === 'section' ? 'Ketikkan deskripsi untuk bagian ini di sini.' : '',
             size: 'Medium',
             target: ['semua'],
             layout: 'One Column'
         };
 
         if (['radio', 'checkbox', 'dropdown'].includes(type)) {
-            newField.options = ['First Choice', 'Second Choice', 'Third Choice'];
+            newField.options = ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
             newField.predefinedValue = type === 'checkbox' ? [] : '';
         }
         
         if (type === 'name') {
-            newField.question = "Name";
             newField.nameFormat = "Normal";
         }
         
-        if (type === 'address') {
-            newField.question = "Address";
+        if (type === 'phone') {
+            newField.phoneFormat = "ID"; 
         }
 
         if (type === 'page') {
-            newField.btnText = 'Next Page';
+            newField.btnText = 'Selanjutnya';
         }
 
         schema.questions.push(newField);
@@ -897,10 +920,10 @@
         
         if (q.type === 'page') {
             fsContent.innerHTML = `
-                <div class="w-section-title">Primary Action</div>
+                <div class="w-section-title">Aksi Utama</div>
                 <div class="s-group" style="background:#eef7d5; border:1px solid #cddfc1; padding:12px; border-radius:6px; margin-bottom:15px;">
-                    <label class="fs-label" style="margin-bottom:8px; font-size:12px; color:#222;">What do you want your button to say?</label>
-                    <input type="text" class="s-input" value="${q.btnText || 'Next Page'}" oninput="schema.questions[${activeIndex}].btnText = this.value; renderPreview();">
+                    <label class="fs-label" style="margin-bottom:8px; font-size:12px; color:#222;">Apa tulisan pada tombol navigasi ini?</label>
+                    <input type="text" class="s-input" value="${q.btnText || 'Selanjutnya'}" oninput="schema.questions[${activeIndex}].btnText = this.value; renderPreview();">
                 </div>
                 <div class="fs-btn-row">
                     <button class="fs-action-btn del" onclick="deleteField(${activeIndex})"><i class="fas fa-trash"></i> Hapus Pemisah</button>
@@ -915,7 +938,8 @@
             'file': 'Unggah File', 'date': 'Tanggal', 'time': 'Waktu',
             'linear_scale': 'Skala Linier', 'rating': 'Peringkat (Rating)',
             'name': 'Nama Lengkap', 'section': 'Pemisah Bagian',
-            'address': 'Alamat'
+            'address': 'Alamat', 'email': 'Email', 'phone': 'Nomor Telepon',
+            'url': 'Situs Web', 'currency': 'Harga'
         };
         const displayType = typeMap[q.type] || q.type;
 
@@ -959,19 +983,33 @@
                 <option value="Three Columns" ${q.layout==='Three Columns'?'selected':''}>Tiga Kolom</option>
                 <option value="Side by Side" ${q.layout==='Side by Side'?'selected':''}>Berdampingan</option>
             </select>`;
-        }
-        
-        if (q.type === 'name') {
-            sizeOrLayoutLabel = 'Name Format';
+        } else if (q.type === 'name') {
+            sizeOrLayoutLabel = 'Format Nama';
             sizeOrLayoutHtml = `
             <select class="s-select" onchange="schema.questions[${activeIndex}].nameFormat = this.value; renderPreview(); renderFieldSettings();">
-                <option value="Normal" ${(!q.nameFormat || q.nameFormat==='Normal')?'selected':''}>Normal</option>
-                <option value="Extended" ${q.nameFormat==='Extended'?'selected':''}>Extended</option>
+                <option value="Normal" ${(!q.nameFormat || q.nameFormat==='Normal')?'selected':''}>Normal (First, Last)</option>
+                <option value="Extended" ${q.nameFormat==='Extended'?'selected':''}>Lengkap (Title, First, Last, Suffix)</option>
+            </select>`;
+        } else if (q.type === 'phone') {
+            sizeOrLayoutLabel = 'Format Telepon';
+            sizeOrLayoutHtml = `
+            <select class="s-select" onchange="schema.questions[${activeIndex}].phoneFormat = this.value; renderPreview(); renderFieldSettings();">
+                <option value="ID" ${q.phoneFormat === 'ID' || !q.phoneFormat ? 'selected' : ''}>Indonesia (+62)</option>
+                <option value="3box" ${q.phoneFormat === '3box' ? 'selected' : ''}>### - ### - ####</option>
+                <option value="Intl" ${q.phoneFormat === 'Intl' ? 'selected' : ''}>Internasional</option>
+            </select>`;
+        } else if (q.type === 'currency') {
+            sizeOrLayoutLabel = 'Format Mata Uang';
+            sizeOrLayoutHtml = `
+            <select class="s-select" onchange="schema.questions[${activeIndex}].currencyFormat = this.value; renderPreview();">
+                <option value="Rupiah" ${q.currencyFormat === 'Rupiah' || !q.currencyFormat ? 'selected' : ''}>Rupiah (Rp)</option>
+                <option value="Dollars" ${q.currencyFormat === 'Dollars' ? 'selected' : ''}>Dollars ($)</option>
+                <option value="Ringgit" ${q.currencyFormat === 'Ringgit' ? 'selected' : ''}>Ringgit (RM)</option>
             </select>`;
         }
 
         let html = '';
-        let labelTitle = q.type === 'section' ? 'Judul Bagian' : 'Field Label';
+        let labelTitle = q.type === 'section' ? 'Judul Bagian' : 'Label Pertanyaan (Field Label)';
 
         html += `
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
@@ -989,12 +1027,23 @@
                 <div style="flex:1;">
                     <label class="fs-label">Tipe Kolom</label>
                     <select class="s-select" disabled style="background:#f1f3f4;"><option>${displayType}</option></select>
-                </div>
+                </div>`;
+            
+            // Kolom Ukuran ditiadakan untuk Currency
+            if (q.type !== 'currency') {
+                html += `
                 <div style="flex:1;">
                     <label class="fs-label">${sizeOrLayoutLabel}</label>
                     ${sizeOrLayoutHtml}
-                </div>
-            </div>`;
+                </div>`;
+            } else {
+                html += `
+                <div style="flex:1;">
+                    <label class="fs-label">${sizeOrLayoutLabel}</label>
+                    ${sizeOrLayoutHtml}
+                </div>`;
+            }
+            html += `</div>`;
         }
 
         if (['short', 'paragraph', 'number', 'linear_scale'].includes(q.type)) {
@@ -1008,7 +1057,7 @@
                             <option value="Digits" ${q.rangeFormat==='Digits'?'selected':''}>Jumlah Digit</option>
                         </select>
                     </div>`;
-            } else if (q.type === 'short' || q.type === 'paragraph') {
+            } else if (['short', 'paragraph'].includes(q.type)) {
                 formatHtml = `
                     <div style="flex:2;">
                         <label style="font-size:10px; color:#444;">Format</label>
@@ -1021,7 +1070,7 @@
 
             html += `
             <div class="fs-box" style="margin-bottom:15px; background:#fff3e0; border-color:#ffe0b2;">
-                <span class="fs-box-title" style="color:#e65100; margin-bottom: 10px;">Batasan (Range)</span>
+                <span class="fs-box-title" style="color:#e65100; margin-bottom: 10px;">${q.type === 'linear_scale' ? 'Skala (Scale)' : 'Batasan (Range)'}</span>
                 <div style="display:flex; gap:10px; align-items:flex-end;">
                     <div style="flex:1;">
                         <label style="font-size:10px; color:#444;">Min</label>
@@ -1099,7 +1148,12 @@
 
         if (q.type !== 'section') {
             let optionsHtml = '';
-            if (q.type === 'radio') {
+            if (q.type === 'phone' || q.type === 'email' || q.type === 'url' || q.type === 'address' || q.type === 'date' || q.type === 'time' || q.type === 'file' || q.type === 'name' || q.type === 'currency') {
+                optionsHtml = `
+                    <div style="margin-bottom:6px;"><label class="s-checkbox-label"><input type="checkbox" class="s-checkbox" ${q.required ? 'checked' : ''} onchange="schema.questions[${activeIndex}].required = this.checked; renderPreview();"> Wajib Diisi</label></div>
+                    <div style="margin-bottom:6px;"><label class="s-checkbox-label"><input type="checkbox" class="s-checkbox" ${q.noDuplicates ? 'checked' : ''} onchange="schema.questions[${activeIndex}].noDuplicates = this.checked; renderPreview();"> Tanpa Duplikat</label></div>
+                `;
+            } else if (q.type === 'radio') {
                 optionsHtml = `
                     <div style="margin-bottom:6px;"><label class="s-checkbox-label"><input type="checkbox" class="s-checkbox" ${q.required ? 'checked' : ''} onchange="schema.questions[${activeIndex}].required = this.checked; renderPreview();"> Wajib Diisi</label></div>
                     <div style="margin-bottom:6px;"><label class="s-checkbox-label"><input type="checkbox" class="s-checkbox" ${q.randomize ? 'checked' : ''} onchange="schema.questions[${activeIndex}].randomize = this.checked; renderPreview();"> Acak Urutan</label></div>
@@ -1122,7 +1176,7 @@
             html += `
             <div style="display:flex; gap:10px; margin-bottom:15px;">
                 <div class="fs-box" style="flex:1; margin-bottom:0;">
-                    <span class="fs-box-title">Opsi</span>
+                    <span class="fs-box-title">Opsi Tambahan</span>
                     ${optionsHtml}
                 </div>
                 <div class="fs-box" style="flex:1; margin-bottom:0;">
@@ -1137,7 +1191,7 @@
             if (format === 'Extended') {
                 html += `
                 <div class="s-group" style="margin-bottom:15px;">
-                    <label class="fs-label">Placeholder Text</label>
+                    <label class="fs-label">Teks Placeholder (Bayangan)</label>
                     <div style="display:flex; gap:10px; margin-top:4px;">
                         <div style="flex:1;"><input type="text" class="s-input" value="${q.placeholderTitle || ''}" placeholder="Title" oninput="schema.questions[${activeIndex}].placeholderTitle = this.value; renderPreview();"></div>
                         <div style="flex:1;"><input type="text" class="s-input" value="${q.placeholderFirst || ''}" placeholder="First" oninput="schema.questions[${activeIndex}].placeholderFirst = this.value; renderPreview();"></div>
@@ -1149,7 +1203,7 @@
             } else {
                 html += `
                 <div class="s-group" style="margin-bottom:15px;">
-                    <label class="fs-label">Placeholder Text</label>
+                    <label class="fs-label">Teks Placeholder (Bayangan)</label>
                     <div style="display:flex; gap:10px; margin-top:4px;">
                         <div style="flex:1;"><input type="text" class="s-input" value="${q.placeholderFirst || ''}" placeholder="First" oninput="schema.questions[${activeIndex}].placeholderFirst = this.value; renderPreview();"></div>
                         <div style="flex:1;"><input type="text" class="s-input" value="${q.placeholderLast || ''}" placeholder="Last" oninput="schema.questions[${activeIndex}].placeholderLast = this.value; renderPreview();"></div>
@@ -1158,24 +1212,84 @@
                 `;
             }
         } else if (q.type === 'address') {
-            // Address placeholders bisa di-hide dulu seperti di wufoo (biasanya tidak ada input placeholder custom di form builder dasar, tapi jika mau bisa ditambahkan)
-        } else if (!['radio', 'checkbox', 'dropdown', 'section'].includes(q.type)) {
             html += `
             <div class="s-group" style="margin-bottom:15px;">
-                <label class="fs-label">Nilai Bawaan (Default)</label>
-                <input type="text" class="s-input" value="${q.predefinedValue || ''}" oninput="schema.questions[${activeIndex}].predefinedValue = this.value; renderPreview();">
+                <label class="fs-label">Teks Placeholder (Bayangan)</label>
+                <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
+                    <input type="text" class="s-input" value="${q.placeholderStreet || ''}" placeholder="Street Address" oninput="schema.questions[${activeIndex}].placeholderStreet = this.value; renderPreview();">
+                    <input type="text" class="s-input" value="${q.placeholderLine2 || ''}" placeholder="Address Line 2" oninput="schema.questions[${activeIndex}].placeholderLine2 = this.value; renderPreview();">
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" class="s-input" style="flex:1;" value="${q.placeholderCity || ''}" placeholder="City" oninput="schema.questions[${activeIndex}].placeholderCity = this.value; renderPreview();">
+                        <input type="text" class="s-input" style="flex:1;" value="${q.placeholderState || ''}" placeholder="State/Provinsi" oninput="schema.questions[${activeIndex}].placeholderState = this.value; renderPreview();">
+                    </div>
+                    <input type="text" class="s-input" value="${q.placeholderZip || ''}" placeholder="Kode Pos" oninput="schema.questions[${activeIndex}].placeholderZip = this.value; renderPreview();">
+                </div>
             </div>
-            `;
             
-            html += `
             <div class="s-group" style="margin-bottom:15px;">
-                <label class="fs-label">Teks Placeholder</label>
-                <input type="text" class="s-input" value="${q.placeholder || ''}" oninput="schema.questions[${activeIndex}].placeholder = this.value; renderPreview();">
+                <label class="fs-label">Negara Default (Predefined Country)</label>
+                <select class="s-select" onchange="schema.questions[${activeIndex}].predefinedCountry = this.value; renderPreview();">
+                    <option value="None" ${q.predefinedCountry === 'None' ? 'selected' : ''}>-- Tidak Ada (Pilih Negara) --</option>
+                    <option value="Indonesia" ${q.predefinedCountry === 'Indonesia' || !q.predefinedCountry ? 'selected' : ''}>Indonesia</option>
+                    <option value="Malaysia" ${q.predefinedCountry === 'Malaysia' ? 'selected' : ''}>Malaysia</option>
+                    <option value="Singapore" ${q.predefinedCountry === 'Singapore' ? 'selected' : ''}>Singapore</option>
+                    <option value="Other" ${q.predefinedCountry === 'Other' ? 'selected' : ''}>Lainnya (Other)</option>
+                </select>
             </div>
             `;
+        } else if (!['radio', 'checkbox', 'dropdown', 'section'].includes(q.type)) {
+            let defLabel = q.type === 'currency' ? 'Harga Bawaan (Predefined Price)' : 'Nilai Bawaan (Default)';
+            
+            if (q.type === 'phone' && q.phoneFormat === '3box') {
+                html += `
+                <div class="s-group" style="margin-bottom:15px;">
+                    <label class="fs-label">Nilai Bawaan (Default)</label>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <input type="text" class="s-input" value="${q.predef1 || ''}" oninput="schema.questions[${activeIndex}].predef1 = this.value; renderPreview();" style="width:50px; text-align:center;"> - 
+                        <input type="text" class="s-input" value="${q.predef2 || ''}" oninput="schema.questions[${activeIndex}].predef2 = this.value; renderPreview();" style="width:50px; text-align:center;"> - 
+                        <input type="text" class="s-input" value="${q.predef3 || ''}" oninput="schema.questions[${activeIndex}].predef3 = this.value; renderPreview();" style="width:70px; text-align:center;">
+                    </div>
+                </div>
+                <div class="s-group" style="margin-bottom:15px;">
+                    <label class="fs-label">Teks Placeholder (Bayangan)</label>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <div style="display:flex; flex-direction:column; gap:2px; align-items:center;">
+                            <input type="text" class="s-input" value="${q.place1 || ''}" placeholder="###" oninput="schema.questions[${activeIndex}].place1 = this.value; renderPreview();" style="width:50px; text-align:center;">
+                            <span style="font-size:10px; color:#999; font-family:monospace;">###</span>
+                        </div>
+                        <span style="margin-top:-15px;">-</span>
+                        <div style="display:flex; flex-direction:column; gap:2px; align-items:center;">
+                            <input type="text" class="s-input" value="${q.place2 || ''}" placeholder="###" oninput="schema.questions[${activeIndex}].place2 = this.value; renderPreview();" style="width:50px; text-align:center;">
+                            <span style="font-size:10px; color:#999; font-family:monospace;">###</span>
+                        </div>
+                        <span style="margin-top:-15px;">-</span>
+                        <div style="display:flex; flex-direction:column; gap:2px; align-items:center;">
+                            <input type="text" class="s-input" value="${q.place3 || ''}" placeholder="####" oninput="schema.questions[${activeIndex}].place3 = this.value; renderPreview();" style="width:70px; text-align:center;">
+                            <span style="font-size:10px; color:#999; font-family:monospace;">####</span>
+                        </div>
+                    </div>
+                </div>
+                `;
+            } else {
+                html += `
+                <div class="s-group" style="margin-bottom:15px;">
+                    <label class="fs-label">${defLabel}</label>
+                    <input type="text" class="s-input" value="${q.predefinedValue || ''}" oninput="schema.questions[${activeIndex}].predefinedValue = this.value; renderPreview();">
+                </div>
+                `;
+                
+                if (q.type !== 'currency') {
+                    html += `
+                    <div class="s-group" style="margin-bottom:15px;">
+                        <label class="fs-label">Teks Placeholder (Bayangan)</label>
+                        <input type="text" class="s-input" value="${q.placeholder || ''}" oninput="schema.questions[${activeIndex}].placeholder = this.value; renderPreview();">
+                    </div>
+                    `;
+                }
+            }
         }
 
-        let instLabel = q.type === 'section' ? 'Deskripsi Bagian' : 'Instructions for User';
+        let instLabel = q.type === 'section' ? 'Deskripsi Bagian' : 'Instruksi (Petunjuk Pengisian)';
         html += `
         <div class="s-group" style="margin-bottom:15px;">
             <label class="fs-label">${instLabel}</label>
