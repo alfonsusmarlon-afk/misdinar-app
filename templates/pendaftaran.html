@@ -103,21 +103,28 @@
         .choice-group { display: flex; flex-direction: column; gap: 6px; margin-top: 6px;}
         .choice-label { font-size: 13px; color: #222; display: flex; align-items: center; gap: 6px; cursor: pointer; }
         .choice-label input { margin: 0; }
+        .choice-label.disabled-option { color: #bbb; text-decoration: line-through; cursor: not-allowed; }
 
-        /* Linear Scale & Grid */
-        .scale-group { display: flex; gap: 15px; align-items: flex-end; margin-top: 8px;}
-        .scale-item { display: flex; flex-direction: column; align-items: center; font-size: 12px; gap: 4px;}
-        .grid-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-        .grid-table th { padding: 8px; font-weight: normal; color: #222; text-align: center; border-bottom: 1px solid #ccc;}
-        .grid-table td { padding: 8px; text-align: center; border-bottom: 1px dotted #ccc;}
-        .grid-table td:first-child { text-align: left; background: transparent; }
+        /* Grid / Matriks Likert */
+        .grid-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; border: 1px solid #ccc; }
+        .grid-table th { padding: 10px; background: #eaeaea; font-weight: bold; color: #444; border: 1px solid #ccc; text-align: center; font-size: 11px; }
+        .grid-table td { padding: 10px; text-align: center; border: 1px solid #ccc; background: #fff; }
+        .grid-table td:first-child { text-align: left; background: #fff; font-weight: normal; color: #222; }
+
+        /* Rating Bintang Interaktif */
+        .rating-stars { display: flex; gap: 6px; flex-direction: row-reverse; justify-content: flex-end; margin-top: 5px; }
+        .rating-stars input { display: none; }
+        .rating-stars label { font-size: 26px; color: #e5e7eb; cursor: pointer; transition: color 0.1s ease; }
+        .rating-stars input:checked ~ label,
+        .rating-stars label:hover,
+        .rating-stars label:hover ~ label { color: #f59e0b; }
 
         /* Media */
         .media-block { margin-bottom: 20px; }
         .media-block img { max-width: 100%; border: 1px solid #ccc; padding: 4px; background: #fff;}
         .media-block iframe { width: 100%; height: 350px; border: 1px solid #ccc; }
 
-        /* Tombol Submit */
+        /* Tombol Footer */
         .form-footer { margin-top: 30px; display: flex; justify-content: space-between; border-top: 1px dotted #ccc; padding-top: 20px; }
         .btn-submit { 
             background-color: #007da5; 
@@ -133,11 +140,6 @@
         .btn-prev { background-color: transparent; color: blue; text-decoration: underline; border: none; padding: 0; font-size: 13px; cursor: pointer; font-weight: normal; }
         .btn-prev:hover { color: darkblue; }
 
-        /* Report Abuse & System Message */
-        .report-abuse { text-align: center; margin-top: 60px; font-size: 11px; }
-        .report-abuse a { color: #0000ff; text-decoration: underline; }
-        .msg-box { padding: 20px 0; }
-        .msg-box h2 { margin-top: 0; color: #222; font-weight: normal;}
         .sys-account { background: #ffffe0; border: 1px solid #e6db55; padding: 15px; margin-top: 20px; border-radius: 3px;}
     </style>
 </head>
@@ -150,7 +152,7 @@
             </div>
             <hr class="divider">
             <div class="msg-box">
-                <p>Formulir ini sudah ditutup dan tidak menerima tanggapan lagi.</p>
+                <p>{{ schema.closedMsg | default('Formulir ini sudah ditutup dan tidak menerima tanggapan lagi.') }}</p>
             </div>
         
         {% elif success %}
@@ -159,20 +161,34 @@
             </div>
             <hr class="divider">
             <div class="msg-box">
-                <h2>Berhasil!</h2>
-                <p>Tanggapan Anda telah direkam oleh sistem.</p>
-                
-                {% if is_default == 1 and new_username %}
-                    <div class="sys-account">
-                        <h3 style="margin-top: 0; color: #d05300;">Akun Sistem Anda Berhasil Dibuat!</h3>
-                        <p style="margin: 6px 0; font-size: 14px;"><strong>Username:</strong> {{ new_username }}</p>
-                        <p style="margin: 6px 0; font-size: 14px;"><strong>Password:</strong> <span style="font-family: monospace; background: #fff; padding: 2px 6px; border: 1px solid #ccc;">{{ new_password }}</span></p>
-                        <p style="margin: 12px 0 0; font-size: 12px; color: #555;">Silakan simpan informasi login ini. Anda sekarang dapat masuk ke dalam dashboard sistem pelayanan.</p>
-                        <a href="{{ url_for('login') }}" style="display: inline-block; margin-top: 15px; color: #007da5; font-weight: bold; text-decoration: none;">&rarr; Login Sekarang</a>
-                    </div>
+                {% if schema.get('confType') == 'redirect' and schema.get('confUrl') %}
+                    <h2 style="color: #007da5;">Mengalihkan...</h2>
+                    <p>Mohon tunggu sebentar, Anda akan dialihkan ke website tujuan.</p>
+                    <script>
+                        setTimeout(function() {
+                            var redirectUrl = "{{ schema.get('confUrl') }}";
+                            if (!redirectUrl.match(/^https?:\/\//i)) {
+                                redirectUrl = 'http://' + redirectUrl;
+                            }
+                            window.location.replace(redirectUrl);
+                        }, 1500);
+                    </script>
                 {% else %}
-                    <br>
-                    <a href="{{ url_for('isi_formulir', form_id=request.path.split('/')[-1]) }}" style="color: #007da5; text-decoration: none;">Kirim tanggapan lain</a>
+                    <h2>Berhasil!</h2>
+                    <p>{{ schema.confMsg | default('Tanggapan Anda telah direkam oleh sistem.') }}</p>
+                    
+                    {% if is_default == 1 and new_username %}
+                        <div class="sys-account">
+                            <h3 style="margin-top: 0; color: #d05300;">Akun Sistem Anda Berhasil Dibuat!</h3>
+                            <p style="margin: 6px 0; font-size: 14px;"><strong>Username:</strong> {{ new_username }}</p>
+                            <p style="margin: 6px 0; font-size: 14px;"><strong>Password:</strong> <span style="font-family: monospace; background: #fff; padding: 2px 6px; border: 1px solid #ccc;">{{ new_password }}</span></p>
+                            <p style="margin: 12px 0 0; font-size: 12px; color: #555;">Silakan simpan informasi login ini. Anda sekarang dapat masuk ke dalam dashboard sistem pelayanan.</p>
+                            <a href="{{ url_for('login') }}" style="display: inline-block; margin-top: 15px; color: #007da5; font-weight: bold; text-decoration: none;">&rarr; Login Sekarang</a>
+                        </div>
+                    {% else %}
+                        <br>
+                        <a href="{{ url_for('isi_formulir', form_id=request.path.split('/')[-1]) }}" style="color: #007da5; text-decoration: none;">Kirim tanggapan lain</a>
+                    {% endif %}
                 {% endif %}
             </div>
         
@@ -200,7 +216,7 @@
                 {% if q.type == 'page' %}
                     {% set _ = pages_list.append([]) %}
                     {% set _ = page_titles_list.append(q.pageTitle if q.pageTitle else 'Untitled Page') %}
-                    {% set _ = next_btn_list.append(q.btnText if q.btnText else 'Next Page') %}
+                    {% set _ = next_btn_list.append(q.btnText if q.btnText else 'Selanjutnya') %}
                     {% set ns.p_idx = ns.p_idx + 1 %}
                 {% else %}
                     {% set _ = pages_list[ns.p_idx].append(q) %}
@@ -238,7 +254,7 @@
                 <hr class="divider">
             {% endif %}
             
-            <form action="{{ url_for('isi_formulir', form_id=request.path.split('/')[-1]) }}" method="POST" enctype="multipart/form-data">
+            <form id="mainForm" action="{{ url_for('isi_formulir', form_id=request.path.split('/')[-1]) }}" method="POST" enctype="multipart/form-data">
                 
                 {% set isSideLabel = schema.labelPlacement != 'Top Aligned' %}
                 {% set labelPlacementAlign = 'right' if schema.labelPlacement == 'Right Aligned' else 'left' %}
@@ -298,30 +314,30 @@
                                     {% if format == 'Extended' %}
                                         <div style="display: flex; gap: 10px; align-items: flex-end; margin-top:6px;">
                                             <div style="flex: 0.5;">
-                                                <input type="text" name="q_{{ q.id }}_title" class="classic-input sz-large" placeholder="{{ q.placeholderTitle if q.placeholderTitle else '' }}" style="margin-bottom:4px;">
+                                                <input type="text" name="q_{{ q.id }}_title" class="classic-input sz-large" placeholder="{{ q.placeholderTitle|default('') }}" style="margin-bottom:4px;">
                                                 <label style="font-size: 11px; color: #666; font-weight: bold; display: block;">Title</label>
                                             </div>
                                             <div style="flex: 1.5;">
-                                                <input type="text" name="q_{{ q.id }}_first" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderFirst if q.placeholderFirst else '' }}" style="margin-bottom:4px;">
+                                                <input type="text" name="q_{{ q.id }}_first" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderFirst|default('') }}" style="margin-bottom:4px;">
                                                 <label style="font-size: 11px; color: #666; font-weight: bold; display: block;">First</label>
                                             </div>
                                             <div style="flex: 2;">
-                                                <input type="text" name="q_{{ q.id }}_last" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderLast if q.placeholderLast else '' }}" style="margin-bottom:4px;">
+                                                <input type="text" name="q_{{ q.id }}_last" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderLast|default('') }}" style="margin-bottom:4px;">
                                                 <label style="font-size: 11px; color: #666; font-weight: bold; display: block;">Last</label>
                                             </div>
                                             <div style="flex: 0.5;">
-                                                <input type="text" name="q_{{ q.id }}_suffix" class="classic-input sz-large" placeholder="{{ q.placeholderSuffix if q.placeholderSuffix else '' }}" style="margin-bottom:4px;">
+                                                <input type="text" name="q_{{ q.id }}_suffix" class="classic-input sz-large" placeholder="{{ q.placeholderSuffix|default('') }}" style="margin-bottom:4px;">
                                                 <label style="font-size: 11px; color: #666; font-weight: bold; display: block;">Suffix</label>
                                             </div>
                                         </div>
                                     {% else %}
                                         <div style="display: flex; gap: 15px; align-items: flex-end; margin-top:6px;">
                                             <div style="flex: 1;">
-                                                <input type="text" name="q_{{ q.id }}_first" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderFirst if q.placeholderFirst else '' }}" style="margin-bottom:4px;">
+                                                <input type="text" name="q_{{ q.id }}_first" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderFirst|default('') }}" style="margin-bottom:4px;">
                                                 <label style="font-size: 11px; color: #666; font-weight: bold; display: block;">First</label>
                                             </div>
                                             <div style="flex: 1;">
-                                                <input type="text" name="q_{{ q.id }}_last" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderLast if q.placeholderLast else '' }}" style="margin-bottom:4px;">
+                                                <input type="text" name="q_{{ q.id }}_last" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderLast|default('') }}" style="margin-bottom:4px;">
                                                 <label style="font-size: 11px; color: #666; font-weight: bold; display: block;">Last</label>
                                             </div>
                                         </div>
@@ -330,31 +346,31 @@
                                 {% elif q.type == 'address' %}
                                     <div style="display:flex; flex-direction:column; gap:10px; margin-top:6px;">
                                         <div>
-                                            <input type="text" name="q_{{ q.id }}_street" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderStreet if q.placeholderStreet else 'Contoh: Jl. Sudirman No. 1' }}" style="margin-bottom:4px;">
+                                            <input type="text" name="q_{{ q.id }}_street" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderStreet|default('') }}" style="margin-bottom:4px;">
                                             <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Street Address</label>
                                         </div>
                                         <div>
-                                            <input type="text" name="q_{{ q.id }}_line2" class="classic-input sz-large" placeholder="{{ q.placeholderLine2 if q.placeholderLine2 else 'Apartemen, suite, gedung, dll. (opsional)' }}" style="margin-bottom:4px;">
+                                            <input type="text" name="q_{{ q.id }}_line2" class="classic-input sz-large" placeholder="{{ q.placeholderLine2|default('') }}" style="margin-bottom:4px;">
                                             <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Address Line 2</label>
                                         </div>
                                         <div style="display:flex; gap:15px;">
                                             <div style="flex:1;">
-                                                <input type="text" name="q_{{ q.id }}_city" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderCity if q.placeholderCity else 'Contoh: Jakarta Selatan' }}" style="margin-bottom:4px;">
+                                                <input type="text" name="q_{{ q.id }}_city" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderCity|default('') }}" style="margin-bottom:4px;">
                                                 <label style="font-size:11px; color:#666; font-weight:bold; display:block;">City</label>
                                             </div>
                                             <div style="flex:1;">
-                                                <input type="text" name="q_{{ q.id }}_state" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderState if q.placeholderState else 'Contoh: DKI Jakarta' }}" style="margin-bottom:4px;">
+                                                <input type="text" name="q_{{ q.id }}_state" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderState|default('') }}" style="margin-bottom:4px;">
                                                 <label style="font-size:11px; color:#666; font-weight:bold; display:block;">State / Province</label>
                                             </div>
                                         </div>
                                         <div style="display:flex; gap:15px;">
                                             <div style="flex:1;">
-                                                <input type="text" name="q_{{ q.id }}_zip" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderZip if q.placeholderZip else 'Contoh: 12345' }}" style="margin-bottom:4px;">
+                                                <input type="text" name="q_{{ q.id }}_zip" class="classic-input sz-large" {% if q.required %}required{% endif %} placeholder="{{ q.placeholderZip|default('') }}" style="margin-bottom:4px;">
                                                 <label style="font-size:11px; color:#666; font-weight:bold; display:block;">Postal / Zip Code</label>
                                             </div>
                                             <div style="flex:1;">
                                                 <select name="q_{{ q.id }}_country" class="classic-input sz-large" {% if q.required %}required{% endif %} style="margin-bottom:4px; height: 26px;">
-                                                    <option value="" {% if q.predefinedCountry == 'None' %}selected{% endif %}>-- Pilih Negara --</option>
+                                                    <option value="" {% if q.predefinedCountry == 'None' %}selected{% endif %}></option>
                                                     <option value="Indonesia" {% if q.predefinedCountry == 'Indonesia' or not q.predefinedCountry %}selected{% endif %}>Indonesia</option>
                                                     <option value="Malaysia" {% if q.predefinedCountry == 'Malaysia' %}selected{% endif %}>Malaysia</option>
                                                     <option value="Singapore" {% if q.predefinedCountry == 'Singapore' %}selected{% endif %}>Singapore</option>
@@ -365,28 +381,28 @@
                                         </div>
                                     </div>
                                     
-                                {% elif q.type == 'short' or q.type == 'number' %}
+                                {% elif q.type == 'short' or q.type == 'number' or q.type == 'email' or q.type == 'url' %}
                                     <input type="{{ 'number' if q.type == 'number' else 'text' }}" 
                                            name="q_{{ q.id }}" 
                                            class="classic-input {{ sz }}" 
-                                           placeholder="{{ q.placeholder if q.placeholder else '' }}" 
-                                           value="{{ q.predefinedValue if q.predefinedValue else '' }}" 
+                                           placeholder="{{ q.placeholder|default('') }}" 
+                                           value="{{ q.predefinedValue|default('') }}" 
                                            {% if q.required %}required{% endif %}
                                            
                                            {% if q.type == 'number' %}
                                                {% if q.rangeFormat == 'Digits' %}
-                                                    oninput="enforceDigitLimit(this, '{{ q.rangeMax }}')"
+                                                    oninput="enforceDigitLimit(this, '{{ q.rangeMax|default('') }}')"
                                                {% else %}
                                                     {% if q.rangeMin %}min="{{ q.rangeMin }}"{% endif %}
                                                     {% if q.rangeMax %}max="{{ q.rangeMax }}"{% endif %}
-                                                    oninput="enforceNumberLimit(this, '{{ q.rangeMin }}', '{{ q.rangeMax }}')"
+                                                    oninput="enforceNumberLimit(this, '{{ q.rangeMin|default('') }}', '{{ q.rangeMax|default('') }}')"
                                                {% endif %}
                                            {% else %}
                                                {% if q.rangeFormat == 'Characters' or not q.rangeFormat %}
                                                    {% if q.rangeMin %}minlength="{{ q.rangeMin }}"{% endif %}
-                                                   {% if q.rangeMax %}maxlength="{{ q.rangeMax }}" oninput="enforceCharacterLimit(this, {{ q.rangeMax }})"{% endif %}
+                                                   {% if q.rangeMax %}maxlength="{{ q.rangeMax }}" oninput="enforceCharacterLimit(this, '{{ q.rangeMax }}')"{% endif %}
                                                {% elif q.rangeFormat == 'Words' and q.rangeMax %}
-                                                   oninput="enforceWordLimit(this, {{ q.rangeMax }})"
+                                                   oninput="enforceWordLimit(this, '{{ q.rangeMax }}')"
                                                {% endif %}
                                            {% endif %}
                                     >
@@ -409,27 +425,86 @@
                                             {% endif %}
                                         </div>
                                     {% endif %}
+                                    
+                                {% elif q.type == 'phone' %}
+                                    {% if q.phoneFormat == '3box' %}
+                                        <div style="display:flex; align-items:center; gap:5px; margin-top:4px;">
+                                            <input type="text" name="q_{{ q.id }}_1" class="classic-input" placeholder="{{ q.place1|default('###') }}" value="{{ q.predef1|default('') }}" style="width:45px; text-align:center;" maxlength="3" {% if q.required %}required{% endif %}>
+                                            <span>-</span>
+                                            <input type="text" name="q_{{ q.id }}_2" class="classic-input" placeholder="{{ q.place2|default('###') }}" value="{{ q.predef2|default('') }}" style="width:45px; text-align:center;" maxlength="3" {% if q.required %}required{% endif %}>
+                                            <span>-</span>
+                                            <input type="text" name="q_{{ q.id }}_3" class="classic-input" placeholder="{{ q.place3|default('####') }}" value="{{ q.predef3|default('') }}" style="width:60px; text-align:center;" maxlength="4" {% if q.required %}required{% endif %}>
+                                        </div>
+                                    {% elif q.phoneFormat == 'Intl' %}
+                                        <input type="text" name="q_{{ q.id }}" class="classic-input {{ sz }}" placeholder="{{ q.placeholder|default('') }}" value="{{ q.predefinedValue|default('') }}" {% if q.required %}required{% endif %}>
+                                    {% else %}
+                                        {% set wSize = '25%' if sz == 'sz-small' else ('55%' if sz == 'sz-medium' else '90%') %}
+                                        <div style="display:flex; align-items:center; gap:0; margin-top:4px;">
+                                            <span style="background:#f0f0f0; border:1px solid #999; border-right:none; padding:5px 8px; border-radius:2px 0 0 2px; font-size:13px; color:#555;">+62</span>
+                                            <input type="text" name="q_{{ q.id }}" class="classic-input" placeholder="{{ q.placeholder|default('') }}" value="{{ q.predefinedValue|default('') }}" {% if q.required %}required{% endif %} style="flex:1; max-width:{{ wSize }}; border-radius:0 2px 2px 0;">
+                                        </div>
+                                    {% endif %}
                                 
+                                {% elif q.type == 'currency' %}
+                                    {% set symbol = 'Rp' %}
+                                    {% if q.currencyFormat == 'Dollars' %}{% set symbol = '$' %}{% endif %}
+                                    {% if q.currencyFormat == 'Ringgit' %}{% set symbol = 'RM' %}{% endif %}
+                                    <div style="display:flex; align-items:center; gap:5px; margin-top:4px;">
+                                        <span style="font-size:14px; font-weight:bold;">{{ symbol }}</span>
+                                        <input type="number" name="q_{{ q.id }}_main" class="classic-input" style="width:120px;" value="{{ (q.predefinedValue|string).split('.')[0] if q.predefinedValue else '' }}" {% if q.required %}required{% endif %}>
+                                        <span style="font-weight:bold;">.</span>
+                                        <input type="number" name="q_{{ q.id }}_cents" class="classic-input" style="width:45px;" maxlength="2" placeholder="00" value="{{ (q.predefinedValue|string).split('.')[1] if q.predefinedValue and '.' in (q.predefinedValue|string) else '' }}">
+                                    </div>
+                                    
+                                {% elif q.type == 'date' %}
+                                    {% set f1 = 'MM' %}{% set f2 = 'DD' %}{% set f3 = 'YYYY' %}
+                                    {% if q.dateFormat == 'DD / MM / YYYY' %}{% set f1 = 'DD' %}{% set f2 = 'MM' %}{% endif %}
+                                    <div style="display:flex; align-items:center; gap:5px; margin-top:4px;">
+                                        <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                                            <input type="text" name="q_{{ q.id }}_1" class="classic-input" value="{{ q.predef1|default('') }}" style="width:35px; text-align:center;" maxlength="2" placeholder="{{ f1 }}" {% if q.required %}required{% endif %}>
+                                            <label style="font-size:10px; color:#666; font-weight:bold;">{{ f1 }}</label>
+                                        </div>
+                                        <span>/</span>
+                                        <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                                            <input type="text" name="q_{{ q.id }}_2" class="classic-input" value="{{ q.predef2|default('') }}" style="width:35px; text-align:center;" maxlength="2" placeholder="{{ f2 }}" {% if q.required %}required{% endif %}>
+                                            <label style="font-size:10px; color:#666; font-weight:bold;">{{ f2 }}</label>
+                                        </div>
+                                        <span>/</span>
+                                        <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                                            <input type="text" name="q_{{ q.id }}_3" class="classic-input" value="{{ q.predef3|default('') }}" style="width:55px; text-align:center;" maxlength="4" placeholder="{{ f3 }}" {% if q.required %}required{% endif %}>
+                                            <label style="font-size:10px; color:#666; font-weight:bold;">{{ f3 }}</label>
+                                        </div>
+                                        <i class="far fa-calendar-alt" style="color:#007da5; font-size:16px; margin-left:5px; margin-top:-14px;"></i>
+                                    </div>
+                                    
+                                {% elif q.type == 'time' %}
+                                    <div style="display:flex; align-items:center; gap:5px; margin-top:4px;">
+                                        <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                                            <input type="text" name="q_{{ q.id }}_hh" class="classic-input" style="width:35px; text-align:center;" maxlength="2" placeholder="HH" {% if q.required %}required{% endif %}>
+                                            <label style="font-size:10px; color:#666; font-weight:bold;">HH</label>
+                                        </div>
+                                        <span>:</span>
+                                        <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                                            <input type="text" name="q_{{ q.id }}_mm" class="classic-input" style="width:35px; text-align:center;" maxlength="2" placeholder="MM" {% if q.required %}required{% endif %}>
+                                            <label style="font-size:10px; color:#666; font-weight:bold;">MM</label>
+                                        </div>
+                                        <span>:</span>
+                                        <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                                            <input type="text" name="q_{{ q.id }}_ss" class="classic-input" style="width:35px; text-align:center;" maxlength="2" placeholder="SS" {% if q.required %}required{% endif %}>
+                                            <label style="font-size:10px; color:#666; font-weight:bold;">SS</label>
+                                        </div>
+                                        <div style="display:flex; flex-direction:column; align-items:center; gap:2px; margin-left:4px;">
+                                            <select name="q_{{ q.id }}_ampm" class="classic-input" style="padding:4px; height:26px;"><option>AM</option><option>PM</option></select>
+                                            <label style="font-size:10px; color:#666; font-weight:bold;">AM/PM</label>
+                                        </div>
+                                    </div>
+
                                 {% elif q.type == 'paragraph' %}
                                     <textarea name="q_{{ q.id }}" 
                                               class="classic-input {{ sz }}" 
-                                              placeholder="{{ q.placeholder if q.placeholder else '' }}" 
+                                              placeholder="{{ q.placeholder|default('') }}" 
                                               {% if q.required %}required{% endif %}
-                                              {% if q.rangeFormat == 'Characters' or not q.rangeFormat %}
-                                                  {% if q.rangeMin %}minlength="{{ q.rangeMin }}"{% endif %}
-                                                  {% if q.rangeMax %}maxlength="{{ q.rangeMax }}" oninput="enforceCharacterLimit(this, {{ q.rangeMax }})"{% endif %}
-                                              {% elif q.rangeFormat == 'Words' and q.rangeMax %}
-                                                  oninput="enforceWordLimit(this, {{ q.rangeMax }})"
-                                              {% endif %}
-                                    >{{ q.predefinedValue if q.predefinedValue else '' }}</textarea>
-                                    {% if q.rangeMin or q.rangeMax %}
-                                        {% set fmt = 'kata' if q.rangeFormat == 'Words' else 'karakter' %}
-                                        <div class="field-instructions">
-                                            {% if q.rangeMin and q.rangeMax %}<span>Harus berisi antara {{ q.rangeMin }} dan {{ q.rangeMax }} {{ fmt }}.</span>
-                                            {% elif q.rangeMax %}<span>Maksimal {{ q.rangeMax }} {{ fmt }}.</span>
-                                            {% elif q.rangeMin %}<span>Minimal {{ q.rangeMin }} {{ fmt }}.</span>{% endif %}
-                                        </div>
-                                    {% endif %}
+                                    >{{ q.predefinedValue|default('') }}</textarea>
                                 
                                 {% elif q.type == 'radio' %}
                                     {% set layoutStyle = 'display:flex;flex-direction:column;gap:8px;' %}
@@ -440,24 +515,16 @@
                                     <div style="{{ layoutStyle }} margin-top: 6px;">
                                         {% for opt in q.options %}
                                         {% set o_idx = loop.index0 %}
-                                        <label class="choice-label">
-                                            <input type="radio" name="q_{{ q.id }}" value="{{ opt }}" {% if q.required %}required{% endif %} {% if q.predefinedValue == opt %}checked{% endif %}>
+                                        {% set is_exhausted = q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] is defined and q.optionLimits[o_idx] != '' and q.optionLimits[o_idx]|int <= 0 %}
+                                        <label class="choice-label {% if is_exhausted %}disabled-option{% endif %}">
+                                            <input type="radio" class="q-opt" name="q_{{ q.id }}" value="{{ opt }}" {% if q.required %}required{% endif %} {% if q.predefinedValue == opt %}checked{% endif %} {% if is_exhausted %}disabled{% endif %}>
                                             <span>{{ opt }} 
-                                                {% if q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] %}
-                                                <span style="font-size:11px; color:#999; font-style:italic; margin-left:4px;">{{ q.optionLimits[o_idx] }} remaining.</span>
+                                                {% if q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] is defined and q.optionLimits[o_idx] != '' %}
+                                                <span style="font-size:11px; color:#999; font-style:italic; margin-left:4px;">(Sisa: {{ q.optionLimits[o_idx] }})</span>
                                                 {% endif %}
                                             </span>
                                         </label>
                                         {% endfor %}
-                                        {% if q.allowOther %}
-                                        <label class="choice-label">
-                                            <input type="radio" name="q_{{ q.id }}" value="__other__" {% if q.required %}required{% endif %}>
-                                            <span>Lainnya:</span> <input type="text" name="q_{{ q.id }}_other" class="classic-input sz-small" style="padding:2px 4px; height:20px;">
-                                            {% if q.maxQuantities and q.otherLimit %}
-                                            <span style="font-size:11px; color:#999; font-style:italic; margin-left:4px;">{{ q.otherLimit }} remaining.</span>
-                                            {% endif %}
-                                        </label>
-                                        {% endif %}
                                     </div>
                                     
                                 {% elif q.type == 'checkbox' %}
@@ -469,72 +536,34 @@
                                     <div style="{{ layoutStyle }} margin-top: 6px;">
                                         {% for opt in q.options %}
                                         {% set o_idx = loop.index0 %}
-                                        <label class="choice-label">
-                                            <input type="checkbox" name="q_{{ q.id }}" value="{{ opt }}" {% if q.predefinedValue and opt in q.predefinedValue %}checked{% endif %} {% if q.rangeMax %}onchange="enforceCheckboxLimit(this, 'q_{{ q.id }}', {{ q.rangeMax }})"{% endif %}>
+                                        {% set is_exhausted = q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] is defined and q.optionLimits[o_idx] != '' and q.optionLimits[o_idx]|int <= 0 %}
+                                        <label class="choice-label {% if is_exhausted %}disabled-option{% endif %}">
+                                            <input type="checkbox" class="q-opt" name="q_{{ q.id }}" value="{{ opt }}" {% if is_exhausted %}disabled{% endif %} {% if q.rangeMax %}onchange="enforceCheckboxLimit(this, 'q_{{ q.id }}', {{ q.rangeMax }})"{% endif %}>
                                             <span>{{ opt }}
-                                                {% if q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] %}
-                                                <span style="font-size:11px; color:#999; font-style:italic; margin-left:4px;">{{ q.optionLimits[o_idx] }} remaining.</span>
+                                                {% if q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] is defined and q.optionLimits[o_idx] != '' %}
+                                                <span style="font-size:11px; color:#999; font-style:italic; margin-left:4px;">(Sisa: {{ q.optionLimits[o_idx] }})</span>
                                                 {% endif %}
                                             </span>
                                         </label>
                                         {% endfor %}
-                                        {% if q.allowOther %}
-                                        <label class="choice-label">
-                                            <input type="checkbox" name="q_{{ q.id }}" value="__other__" {% if q.rangeMax %}onchange="enforceCheckboxLimit(this, 'q_{{ q.id }}', {{ q.rangeMax }})"{% endif %}>
-                                            <span>Lainnya:</span> <input type="text" name="q_{{ q.id }}_other" class="classic-input sz-small" style="padding:2px 4px; height:20px;">
-                                            {% if q.maxQuantities and q.otherLimit %}
-                                            <span style="font-size:11px; color:#999; font-style:italic; margin-left:4px;">{{ q.otherLimit }} remaining.</span>
-                                            {% endif %}
-                                        </label>
-                                        {% endif %}
                                     </div>
-                                    {% if q.rangeMin or q.rangeMax %}
-                                        <div class="field-instructions">
-                                            {% if q.rangeMin and q.rangeMax %}<span>Pilih antara {{ q.rangeMin }} dan {{ q.rangeMax }} pilihan.</span>
-                                            {% elif q.rangeMax %}<span>Pilih maksimal {{ q.rangeMax }} pilihan.</span>
-                                            {% elif q.rangeMin %}<span>Pilih minimal {{ q.rangeMin }} pilihan.</span>{% endif %}
-                                        </div>
-                                    {% endif %}
                                     
                                 {% elif q.type == 'dropdown' %}
                                     <select name="q_{{ q.id }}" class="classic-input {{ sz }}" {% if q.required %}required{% endif %}>
                                         <option value="">Pilih salah satu</option>
                                         {% for opt in q.options %}
                                         {% set o_idx = loop.index0 %}
-                                            <option value="{{ opt }}">
+                                        {% set is_exhausted = q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] is defined and q.optionLimits[o_idx] != '' and q.optionLimits[o_idx]|int <= 0 %}
+                                            <option value="{{ opt }}" class="q-opt" {% if is_exhausted %}disabled style="color:#ccc;"{% endif %}>
                                                 {{ opt }} 
-                                                {% if q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] %}
-                                                -- {{ q.optionLimits[o_idx] }} remaining
+                                                {% if q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] is defined and q.optionLimits[o_idx] != '' %}
+                                                -- Sisa: {{ q.optionLimits[o_idx] }}
                                                 {% endif %}
                                             </option>
                                         {% endfor %}
                                     </select>
                                     
-                                {% elif q.type == 'file' %}
-                                    <input type="file" name="q_{{ q.id }}" class="classic-input {{ sz }}" style="padding: 2px;" {% if q.required %}required{% endif %}>
-                                    
-                                {% elif q.type == 'linear_scale' %}
-                                    <div class="scale-group">
-                                        <span>{{ q.rangeMin if q.rangeMin else 0 }}</span>
-                                        {% for i in range( (q.rangeMin|int if q.rangeMin else 0), (q.rangeMax|int if q.rangeMax else 5) + 1 ) %}
-                                        <div class="scale-item">
-                                            <span>{{ i }}</span>
-                                            <input type="radio" name="q_{{ q.id }}" value="{{ i }}" {% if q.required %}required{% endif %}>
-                                        </div>
-                                        {% endfor %}
-                                        <span>{{ q.rangeMax if q.rangeMax else 5 }}</span>
-                                    </div>
-                                    
-                                {% elif q.type == 'rating' %}
-                                    <div style="color:#f59e0b;font-size:20px;letter-spacing:5px;">
-                                        <input type="radio" name="q_{{ q.id }}" value="1" required style="margin:0;"> 1 
-                                        <input type="radio" name="q_{{ q.id }}" value="2" style="margin:0; margin-left:10px;"> 2 
-                                        <input type="radio" name="q_{{ q.id }}" value="3" style="margin:0; margin-left:10px;"> 3 
-                                        <input type="radio" name="q_{{ q.id }}" value="4" style="margin:0; margin-left:10px;"> 4 
-                                        <input type="radio" name="q_{{ q.id }}" value="5" style="margin:0; margin-left:10px;"> 5
-                                    </div>
-                                    
-                                {% elif q.type == 'grid_radio' or q.type == 'grid_checkbox' %}
+                                {% elif q.type == 'likert' %}
                                     <div style="overflow-x: auto;">
                                         <table class="grid-table">
                                             <thead>
@@ -543,28 +572,44 @@
                                                     {% for col in q.columns %}
                                                     <th>{{ col }}</th>
                                                     {% endfor %}
+                                                    {% if q.notApplicable %}
+                                                    <th>N/A</th>
+                                                    {% endif %}
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {% for row in q.rows %}
+                                                {% for stmt in q.statements %}
                                                 {% set r_idx = loop.index0 %}
                                                 <tr>
-                                                    <td>{{ row }}</td>
+                                                    <td>{{ stmt }}</td>
                                                     {% for col in q.columns %}
+                                                    {% set c_idx = loop.index0 %}
                                                     <td>
-                                                        <input type="{{ 'radio' if q.type == 'grid_radio' else 'checkbox' }}" name="q_{{ q.id }}_r{{ r_idx }}" value="{{ col }}" {% if q.type == 'grid_radio' and q.required %}required{% endif %}>
+                                                        <input type="radio" name="q_{{ q.id }}_r{{ r_idx }}" value="{{ col }}" {% if q.required %}required{% endif %}>
+                                                        {% if not q.hideNumbers %}
+                                                        <div style="font-size:11px; color:#777; margin-top:4px;">{{ c_idx + 1 }}</div>
+                                                        {% endif %}
                                                     </td>
                                                     {% endfor %}
+                                                    {% if q.notApplicable %}
+                                                    <td><input type="radio" name="q_{{ q.id }}_r{{ r_idx }}" value="N/A" {% if q.required %}required{% endif %}></td>
+                                                    {% endif %}
                                                 </tr>
                                                 {% endfor %}
                                             </tbody>
                                         </table>
                                     </div>
+                                
+                                {% elif q.type == 'rating' %}
+                                    <div class="rating-stars">
+                                        {% for i in range(5, 0, -1) %}
+                                        <input type="radio" id="q_{{ q.id }}_{{ i }}" name="q_{{ q.id }}" value="{{ i }}" {% if q.required %}required{% endif %}>
+                                        <label for="q_{{ q.id }}_{{ i }}"><i class="fas fa-star"></i></label>
+                                        {% endfor %}
+                                    </div>
                                     
-                                {% elif q.type == 'date' %}
-                                    <input type="date" name="q_{{ q.id }}" class="classic-input sz-small" {% if q.required %}required{% endif %}>
-                                {% elif q.type == 'time' %}
-                                    <input type="time" name="q_{{ q.id }}" class="classic-input sz-small" {% if q.required %}required{% endif %}>
+                                {% elif q.type == 'file' %}
+                                    <input type="file" name="q_{{ q.id }}" class="classic-input {{ sz }}" style="padding: 2px;" {% if q.required %}required{% endif %}>
                                 {% endif %}
                             </div>
                         </div>
@@ -579,7 +624,12 @@
                         </div>
                         <div style="flex:1; text-align:right;">
                             {% if not loop.last %}
-                                <button type="button" class="btn-submit" onclick="changePage({{ loop.index + 1 }})">{{ next_btn_list[loop.index0] }}</button>
+                                {% if schema.hideFooterNumbers %}
+                                    <button type="button" class="btn-submit" onclick="changePage({{ loop.index + 1 }})">{{ next_btn_list[loop.index0] }}</button>
+                                {% else %}
+                                    <button type="button" class="btn-submit" onclick="changePage({{ loop.index + 1 }})">{{ next_btn_list[loop.index0] }}</button>
+                                    <div style="font-size:11px; color:#222; font-weight:bold; margin-top:10px;">{{ loop.index }} / {{ pages_list|length }}</div>
+                                {% endif %}
                             {% else %}
                                 <button type="submit" class="btn-submit">Submit Form</button>
                             {% endif %}
@@ -594,17 +644,23 @@
 
     <script>
         function changePage(pageNum) {
-            // Sembunyikan semua page
             document.querySelectorAll('.form-page').forEach(function(page) {
                 page.style.display = 'none';
             });
-            // Tampilkan page target
             var targetPage = document.getElementById('page-' + pageNum);
             if(targetPage) {
                 targetPage.style.display = 'block';
             }
             
-            // Perbarui step indicator / pagination lingkaran jika ada
+            var totalPages = {{ pages_list|length }};
+            var progressBar = document.getElementById('progressBar');
+            var progressText = document.getElementById('progressText');
+            if (progressBar && progressText) {
+                var percentage = Math.round(((pageNum - 1) / totalPages) * 100);
+                progressBar.style.width = percentage + '%';
+                progressText.innerText = percentage + '%';
+            }
+
             var circles = document.querySelectorAll('.step-circle');
             if (circles.length > 0) {
                 circles.forEach(function(circle, index) {
@@ -623,7 +679,26 @@
                     }
                 });
             }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+
+        document.getElementById('mainForm').addEventListener('submit', function(e) {
+            let valid = true;
+            document.querySelectorAll('.q-opt:checked').forEach(el => {
+                if(el.disabled || (el.parentElement && el.parentElement.classList.contains('disabled-option'))) {
+                    valid = false;
+                }
+            });
+            document.querySelectorAll('option.q-opt:checked').forEach(el => {
+                if(el.disabled) {
+                    valid = false;
+                }
+            });
+            if(!valid) {
+                e.preventDefault();
+                alert("Anda tidak dapat mengirimkan formulir karena ada pilihan yang kuantitasnya sudah habis terisi.");
+            }
+        });
     </script>
 </body>
 </html>
