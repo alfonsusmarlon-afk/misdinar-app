@@ -50,6 +50,10 @@
                 <span style="font-size: 11px; color: var(--text-gray);"><i class="fas fa-calendar-alt"></i> {{ p.tanggal_dibuat }}</span>
                 <span style="font-size: 10px; background: #f1f5f9; color: #475569; padding: 2px 6px; border-radius: 4px; font-weight: bold;" class="search-target">{{ p.target | upper }}</span>
             </div>
+
+            {% if p.deskripsi %}
+            <p style="font-size: 12px; color: var(--text-gray); margin: 0 0 12px 0; line-height: 1.4;">{{ p.deskripsi }}</p>
+            {% endif %}
             
             {% if p.editor_terakhir %}
             <div style="margin-bottom: 12px;">
@@ -70,7 +74,7 @@
         
         {% if role in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
         <div style="padding: 12px 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 8px;">
-            <button onclick="openEditModal('{{ p.id }}', '{{ p.judul|escape }}', '{{ p.target }}')" style="background: none; border: none; color: var(--primary-blue); cursor: pointer;"><i class="fas fa-edit"></i> Edit</button>
+            <button onclick="openEditModal('{{ p.id }}', '{{ p.judul|replace('\'', '\\\'') }}', '{{ p.deskripsi|replace('\n', '\\n')|replace('\r', '')|replace('\'', '\\\'') if p.deskripsi else '' }}', '{{ p.target }}')" style="background: none; border: none; color: var(--primary-blue); cursor: pointer;"><i class="fas fa-edit"></i> Edit</button>
             <form action="{{ url_for('galeri') }}" method="POST" style="margin: 0;" onsubmit="return confirm('Hapus album foto ini?');">
                 <input type="hidden" name="action" value="hapus"><input type="hidden" name="id" value="{{ p.id }}">
                 <button type="submit" style="background: none; border: none; color: #ef4444; cursor: pointer;"><i class="fas fa-trash-alt"></i></button>
@@ -100,6 +104,11 @@
                 <input type="text" name="judul" id="judulField" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box;">
             </div>
             
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Deskripsi / Pesan Tambahan</label>
+                <textarea name="deskripsi" id="deskripsiField" rows="3" placeholder="Opsional..." style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit; resize: vertical;"></textarea>
+            </div>
+
             <div style="margin-bottom: 16px;">
                 <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px;">Target Viewer</label>
                 <select name="target" id="targetField" class="select2-multi" multiple="multiple" required style="width: 100%;">
@@ -146,15 +155,17 @@ function openAddModal() {
     document.getElementById('actionField').value = 'tambah';
     document.getElementById('idField').value = '';
     document.getElementById('judulField').value = '';
+    document.getElementById('deskripsiField').value = '';
     document.getElementById('fotoField').required = true;
     $('.select2-multi').val(null).trigger('change');
     document.getElementById('dataModal').style.display = 'flex';
 }
 
-function openEditModal(id, judul, target) {
+function openEditModal(id, judul, deskripsi, target) {
     document.getElementById('actionField').value = 'edit';
     document.getElementById('idField').value = id;
     document.getElementById('judulField').value = judul;
+    document.getElementById('deskripsiField').value = deskripsi;
     document.getElementById('fotoField').required = false;
     let targetArr = target.split(',');
     $('.select2-multi').val(targetArr).trigger('change');

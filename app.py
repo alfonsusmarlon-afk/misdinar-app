@@ -58,13 +58,14 @@ def init_db():
             conn.execute(f'ALTER TABLE users ADD COLUMN {col_name} {col_type}')
 
     conn.execute('''CREATE TABLE IF NOT EXISTS pengumuman (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, deskripsi TEXT DEFAULT "", tanggal_pelaksanaan TEXT DEFAULT "-", waktu_pelaksanaan TEXT NOT NULL, tempat TEXT DEFAULT "-", tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL, editor_terakhir TEXT, waktu_edit TEXT)''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS dokumen (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, file_path TEXT NOT NULL, tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL, editor_terakhir TEXT, waktu_edit TEXT)''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS galeri (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, foto_path TEXT NOT NULL, tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL, editor_terakhir TEXT, waktu_edit TEXT)''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS dokumen (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, deskripsi TEXT DEFAULT "", file_path TEXT NOT NULL, tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL, editor_terakhir TEXT, waktu_edit TEXT)''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS galeri (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, deskripsi TEXT DEFAULT "", foto_path TEXT NOT NULL, tanggal_dibuat TEXT NOT NULL, target TEXT NOT NULL, pembuat TEXT NOT NULL, editor_terakhir TEXT, waktu_edit TEXT)''')
     
     for table in ['pengumuman', 'dokumen', 'galeri']:
         cols = [col[1] for col in conn.execute(f'PRAGMA table_info({table})').fetchall()]
         if 'editor_terakhir' not in cols: conn.execute(f'ALTER TABLE {table} ADD COLUMN editor_terakhir TEXT')
         if 'waktu_edit' not in cols: conn.execute(f'ALTER TABLE {table} ADD COLUMN waktu_edit TEXT')
+        if table in ['dokumen', 'galeri'] and 'deskripsi' not in cols: conn.execute(f'ALTER TABLE {table} ADD COLUMN deskripsi TEXT DEFAULT ""')
 
     pengumuman_cols = [col[1] for col in conn.execute('PRAGMA table_info(pengumuman)').fetchall()]
     if 'tempat' not in pengumuman_cols: conn.execute('ALTER TABLE pengumuman ADD COLUMN tempat TEXT DEFAULT "-"')
@@ -1249,6 +1250,7 @@ def dokumen():
             target_str = 'semua' if 'semua' in request.form.getlist('target') else ','.join(request.form.getlist('target'))
             file_paths = []
             judul_info = request.form.get('judul')
+            deskripsi_info = request.form.get('deskripsi', '')
             
             for idx, file in enumerate(request.files.getlist('file')):
                 if file and file.filename != '':
@@ -1257,8 +1259,8 @@ def dokumen():
                     file_paths.append(f"uploads/dokumen/{filename}")
                     
             if action == 'tambah': 
-                conn.execute('INSERT INTO dokumen (judul, file_path, tanggal_dibuat, target, pembuat, editor_terakhir, waktu_edit) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-                             (judul_info, ','.join(file_paths), datetime.now().strftime("%d %b %Y"), target_str, user_id, nama_pengurus, now_str))
+                conn.execute('INSERT INTO dokumen (judul, deskripsi, file_path, tanggal_dibuat, target, pembuat, editor_terakhir, waktu_edit) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', 
+                             (judul_info, deskripsi_info, ','.join(file_paths), datetime.now().strftime("%d %b %Y"), target_str, user_id, nama_pengurus, now_str))
                 create_notification(conn, target_str, f"Ada dokumen baru yang dibagikan: {judul_info}", url_for('dokumen'))
             else:
                 p_id = request.form.get('id')
@@ -1267,11 +1269,11 @@ def dokumen():
                     if old_doc and old_doc['file_path']:
                         for p in old_doc['file_path'].split(','):
                             if os.path.exists(os.path.join('static', p)): os.remove(os.path.join('static', p))
-                    conn.execute('UPDATE dokumen SET judul=?, file_path=?, target=?, editor_terakhir=?, waktu_edit=? WHERE id=?', 
-                                 (judul_info, ','.join(file_paths), target_str, nama_pengurus, now_str, p_id))
+                    conn.execute('UPDATE dokumen SET judul=?, deskripsi=?, file_path=?, target=?, editor_terakhir=?, waktu_edit=? WHERE id=?', 
+                                 (judul_info, deskripsi_info, ','.join(file_paths), target_str, nama_pengurus, now_str, p_id))
                 else: 
-                    conn.execute('UPDATE dokumen SET judul=?, target=?, editor_terakhir=?, waktu_edit=? WHERE id=?', 
-                                 (judul_info, target_str, nama_pengurus, now_str, p_id))
+                    conn.execute('UPDATE dokumen SET judul=?, deskripsi=?, target=?, editor_terakhir=?, waktu_edit=? WHERE id=?', 
+                                 (judul_info, deskripsi_info, target_str, nama_pengurus, now_str, p_id))
                 create_notification(conn, target_str, f"Dokumen '{judul_info}' baru saja diperbarui.", url_for('dokumen'))
                 
         elif action == 'hapus':
@@ -1299,6 +1301,7 @@ def galeri():
             target_str = 'semua' if 'semua' in request.form.getlist('target') else ','.join(request.form.getlist('target'))
             foto_paths = []
             judul_info = request.form.get('judul')
+            deskripsi_info = request.form.get('deskripsi', '')
             
             for idx, foto in enumerate(request.files.getlist('foto')):
                 if foto and foto.filename != '':
@@ -1307,8 +1310,8 @@ def galeri():
                     foto_paths.append(f"uploads/galeri/{filename}")
                     
             if action == 'tambah': 
-                conn.execute('INSERT INTO galeri (judul, foto_path, tanggal_dibuat, target, pembuat, editor_terakhir, waktu_edit) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-                             (judul_info, ','.join(foto_paths), datetime.now().strftime("%d %b %Y"), target_str, user_id, nama_pengurus, now_str))
+                conn.execute('INSERT INTO galeri (judul, deskripsi, foto_path, tanggal_dibuat, target, pembuat, editor_terakhir, waktu_edit) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', 
+                             (judul_info, deskripsi_info, ','.join(foto_paths), datetime.now().strftime("%d %b %Y"), target_str, user_id, nama_pengurus, now_str))
                 create_notification(conn, target_str, f"Album foto baru telah diupload: {judul_info}", url_for('galeri'))
             else:
                 p_id = request.form.get('id')
@@ -1317,11 +1320,11 @@ def galeri():
                     if old_gal and old_gal['foto_path']:
                         for p in old_gal['foto_path'].split(','):
                             if os.path.exists(os.path.join('static', p)): os.remove(os.path.join('static', p))
-                    conn.execute('UPDATE galeri SET judul=?, foto_path=?, target=?, editor_terakhir=?, waktu_edit=? WHERE id=?', 
-                                 (judul_info, ','.join(foto_paths), target_str, nama_pengurus, now_str, p_id))
+                    conn.execute('UPDATE galeri SET judul=?, deskripsi=?, foto_path=?, target=?, editor_terakhir=?, waktu_edit=? WHERE id=?', 
+                                 (judul_info, deskripsi_info, ','.join(foto_paths), target_str, nama_pengurus, now_str, p_id))
                 else: 
-                    conn.execute('UPDATE galeri SET judul=?, target=?, editor_terakhir=?, waktu_edit=? WHERE id=?', 
-                                 (judul_info, target_str, nama_pengurus, now_str, p_id))
+                    conn.execute('UPDATE galeri SET judul=?, deskripsi=?, target=?, editor_terakhir=?, waktu_edit=? WHERE id=?', 
+                                 (judul_info, deskripsi_info, target_str, nama_pengurus, now_str, p_id))
                 create_notification(conn, target_str, f"Album foto '{judul_info}' telah diperbarui.", url_for('galeri'))
                 
         elif action == 'hapus':
