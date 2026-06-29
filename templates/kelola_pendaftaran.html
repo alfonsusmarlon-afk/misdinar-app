@@ -172,6 +172,8 @@
                 <div style="display: flex; gap: 4px;">
                     <a href="{{ url_for('kelola_pendaftaran', edit_id=f.id) }}" class="btn-outline" style="padding: 6px 12px; font-size: 12px; color: #1e70a6; border-color: #1e70a6; text-decoration: none;"><i class="fas fa-edit"></i> Edit</a>
                     <a href="{{ url_for('kelola_pendaftaran', respon_id=f.id) }}" class="btn-outline" style="padding: 6px 12px; font-size: 12px; color: #0ea5e9; border-color: #0ea5e9; text-decoration: none;"><i class="fas fa-list"></i> Hasil</a>
+                    
+                    <button type="button" class="btn-outline" style="padding: 6px 12px; font-size: 12px; color: #10b981; border-color: #10b981; background: transparent; cursor: pointer;" onclick="navigator.clipboard.writeText('{{ request.host_url[:-1] }}{{ url_for('isi_formulir', form_id=f.id) }}'); alert('Link formulir berhasil disalin!');"><i class="fas fa-share-alt"></i> Share</button>
                 </div>
                 {% if not f.is_default %}
                 <form action="{{ url_for('kelola_pendaftaran') }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus formulir ini selamanya beserta seluruh data tanggungannya?');" style="margin: 0;">
@@ -200,6 +202,7 @@
             <input type="hidden" name="action" value="save_schema">
             <input type="hidden" name="form_id" value="{{ form_data.id }}">
             <input type="hidden" name="schema_data" id="schema_data">
+            <input type="hidden" name="target" id="target_input" value="{{ form_data.target | default('semua') }}">
             <button type="button" class="w-save-btn" onclick="saveForm()"><i class="fas fa-save"></i> Simpan Formulir</button>
         </form>
     </div>
@@ -248,6 +251,19 @@
 
         <div id="panel-form" class="w-panel">
             <div id="form-settings-basic" style="display: none;">
+                
+                <div class="s-group" style="background:#eef5fc; border:1px solid #cddbea; padding:12px; border-radius:6px; margin-bottom:15px;">
+                    <label class="fs-label" style="color:#222; font-size:12px; margin-bottom:8px;">Target Penerima Formulir</label>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label class="s-checkbox-label"><input type="checkbox" class="s-checkbox form-target-cb" value="semua"> Semua (Publik)</label>
+                        <label class="s-checkbox-label"><input type="checkbox" class="s-checkbox form-target-cb" value="super admin"> Super Admin</label>
+                        <label class="s-checkbox-label"><input type="checkbox" class="s-checkbox form-target-cb" value="bph"> BPH</label>
+                        <label class="s-checkbox-label"><input type="checkbox" class="s-checkbox form-target-cb" value="penjadwalan"> Penjadwalan</label>
+                        <label class="s-checkbox-label"><input type="checkbox" class="s-checkbox form-target-cb" value="pelatihan"> Pelatihan</label>
+                        <label class="s-checkbox-label"><input type="checkbox" class="s-checkbox form-target-cb" value="user"> Anggota (User Biasa)</label>
+                    </div>
+                </div>
+
                 <div class="s-group">
                     <label class="fs-label">Form Title</label>
                     <input type="text" class="s-input" id="fs-title" oninput="updateFormSettings()">
@@ -1630,11 +1646,27 @@
 
     function saveForm() {
         document.getElementById('schema_data').value = JSON.stringify(schema);
+        
+        let selectedTargets = [];
+        document.querySelectorAll('.form-target-cb:checked').forEach(c => selectedTargets.push(c.value));
+        if (selectedTargets.length === 0) selectedTargets = ['semua'];
+        document.getElementById('target_input').value = selectedTargets.join(',');
+        
         document.getElementById('saveForm').submit();
     }
 
     document.addEventListener('DOMContentLoaded', () => {
         renderPreview();
+        
+        let targetVal = document.getElementById('target_input');
+        if(targetVal) {
+            let initialTargets = targetVal.value.split(',');
+            document.querySelectorAll('.form-target-cb').forEach(cb => {
+                if(initialTargets.includes(cb.value)) {
+                    cb.checked = true;
+                }
+            });
+        }
     });
 </script>
 
@@ -1661,47 +1693,60 @@
     <table style="width: 100%; border-collapse: collapse; min-width: 800px; font-size: 14px;">
         <thead>
             <tr style="background: var(--background); color: var(--text-dark); text-align: left;">
-                <th style="padding: 12px; border-bottom: 2px solid var(--border-color); width: 15%;">Waktu Submit</th>
-                <th style="padding: 12px; border-bottom: 2px solid var(--border-color);">Rincian Jawaban</th>
-                <th style="padding: 12px; border-bottom: 2px solid var(--border-color); width: 15%;">Status</th>
-                <th style="padding: 12px; border-bottom: 2px solid var(--border-color); text-align: center; width: 10%;">Aksi</th>
+                <th style="padding: 12px; border-bottom: 2px solid var(--border-color); width: 25%;">Responden (ID)</th>
+                <th style="padding: 12px; border-bottom: 2px solid var(--border-color); width: 25%;">Waktu Submit</th>
+                <th style="padding: 12px; border-bottom: 2px solid var(--border-color); width: 25%;">Status</th>
+                <th style="padding: 12px; border-bottom: 2px solid var(--border-color); text-align: center; width: 25%;">Aksi</th>
             </tr>
         </thead>
         <tbody>
             {% for p in pendaftar %}
+            {% set nama_user = p.data_parsed.get('Nama Lengkap', p.data_parsed.get('Nama', p.data_parsed.get('Username', 'User Anonim'))) %}
             <tr style="border-bottom: 1px solid var(--border-color);">
-                <td style="padding: 12px; vertical-align: top; color: var(--text-dark);">{{ p.tanggal }}</td>
-                <td style="padding: 12px; vertical-align: top; color: var(--text-dark);">
-                    <ul style="margin: 0; padding-left: 16px;">
-                    {% for key, val in p.data_parsed.items() %}
-                        <li style="margin-bottom: 6px;">
-                            <strong style="color: #1e70a6;">{{ key }}:</strong><br>
-                            {{ val | safe }}
-                        </li>
-                    {% endfor %}
-                    </ul>
+                <td style="padding: 12px; vertical-align: middle; color: var(--text-dark); font-weight: 600;">
+                    <i class="fas fa-user-circle" style="color: #cbd5e1; margin-right: 6px; font-size: 18px; vertical-align: middle;"></i> 
+                    {{ nama_user }}
                 </td>
-                <td style="padding: 12px; vertical-align: top;">
-                    <form action="{{ url_for('kelola_pendaftaran') }}" method="POST" style="margin: 0;">
-                        <input type="hidden" name="action" value="update_status">
-                        <input type="hidden" name="id" value="{{ p.id }}">
-                        <input type="hidden" name="form_id" value="{{ form_data.id }}">
-                        <select name="status" onchange="this.form.submit()" style="padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); font-family: inherit; width: 100%; font-weight: bold; color: {% if p.status == 'Diterima' %}#10b981{% elif p.status == 'Ditolak' %}#ef4444{% else %}#f59e0b{% endif %};">
-                            <option value="Menunggu" {% if p.status == 'Menunggu' %}selected{% endif %}>Menunggu</option>
-                            <option value="Diterima" {% if p.status == 'Diterima' %}selected{% endif %}>Diterima</option>
-                            <option value="Ditolak" {% if p.status == 'Ditolak' %}selected{% endif %}>Ditolak</option>
-                        </select>
-                    </form>
+                <td style="padding: 12px; vertical-align: middle; color: var(--text-gray);">{{ p.tanggal }}</td>
+                <td style="padding: 12px; vertical-align: middle;">
+                    <span style="background: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;"><i class="fas fa-check-circle"></i> Completed</span>
                 </td>
-                <td style="padding: 12px; text-align: center; vertical-align: top;">
-                    <form action="{{ url_for('kelola_pendaftaran') }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus respon/jawaban ini?');" style="margin: 0;">
-                        <input type="hidden" name="action" value="hapus_pendaftar">
-                        <input type="hidden" name="id" value="{{ p.id }}">
-                        <input type="hidden" name="form_id" value="{{ form_data.id }}">
-                        <button type="submit" class="btn-outline" style="color: #ef4444; border-color: #ef4444; padding: 6px 10px; font-size: 13px;"><i class="fas fa-trash"></i></button>
-                    </form>
+                <td style="padding: 12px; text-align: center; vertical-align: middle;">
+                    <div style="display: flex; gap: 8px; justify-content: center;">
+                        <button type="button" class="btn-outline" style="color: #3b82f6; border-color: #3b82f6; padding: 6px 12px; font-size: 12px; cursor: pointer;" onclick="document.getElementById('modal-jawaban-{{ p.id }}').style.display='flex';" title="Lihat Jawaban">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                        <form action="{{ url_for('kelola_pendaftaran') }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus tanggapan ini?');" style="margin: 0;">
+                            <input type="hidden" name="action" value="hapus_pendaftar">
+                            <input type="hidden" name="id" value="{{ p.id }}">
+                            <input type="hidden" name="form_id" value="{{ form_data.id }}">
+                            <button type="submit" class="btn-outline" style="color: #ef4444; border-color: #ef4444; padding: 6px 12px; font-size: 12px;"><i class="fas fa-trash"></i></button>
+                        </form>
+                    </div>
                 </td>
             </tr>
+
+            <div id="modal-jawaban-{{ p.id }}" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; text-align: left;">
+                <div style="background: var(--white); width: 90%; max-width: 600px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;">
+                    <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
+                        <h3 style="margin: 0; font-size: 16px; color: var(--text-dark);"><i class="fas fa-file-alt" style="color: #1e70a6; margin-right: 8px;"></i> Jawaban: {{ nama_user }}</h3>
+                        <button type="button" onclick="document.getElementById('modal-jawaban-{{ p.id }}').style.display='none';" style="background: none; border: none; font-size: 20px; color: var(--text-gray); cursor: pointer;"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div style="padding: 20px; overflow-y: auto; flex: 1;">
+                        <ul style="margin: 0; padding: 0; list-style: none;">
+                        {% for key, val in p.data_parsed.items() %}
+                            <li style="margin-bottom: 16px; background: #f1f5f9; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                <strong style="color: #475569; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">{{ key }}</strong>
+                                <span style="color: #0f172a; font-size: 14px;">{{ val | safe }}</span>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    </div>
+                    <div style="padding: 16px 20px; border-top: 1px solid var(--border-color); text-align: right; background: #f8fafc;">
+                        <button type="button" class="btn-primary" style="padding: 8px 16px; cursor: pointer; border-radius: 6px; background: #1e70a6; color: #fff; border: none;" onclick="document.getElementById('modal-jawaban-{{ p.id }}').style.display='none';">Tutup</button>
+                    </div>
+                </div>
+            </div>
             {% endfor %}
             {% if not pendaftar %}
             <tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--text-gray);">Belum ada tanggapan masuk untuk formulir ini.</td></tr>

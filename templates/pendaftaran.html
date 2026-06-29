@@ -103,7 +103,7 @@
         .choice-group { display: flex; flex-direction: column; gap: 6px; margin-top: 6px;}
         .choice-label { font-size: 13px; color: #222; display: flex; align-items: center; gap: 6px; cursor: pointer; }
         .choice-label input { margin: 0; }
-        .choice-label.disabled-option { color: #bbb; text-decoration: line-through; cursor: not-allowed; }
+        .choice-label.disabled-option { color: #bbb; text-decoration: line-through; cursor: not-allowed; opacity: 0.6; }
 
         /* Grid / Matriks Likert */
         .grid-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; border: 1px solid #ccc; }
@@ -147,12 +147,10 @@
     <div class="form-container">
         
         {% if closed %}
-            <div class="form-header">
-                <h1>{{ schema.title }}</h1>
-            </div>
-            <hr class="divider">
-            <div class="msg-box">
-                <p>{{ schema.closedMsg | default('Formulir ini sudah ditutup dan tidak menerima tanggapan lagi.') }}</p>
+            <div style="text-align: center; padding: 60px 20px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 500px; margin: 40px auto; border: 1px solid #e2e8f0;">
+                <i class="fas fa-lock" style="font-size: 56px; color: #cbd5e1; margin-bottom: 20px;"></i>
+                <h2 style="color: #334155; margin-bottom: 12px;">Formulir Ditutup</h2>
+                <p style="color: #64748b; font-size: 15px; line-height: 1.6;">{{ closed_msg | default(schema.closedMsg) | default('Formulir ini telah ditutup dan tidak menerima tanggapan lagi.') }}</p>
             </div>
         
         {% elif success %}
@@ -513,18 +511,25 @@
                                     {% if q.layout == 'Side by Side' %}{% set layoutStyle = 'display:flex;flex-wrap:wrap;gap:15px;' %}{% endif %}
                                     
                                     <div style="{{ layoutStyle }} margin-top: 6px;">
-                                        {% for opt in q.options %}
-                                        {% set o_idx = loop.index0 %}
-                                        {% set is_exhausted = q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] is defined and q.optionLimits[o_idx] != '' and q.optionLimits[o_idx]|int <= 0 %}
-                                        <label class="choice-label {% if is_exhausted %}disabled-option{% endif %}">
-                                            <input type="radio" class="q-opt" name="q_{{ q.id }}" value="{{ opt }}" {% if q.required %}required{% endif %} {% if q.predefinedValue == opt %}checked{% endif %} {% if is_exhausted %}disabled{% endif %}>
-                                            <span>{{ opt }} 
-                                                {% if q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] is defined and q.optionLimits[o_idx] != '' %}
-                                                <span style="font-size:11px; color:#999; font-style:italic; margin-left:4px;">(Sisa: {{ q.optionLimits[o_idx] }})</span>
-                                                {% endif %}
-                                            </span>
-                                        </label>
-                                        {% endfor %}
+                                        {% if q.processedOptions %}
+                                            {% for pOpt in q.processedOptions %}
+                                            <label class="choice-label {% if pOpt.disabled %}disabled-option{% endif %}">
+                                                <input type="radio" class="q-opt" name="q_{{ q.id }}" value="{{ pOpt.text }}" {% if q.required and not pOpt.disabled %}required{% endif %} {% if q.predefinedValue == pOpt.text and not pOpt.disabled %}checked{% endif %} {% if pOpt.disabled %}disabled{% endif %}>
+                                                <span>{{ pOpt.text }} 
+                                                    {% if q.maxQuantities %}
+                                                    <span style="font-size:11px; color:#999; font-style:italic; margin-left:4px;">(Sisa: {{ pOpt.remaining }})</span>
+                                                    {% endif %}
+                                                </span>
+                                            </label>
+                                            {% endfor %}
+                                        {% else %}
+                                            {% for opt in q.options %}
+                                            <label class="choice-label">
+                                                <input type="radio" class="q-opt" name="q_{{ q.id }}" value="{{ opt }}" {% if q.required %}required{% endif %} {% if q.predefinedValue == opt %}checked{% endif %}>
+                                                <span>{{ opt }}</span>
+                                            </label>
+                                            {% endfor %}
+                                        {% endif %}
                                     </div>
                                     
                                 {% elif q.type == 'checkbox' %}
@@ -534,33 +539,41 @@
                                     {% if q.layout == 'Side by Side' %}{% set layoutStyle = 'display:flex;flex-wrap:wrap;gap:15px;' %}{% endif %}
                                     
                                     <div style="{{ layoutStyle }} margin-top: 6px;">
-                                        {% for opt in q.options %}
-                                        {% set o_idx = loop.index0 %}
-                                        {% set is_exhausted = q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] is defined and q.optionLimits[o_idx] != '' and q.optionLimits[o_idx]|int <= 0 %}
-                                        <label class="choice-label {% if is_exhausted %}disabled-option{% endif %}">
-                                            <input type="checkbox" class="q-opt" name="q_{{ q.id }}" value="{{ opt }}" {% if is_exhausted %}disabled{% endif %} {% if q.rangeMax %}onchange="enforceCheckboxLimit(this, 'q_{{ q.id }}', {{ q.rangeMax }})"{% endif %}>
-                                            <span>{{ opt }}
-                                                {% if q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] is defined and q.optionLimits[o_idx] != '' %}
-                                                <span style="font-size:11px; color:#999; font-style:italic; margin-left:4px;">(Sisa: {{ q.optionLimits[o_idx] }})</span>
-                                                {% endif %}
-                                            </span>
-                                        </label>
-                                        {% endfor %}
+                                        {% if q.processedOptions %}
+                                            {% for pOpt in q.processedOptions %}
+                                            <label class="choice-label {% if pOpt.disabled %}disabled-option{% endif %}">
+                                                <input type="checkbox" class="q-opt" name="q_{{ q.id }}" value="{{ pOpt.text }}" {% if pOpt.disabled %}disabled{% endif %} {% if q.rangeMax %}onchange="enforceCheckboxLimit(this, 'q_{{ q.id }}', {{ q.rangeMax }})"{% endif %}>
+                                                <span>{{ pOpt.text }}
+                                                    {% if q.maxQuantities %}
+                                                    <span style="font-size:11px; color:#999; font-style:italic; margin-left:4px;">(Sisa: {{ pOpt.remaining }})</span>
+                                                    {% endif %}
+                                                </span>
+                                            </label>
+                                            {% endfor %}
+                                        {% else %}
+                                            {% for opt in q.options %}
+                                            <label class="choice-label">
+                                                <input type="checkbox" class="q-opt" name="q_{{ q.id }}" value="{{ opt }}">
+                                                <span>{{ opt }}</span>
+                                            </label>
+                                            {% endfor %}
+                                        {% endif %}
                                     </div>
                                     
                                 {% elif q.type == 'dropdown' %}
                                     <select name="q_{{ q.id }}" class="classic-input {{ sz }}" {% if q.required %}required{% endif %}>
                                         <option value="">Pilih salah satu</option>
-                                        {% for opt in q.options %}
-                                        {% set o_idx = loop.index0 %}
-                                        {% set is_exhausted = q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] is defined and q.optionLimits[o_idx] != '' and q.optionLimits[o_idx]|int <= 0 %}
-                                            <option value="{{ opt }}" class="q-opt" {% if is_exhausted %}disabled style="color:#ccc;"{% endif %}>
-                                                {{ opt }} 
-                                                {% if q.maxQuantities and q.optionLimits and q.optionLimits[o_idx] is defined and q.optionLimits[o_idx] != '' %}
-                                                -- Sisa: {{ q.optionLimits[o_idx] }}
-                                                {% endif %}
-                                            </option>
-                                        {% endfor %}
+                                        {% if q.processedOptions %}
+                                            {% for pOpt in q.processedOptions %}
+                                                <option value="{{ pOpt.text }}" class="q-opt" {% if pOpt.disabled %}disabled style="color:#ccc;"{% endif %}>
+                                                    {{ pOpt.text }} {% if q.maxQuantities %}-- Sisa: {{ pOpt.remaining }}{% endif %}
+                                                </option>
+                                            {% endfor %}
+                                        {% else %}
+                                            {% for opt in q.options %}
+                                                <option value="{{ opt }}" class="q-opt">{{ opt }}</option>
+                                            {% endfor %}
+                                        {% endif %}
                                     </select>
                                     
                                 {% elif q.type == 'likert' %}
@@ -643,6 +656,9 @@
     </div>
 
     <script>
+        // Data dari backend untuk membantu logik validasi
+        let schema = {{ schema | default('{}') | tojson | safe }};
+
         function changePage(pageNum) {
             document.querySelectorAll('.form-page').forEach(function(page) {
                 page.style.display = 'none';
@@ -652,7 +668,7 @@
                 targetPage.style.display = 'block';
             }
             
-            var totalPages = {{ pages_list|length }};
+            var totalPages = {{ pages_list|length | default(1) }};
             var progressBar = document.getElementById('progressBar');
             var progressText = document.getElementById('progressText');
             if (progressBar && progressText) {
@@ -682,23 +698,32 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        document.getElementById('mainForm').addEventListener('submit', function(e) {
-            let valid = true;
-            document.querySelectorAll('.q-opt:checked').forEach(el => {
-                if(el.disabled || (el.parentElement && el.parentElement.classList.contains('disabled-option'))) {
-                    valid = false;
+        // Cegah Form Tersubmit Apabila Pilihan Di-hack oleh User / Invalid
+        let mainForm = document.getElementById('mainForm');
+        if(mainForm) {
+            mainForm.addEventListener('submit', function(e) {
+                let valid = true;
+                
+                // Pengecekan Opsi Radio/Checkbox Disabled
+                document.querySelectorAll('.q-opt:checked').forEach(el => {
+                    if(el.disabled || (el.parentElement && el.parentElement.classList.contains('disabled-option'))) {
+                        valid = false;
+                    }
+                });
+
+                // Pengecekan Dropdown Disabled
+                document.querySelectorAll('option.q-opt:checked').forEach(el => {
+                    if(el.disabled) {
+                        valid = false;
+                    }
+                });
+
+                if(!valid) {
+                    e.preventDefault();
+                    alert("Gagal Terkirim: Pilihan opsi yang Anda centang saat ini sudah kehabisan slot (kuota sudah 0). Silakan pilih opsi lain yang masih tersedia.");
                 }
             });
-            document.querySelectorAll('option.q-opt:checked').forEach(el => {
-                if(el.disabled) {
-                    valid = false;
-                }
-            });
-            if(!valid) {
-                e.preventDefault();
-                alert("Anda tidak dapat mengirimkan formulir karena ada pilihan yang kuantitasnya sudah habis terisi.");
-            }
-        });
+        }
     </script>
 </body>
 </html>

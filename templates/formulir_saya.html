@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Formulir Saya - MISDINAR{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 24px;">
+    <h2>Formulir Saya</h2>
+    <p>Daftar formulir yang ditugaskan kepada Anda atau terbuka untuk publik.</p>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+    {% for f in forms %}
+    <div style="background: var(--white); border-radius: 8px; border: 1px solid var(--border-color); overflow: hidden; display: flex; flex-direction: column; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        
+        <div style="height: 120px; background: #e5f2f9; display: flex; align-items: center; justify-content: center; position: relative;">
+            <i class="fas fa-file-signature" style="font-size: 48px; color: #1e70a6;"></i>
+            
+            <div style="position: absolute; top: 12px; right: 12px;">
+                {% if f.is_completed %}
+                    <span style="background: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid #34d399; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"><i class="fas fa-check-circle"></i> Completed</span>
+                {% else %}
+                    <span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid #f87171; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"><i class="fas fa-times-circle"></i> Not Completed</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div style="padding: 16px; flex: 1; display: flex; flex-direction: column;">
+            <h3 style="margin: 0 0 6px 0; font-size: 15px; color: var(--text-dark); line-height: 1.4;">{{ f.judul }}</h3>
+            
+            <div style="margin-bottom: 16px;">
+                {% if not f.is_active %}
+                    <span style="font-size: 11px; color: #ef4444; font-weight: bold;"><i class="fas fa-lock"></i> Formulir Ditutup</span>
+                {% else %}
+                    <span style="font-size: 11px; color: #10b981; font-weight: bold;"><i class="fas fa-lock-open"></i> Menerima Tanggapan</span>
+                {% endif %}
+            </div>
+
+            {% if f.is_completed %}
+                <button class="btn-outline" style="margin-top: auto; text-align: center; display: block; width: 100%; padding: 10px; border-radius: 6px; cursor: not-allowed; color: #64748b; border-color: #cbd5e1; background: #f8fafc;" disabled>
+                    <i class="fas fa-check-double"></i> Sudah Diisi
+                </button>
+            {% else %}
+                {% if f.is_active %}
+                    <a href="{{ url_for('isi_formulir', form_id=f.id) }}" class="btn-primary" style="margin-top: auto; text-align: center; display: block; text-decoration: none; padding: 10px; border-radius: 6px; background: #1e70a6; border-color: #1e70a6; box-shadow: 0 2px 4px rgba(30,112,166,0.3);">
+                        <i class="fas fa-edit"></i> Isi Formulir
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('isi_formulir', form_id=f.id) }}" class="btn-outline" style="margin-top: auto; text-align: center; display: block; text-decoration: none; padding: 10px; border-radius: 6px;">
+                        <i class="fas fa-info-circle"></i> Lihat Pesan
+                    </a>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: var(--white); border-radius: 8px; border: 1px solid var(--border-color); color: var(--text-gray);">
+        <i class="fas fa-inbox" style="font-size: 40px; color: #cbd5e1; margin-bottom: 12px;"></i>
+        <p style="margin:0;">Belum ada formulir yang ditugaskan untuk Anda saat ini.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

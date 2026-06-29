@@ -114,7 +114,12 @@ def init_db():
         hashed_pw = generate_password_hash('super123')
         conn.execute('INSERT INTO users (username, password, nama, role, no_hp, nama_panggilan) VALUES (?, ?, ?, ?, ?, ?)', ('superadmin', hashed_pw, 'Super Admin', 'super admin', '081234567890', 'Admin'))
     
-    conn.execute('''CREATE TABLE IF NOT EXISTS formulir (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, deskripsi TEXT, schema_data TEXT NOT NULL, is_active INTEGER DEFAULT 1, is_default INTEGER DEFAULT 0)''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS formulir (id INTEGER PRIMARY KEY AUTOINCREMENT, judul TEXT NOT NULL, deskripsi TEXT, schema_data TEXT NOT NULL, is_active INTEGER DEFAULT 1, is_default INTEGER DEFAULT 0, target TEXT DEFAULT 'semua')''')
+    
+    formulir_cols = [col[1] for col in conn.execute('PRAGMA table_info(formulir)').fetchall()]
+    if 'target' not in formulir_cols:
+        conn.execute('ALTER TABLE formulir ADD COLUMN target TEXT DEFAULT "semua"')
+
     conn.execute('''CREATE TABLE IF NOT EXISTS pendaftaran (id INTEGER PRIMARY KEY AUTOINCREMENT, tanggal TEXT NOT NULL, data_respon TEXT NOT NULL, status TEXT DEFAULT 'Menunggu', form_id INTEGER DEFAULT 1)''')
     
     pendaftaran_cols = [col[1] for col in conn.execute('PRAGMA table_info(pendaftaran)').fetchall()]
@@ -135,7 +140,7 @@ def init_db():
                 {"id": 3, "type": "paragraph", "question": "Alasan ingin bergabung menjadi Misdinar?", "options": [], "required": True, "size": "Large"}
             ]
         })
-        conn.execute("INSERT INTO formulir (id, judul, deskripsi, schema_data, is_active, is_default) VALUES (1, ?, ?, ?, 1, 1)", 
+        conn.execute("INSERT INTO formulir (id, judul, deskripsi, schema_data, is_active, is_default, target) VALUES (1, ?, ?, ?, 1, 1, 'semua')", 
                      ("Pendaftaran Calon Misdinar Baru", "Formulir pendaftaran anggota baru otomatis.", default_schema))
 
     conn.commit()
@@ -971,6 +976,25 @@ def hapus_anggota():
         conn.close()
     return redirect(url_for('anggota'))
 
+@app.route('/formulir-saya')
+@login_required
+def formulir_saya():
+    user_role = session.get('role')
+    conn = get_db_connection()
+    # Hanya tampilkan form yang aktif dan bukan form pendaftaran utama (is_default=0)
+    forms_raw = conn.execute("SELECT * FROM formulir WHERE is_active=1 AND is_default=0 ORDER BY id DESC").fetchall()
+    
+    available_forms = []
+    for f in forms_raw:
+        f_dict = dict(f)
+        targets = [t.strip() for t in f_dict.get('target', 'semua').split(',')]
+        # Filter form yang targetnya sesuai dengan role user atau 'semua'
+        if 'semua' in targets or user_role in targets:
+            available_forms.append(f_dict)
+            
+    conn.close()
+    return render_template('formulir_saya.html', forms=available_forms)
+
 @app.route('/formulir/<int:form_id>', methods=['GET', 'POST'])
 def isi_formulir(form_id):
     conn = get_db_connection()
@@ -983,10 +1007,58 @@ def isi_formulir(form_id):
     form_dict = dict(form_db)
     form_schema = json.loads(form_dict['schema_data'])
     
+    # PENGAMANAN TARGET FORMULIR
+    if form_dict['is_default'] == 0:
+        if 'user_id' not in session:
+            conn.close()
+            flash("Silakan login untuk mengakses formulir ini.", "error")
+            return redirect(url_for('login'))
+        
+        targets = [t.strip() for t in form_dict.get('target', 'semua').split(',')]
+        if 'semua' not in targets and session.get('role') not in targets:
+            conn.close()
+            return "Akses Ditolak: Formulir ini tidak ditujukan untuk jabatan Anda.", 403
+
+    # CEK PESAN FORMULIR DITUTUP
     if form_dict['is_active'] == 0:
         conn.close()
-        return render_template('pendaftaran.html', closed=True, schema=form_schema)
-        
+        if form_schema.get('closedType') == 'redirect' and form_schema.get('closedUrl'):
+            return redirect(form_schema.get('closedUrl'))
+        closed_msg = form_schema.get('closedMsg', 'Formulir ini telah ditutup dan tidak menerima tanggapan lagi.')
+        return render_template('pendaftaran.html', closed=True, schema=form_schema, closed_msg=closed_msg)
+
+    # HITUNG BATAS KUANTITAS (LIMITS)
+    all_responses = conn.execute("SELECT data_respon FROM pendaftaran WHERE form_id=?", (form_id,)).fetchall()
+    usage_counts = {}
+    for r in all_responses:
+        try:
+            resp_data = json.loads(r['data_respon'])
+            for k, v in resp_data.items():
+                if isinstance(v, str):
+                    for item in v.split(','):
+                        clean_item = item.strip()
+                        usage_counts[clean_item] = usage_counts.get(clean_item, 0) + 1
+        except:
+            pass
+            
+    # Injeksi data sisa kuantitas ke schema agar diproses oleh pendaftaran.html
+    for q in form_schema.get('questions', []):
+        if q.get('maxQuantities') and q.get('options') and q.get('optionLimits'):
+            q['processedOptions'] = []
+            for i, opt in enumerate(q['options']):
+                limit = 0
+                try: 
+                    limit = int(q['optionLimits'][i])
+                except: 
+                    pass
+                used = usage_counts.get(opt.strip(), 0)
+                sisa = max(0, limit - used)
+                q['processedOptions'].append({
+                    'text': opt,
+                    'remaining': sisa,
+                    'disabled': sisa == 0
+                })
+    
     if request.method == 'POST':
         respon_data = {}
         nama_pendaftar, no_hp_pendaftar = "User Baru", ""
@@ -1113,13 +1185,14 @@ def kelola_pendaftaran():
         elif action == 'save_schema':
             form_id = request.form.get('form_id')
             schema_json = request.form.get('schema_data')
+            target_data = request.form.get('target', 'semua')
             try:
                 schema_parsed = json.loads(schema_json)
                 judul = schema_parsed.get('title', 'Formulir')
             except:
                 judul = 'Formulir'
                 
-            conn.execute("UPDATE formulir SET schema_data=?, judul=? WHERE id=?", (schema_json, judul, form_id))
+            conn.execute("UPDATE formulir SET schema_data=?, judul=?, target=? WHERE id=?", (schema_json, judul, target_data, form_id))
             conn.commit()
             flash("Formulir berhasil disimpan dan diperbarui!", "success")
             return redirect(url_for('kelola_pendaftaran', edit_id=form_id))
@@ -1465,7 +1538,7 @@ def penjadwalan():
             if not start_str or not end_str: return redirect(url_for('penjadwalan'))
             start_time, end_time = f"{start_str} 00:00:00", f"{end_str} 23:59:59"
             existing_rows = conn.execute('SELECT * FROM jadwal WHERE jadwal_datetime >= ? AND jadwal_datetime <= ? AND jenis="Matriks" ORDER BY id ASC', (start_time, end_time)).fetchall()
-            existing_wkt, existing_data, acara_data = {}, {}, {}
+            existing_wkt, existing_data, acara_data = {}, {}
             for r in existing_rows:
                 dt = datetime.strptime(r['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
                 d_str = dt.strftime('%Y-%m-%d')
