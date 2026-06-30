@@ -286,47 +286,54 @@
         
         if (localStorage.getItem('theme') === 'dark') {
             body.classList.add('dark-mode');
-            themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+            if(themeToggle) themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
         }
 
-        themeToggle.addEventListener('click', () => {
-            body.classList.toggle('dark-mode');
-            if (body.classList.contains('dark-mode')) {
-                localStorage.setItem('theme', 'dark');
-                themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
-            } else {
-                localStorage.setItem('theme', 'light');
-                themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
-            }
-        });
+        if(themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                body.classList.toggle('dark-mode');
+                if (body.classList.contains('dark-mode')) {
+                    localStorage.setItem('theme', 'dark');
+                    themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+                } else {
+                    localStorage.setItem('theme', 'light');
+                    themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+                }
+            });
+        }
 
         // SIDEBAR LOGIC (Responsive)
         const sidebar = document.getElementById('sidebar');
         const menuToggle = document.getElementById('menuToggle');
         const sidebarOverlay = document.getElementById('sidebarOverlay');
         
-        menuToggle.addEventListener('click', () => { 
-            sidebar.classList.toggle('open'); 
-            sidebarOverlay.classList.toggle('show');
-        });
+        if(menuToggle) {
+            menuToggle.addEventListener('click', () => { 
+                if(sidebar) sidebar.classList.toggle('open'); 
+                if(sidebarOverlay) sidebarOverlay.classList.toggle('show');
+            });
+        }
 
-        sidebarOverlay.addEventListener('click', () => {
-            sidebar.classList.remove('open');
-            sidebarOverlay.classList.remove('show');
-        });
+        if(sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', () => {
+                if(sidebar) sidebar.classList.remove('open');
+                if(sidebarOverlay) sidebarOverlay.classList.remove('show');
+            });
+        }
 
-        // NOTIFIKASI LOGIC
+        // NOTIFIKASI LOGIC (Dropdown)
         const notifBtn = document.getElementById('notifBtn');
         const notifDropdown = document.getElementById('notifDropdown');
         if(notifBtn) {
             notifBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                notifDropdown.classList.toggle('show');
+                if(notifDropdown) notifDropdown.classList.toggle('show');
                 const badge = document.getElementById('notifBadge');
-                if (badge && notifDropdown.classList.contains('show')) {
+                if (badge && notifDropdown && notifDropdown.classList.contains('show')) {
                     fetch("{{ url_for('baca_notif') }}", { method: 'POST' })
                     .then(res => res.json())
-                    .then(data => { if(data.success) badge.style.display = 'none'; });
+                    .then(data => { if(data.success) badge.style.display = 'none'; })
+                    .catch(err => console.error(err));
                 }
             });
         }
@@ -336,7 +343,20 @@
             }
         });
 
-        // LOGIKA PROMPT PWA (ADD TO HOME SCREEN)
+        // =======================================================
+        // LOGIKA PROMPT PWA (ADD TO HOME SCREEN) FIX ANDROID
+        // =======================================================
+        // Daftarkan Service Worker secara eksplisit agar PWA Valid
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js', {scope: '/'}).then(function(reg) {
+                    console.log('SW terdaftar:', reg.scope);
+                }).catch(function(err) {
+                    console.log('SW gagal:', err);
+                });
+            });
+        }
+
         let deferredPrompt;
         const installBanner = document.getElementById('pwaInstallBanner');
         const closeBtn = document.getElementById('pwaCloseBtn');
@@ -345,30 +365,35 @@
             // Cegah prompt bawaan Chrome muncul langsung
             e.preventDefault();
             deferredPrompt = e;
-            // Tampilkan tombol Install custom kita
-            installBanner.style.display = 'flex';
+            // Tampilkan tombol Install custom dengan safety check
+            if (installBanner) installBanner.style.display = 'flex';
         });
 
-        installBanner.addEventListener('click', async (e) => {
-            if(e.target === closeBtn || e.target.parentElement === closeBtn) return;
-            installBanner.style.display = 'none';
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            console.log(`User response to the install prompt: ${outcome}`);
-            deferredPrompt = null;
-        });
+        if (installBanner) {
+            installBanner.addEventListener('click', async (e) => {
+                if(e.target === closeBtn || (closeBtn && e.target.parentElement === closeBtn)) return;
+                installBanner.style.display = 'none';
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log(`User response to install: ${outcome}`);
+                    deferredPrompt = null;
+                }
+            });
+        }
 
-        closeBtn.addEventListener('click', () => {
-            installBanner.style.display = 'none';
-        });
+        if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if(installBanner) installBanner.style.display = 'none';
+            });
+        }
     </script>
 
-{% if session.get('user_id') %}
+    {% if session.get('user_id') %}
     <script>
-        // Kunci VAPID Publik yang terhubung dengan backend app.py
         const PUBLIC_VAPID_KEY = "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuB-5bNd_5qUjG2lM2DcdK1Bcw";
 
-        // Konversi key untuk Push Manager
         function urlBase64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);
             const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
@@ -381,44 +406,51 @@
         }
 
         async function initPushSubscription() {
-            // Cek apakah HP mendukung Service Worker & Push Notification
+            // Cek kompatibilitas browser
             if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
             
             try {
-                // Meminta izin (Bakal muncul pop-up "Allow Notifications")
+                // Minta izin notifikasi
                 const permission = await Notification.requestPermission();
-                if (permission !== 'granted') return;
+                if (permission !== 'granted') {
+                    console.warn("Izin notifikasi ditolak oleh pengguna.");
+                    return;
+                }
 
                 const registration = await navigator.serviceWorker.ready;
                 let subscription = await registration.pushManager.getSubscription();
 
-                // Jika belum berlangganan notifikasi di HP ini, buat langganan baru
+                // Jika belum punya token, buat token baru
                 if (!subscription) {
                     subscription = await registration.pushManager.subscribe({
                         userVisibleOnly: true,
                         applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
                     });
-
-                    // Kirim token notifikasi ke backend database
-                    await fetch("{{ url_for('subscribe_push') }}", {
-                        method: 'POST',
-                        body: JSON.stringify(subscription),
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                    console.log('HP berhasil didaftarkan untuk Push Notification!');
                 }
+
+                // FIX UTAMA: KITA HARUS SELALU MENGIRIM TOKEN KE SERVER!
+                // Meski user "sudah allow", server butuh token ini untuk mengirim notifikasi.
+                await fetch("{{ url_for('subscribe_push') }}", {
+                    method: 'POST',
+                    body: JSON.stringify(subscription),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                console.log('Push Notification tersinkronisasi. HP siap menerima notif!');
             } catch (err) {
-                console.warn('Push error: ', err);
+                console.error('Push error: ', err);
             }
         }
 
-        // Trik Bypass Apple: iPhone memblokir notif jika tidak dipicu langsung oleh sentuhan pengguna.
-        // Script ini akan memicu permintaan notifikasi saat pengguna menyentuh/klik layar pertama kali.
+        // Trik Bypass Apple/Android: Izin notifikasi sering diblokir jika tidak ada interaksi sentuhan.
         document.body.addEventListener('click', function _reqPush() {
             initPushSubscription();
-            // Hapus listener agar tidak dieksekusi berkali-kali
             document.body.removeEventListener('click', _reqPush);
         }, { once: true });
+        
+        // Jalankan sinkronisasi secara background jika HP sudah pernah klik "Allow" sebelumnya
+        if (Notification.permission === 'granted') {
+            initPushSubscription();
+        }
     </script>
     {% endif %}
 </body>

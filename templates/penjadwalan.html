@@ -28,71 +28,97 @@ input:checked + .slider:before { transform: translateX(20px); }
 
 <div class="grid-setup">
     
-    <div class="card-box">
-        <form action="{{ url_for('penjadwalan') }}" method="POST">
-            <input type="hidden" name="action" value="update_sanksi_settings">
-            
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
-                <h3 style="margin: 0; color: #ef4444;"><i class="fas fa-gavel"></i> Bobot Sanksi Otomatis</h3>
-                <label class="switch" title="Nyalakan / Matikan Seluruh Sistem Sanksi Otomatis">
-                    <input type="checkbox" name="fitur_sanksi" value="on" {% if settings.get('fitur_sanksi', 'on') == 'on' %}checked{% endif %}>
-                    <span class="slider"></span>
-                </label>
-            </div>
-
-            <!-- TAMPILAN SANKSI DISEDERHANAKAN: 1 KOLOM PER MISA -->
-            <p style="font-size: 11px; color: var(--text-gray); margin-top: 0;">Isi dengan jumlah hitungan sanksi berlutut jika anggota Tidak Hadir.</p>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 24px;">
+        
+        <!-- KOTAK 1: PENGATURAN SANKSI -->
+        <div style="background: var(--white); border-radius: 8px; border: 1px solid var(--border-color); padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column;">
+            <form action="{{ url_for('penjadwalan') }}" method="POST" style="margin: 0; display: flex; flex-direction: column; height: 100%;">
+                <input type="hidden" name="action" value="update_sanksi_settings">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+                    <h3 style="margin: 0; color: #1e3a8a; font-size: 16px;"><i class="fas fa-gavel"></i> Sanksi & Hukuman</h3>
+                    <label class="switch" title="Nyalakan / Matikan Sistem Sanksi">
+                        <input type="checkbox" name="fitur_sanksi" value="on" {% if settings.get('fitur_sanksi', 'on') == 'on' %}checked{% endif %}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <p style="font-size: 12px; color: var(--text-gray); margin-bottom: 16px; line-height: 1.4;">Isi dengan jumlah hitungan sanksi berlutut jika anggota Tidak Hadir.</p>
                 
-                <div style="background: var(--background); padding: 12px; border-radius: 8px;">
-                    <label style="font-size: 11px; font-weight: bold; color: var(--text-gray); display: block; margin-bottom: 8px;">Misa Harian</label>
-                    <input type="number" name="sanksi_alpa_harian" value="{{ settings.get('sanksi_alpa_harian', 0) }}" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--white); color: var(--text-dark);" title="Jumlah Berlutut untuk Alpa Misa Harian">
+                <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 11px; font-weight: bold; color: var(--text-dark); display: block; margin-bottom: 4px;">Harian</label>
+                        <input type="number" name="sanksi_alpa_harian" value="{{ settings.get('sanksi_alpa_harian', '5') }}" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 11px; font-weight: bold; color: var(--text-dark); display: block; margin-bottom: 4px;">Mingguan</label>
+                        <input type="number" name="sanksi_alpa_mingguan" value="{{ settings.get('sanksi_alpa_mingguan', '10') }}" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 11px; font-weight: bold; color: var(--text-dark); display: block; margin-bottom: 4px;">Hari Raya</label>
+                        <input type="number" name="sanksi_alpa_besar" value="{{ settings.get('sanksi_alpa_besar', '20') }}" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; background: #1e3a8a; border-color: #1e3a8a; margin-top: auto;"><i class="fas fa-save"></i> Simpan Sanksi</button>
+            </form>
+        </div>
+
+        <!-- KOTAK 2: PENGATURAN WAKTU SCAN -->
+        <div style="background: var(--white); border-radius: 8px; border: 1px solid var(--border-color); padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column;">
+            <form action="{{ url_for('penjadwalan') }}" method="POST" style="margin: 0; display: flex; flex-direction: column; height: 100%;">
+                <input type="hidden" name="action" value="update_global_scan_window">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+                    <h3 style="margin: 0; color: #1e70a6; font-size: 16px;"><i class="fas fa-clock"></i> Jendela Waktu Scan</h3>
+                    <label class="switch" title="Nyalakan / Matikan Batas Waktu Scan">
+                        <input type="checkbox" name="fitur_scan_window" value="on" {% if settings.get('fitur_scan_window', 'on') == 'on' %}checked{% endif %}>
+                        <span class="slider"></span>
+                    </label>
                 </div>
                 
-                <div style="background: var(--background); padding: 12px; border-radius: 8px;">
-                    <label style="font-size: 11px; font-weight: bold; color: var(--text-gray); display: block; margin-bottom: 8px;">Misa Mingguan</label>
-                    <input type="number" name="sanksi_alpa_mingguan" value="{{ settings.get('sanksi_alpa_mingguan', 0) }}" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--white); color: var(--text-dark);" title="Jumlah Berlutut untuk Alpa Misa Mingguan">
+                <div style="margin-bottom: 12px;">
+                    <label style="font-size: 12px; font-weight: bold; color: var(--text-dark); display: block; margin-bottom: 4px;">Buka Scan (Menit sblm Misa)</label>
+                    <input type="number" name="scan_window_before" value="{{ settings.get('scan_window_before', '60') }}" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box;">
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="font-size: 12px; font-weight: bold; color: var(--text-dark); display: block; margin-bottom: 4px;">Tutup Scan (Menit stlh Misa)</label>
+                    <input type="number" name="scan_window_after" value="{{ settings.get('scan_window_after', '180') }}" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box;">
+                    <small style="color: #ef4444; font-size: 10px; margin-top: 4px; display: block;">*Jika lewat waktu ini, sistem catat Alpa.</small>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; background: #1e70a6; border-color: #1e70a6; margin-top: auto;"><i class="fas fa-save"></i> Simpan Waktu</button>
+            </form>
+        </div>
+
+        <!-- KOTAK 3: PENGATURAN PENGINGAT TUGAS -->
+        <div style="background: var(--white); border-radius: 8px; border: 1px solid var(--border-color); padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column;">
+            <form action="{{ url_for('penjadwalan') }}" method="POST" style="margin: 0; display: flex; flex-direction: column; height: 100%;">
+                <input type="hidden" name="action" value="update_pengingat_settings">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+                    <h3 style="margin: 0; color: #f59e0b; font-size: 16px;"><i class="fas fa-bell"></i> Pengingat Jadwal</h3>
+                    <label class="switch" title="Nyalakan / Matikan Sistem Pengingat">
+                        <input type="checkbox" name="fitur_pengingat" value="on" {% if settings.get('fitur_pengingat', 'on') == 'on' %}checked{% endif %}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div style="margin-bottom: 16px;" id="pengingat-container">
+                    <label style="display: block; font-size: 12px; font-weight: bold; margin-bottom: 6px; color: var(--text-dark);">Kirim Pengingat (Menit Sebelum Misa)</label>
+                    <small style="color: var(--text-gray); font-size: 11px; margin-bottom: 12px; display: block; line-height: 1.4;">Bisa ditambah sebanyak apapun. <br>Cth: <b>1440</b> (1 Hari), <b>60</b> (1 Jam), <b>30</b> (Setengah jam).</small>
+                    
+                    {% set existing_pengingat = settings.get('pengingat_waktu', '1440').split(',') %}
+                    {% for ep in existing_pengingat %}
+                    <div class="pengingat-row" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+                        <input type="number" name="pengingat_waktu[]" value="{{ ep }}" required min="1" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--background); color: var(--text-dark);">
+                        <span style="font-size: 12px; font-weight: bold; color: var(--text-gray);">Menit</span>
+                        <button type="button" class="btn-outline" onclick="this.parentElement.remove()" style="padding: 8px 12px; border-color: #ef4444; color: #ef4444; background: var(--white);"><i class="fas fa-trash"></i></button>
+                    </div>
+                    {% endfor %}
                 </div>
                 
-                <div style="background: var(--background); padding: 12px; border-radius: 8px;">
-                    <label style="font-size: 11px; font-weight: bold; color: var(--text-gray); display: block; margin-bottom: 8px;">Misa Hari Raya</label>
-                    <input type="number" name="sanksi_alpa_besar" value="{{ settings.get('sanksi_alpa_besar', 0) }}" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--white); color: var(--text-dark);" title="Jumlah Berlutut untuk Alpa Misa Besar">
-                </div>
+                <button type="button" onclick="tambahPengingat()" style="width: 100%; padding: 8px; background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px dashed #f59e0b; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; margin-bottom: 16px;">
+                    <i class="fas fa-plus"></i> Tambah Waktu Pengingat Baru
+                </button>
                 
-            </div>
-            <div class="submit-btn">
-                <button type="submit" class="btn-primary" style="width: 100%;"><i class="fas fa-save"></i> Simpan Sanksi</button>
-            </div>
-        </form>
-    </div>
-
-    <div class="card-box">
-        <form action="{{ url_for('penjadwalan') }}" method="POST">
-            <input type="hidden" name="action" value="update_global_scan_window">
-            
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
-                <h3 style="margin: 0; color: var(--primary-blue);"><i class="fas fa-clock"></i> Jendela Waktu Scan</h3>
-                <label class="switch" title="Nyalakan / Matikan Sistem Tolak Absen Otomatis">
-                    <input type="checkbox" name="fitur_scan_window" value="on" {% if settings.get('fitur_scan_window', 'on') == 'on' %}checked{% endif %}>
-                    <span class="slider"></span>
-                </label>
-            </div>
-
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px; color: var(--text-dark);">Buka Scan (Menit sebelum Misa)</label>
-                <input type="number" name="scan_window_before" value="{{ global_before }}" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit; background: var(--background); color: var(--text-dark);">
-            </div>
-            
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px; color: var(--text-dark);">Tutup Scan (Menit setelah Misa mulai)</label>
-                <input type="number" name="scan_window_after" value="{{ global_after }}" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; box-sizing: border-box; font-family: inherit; background: var(--background); color: var(--text-dark);">
-                <small style="color: #ef4444; font-size: 11px;">*Jika lewat waktu ini, sistem otomatis catat Alpa.</small>
-            </div>
-            <div class="submit-btn">
-                <button type="submit" class="btn-primary" style="width: 100%; background: var(--primary-blue);"><i class="fas fa-save"></i> Simpan Waktu</button>
-            </div>
-        </form>
-    </div>
+                <button type="submit" class="btn-primary" style="width: 100%; background: #f59e0b; border-color: #f59e0b; margin-top: auto;"><i class="fas fa-save"></i> Simpan Pengingat</button>
+            </form>
+        </div>
 
     <div class="card-box">
         <form action="{{ url_for('penjadwalan') }}" method="POST">
@@ -584,6 +610,18 @@ function bukaQR(dt, ac, wktFormat) {
     document.getElementById('qrWaktu').innerText = wktFormat;
     
     document.getElementById('qrModal').style.display = 'flex';
+}
+function tambahPengingat() {
+    let container = document.getElementById('pengingat-container');
+    let div = document.createElement('div');
+    div.className = 'pengingat-row';
+    div.style.cssText = 'display: flex; gap: 8px; margin-bottom: 8px; align-items: center;';
+    div.innerHTML = `
+        <input type="number" name="pengingat_waktu[]" placeholder="Contoh: 60" required min="1" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--background); color: var(--text-dark);">
+        <span style="font-size: 12px; font-weight: bold; color: var(--text-gray);">Menit</span>
+        <button type="button" class="btn-outline" onclick="this.parentElement.remove()" style="padding: 8px 12px; border-color: #ef4444; color: #ef4444; background: var(--white);"><i class="fas fa-trash"></i></button>
+    `;
+    container.appendChild(div);
 }
 </script>
 {% endblock %}
