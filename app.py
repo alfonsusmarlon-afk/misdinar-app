@@ -181,20 +181,30 @@ def service_worker():
     });
     
     self.addEventListener('push', function(event) {
-        let title = "Notifikasi MISDINAR";
-        let body = "Ada pemberitahuan baru untuk Anda.";
-        let url = "/";
+        let title = "PENGINGAT TUGAS MISDINAR";
+        let body = "Ada jadwal tugas Misa mendekati waktu dimulai!";
+        let url = "/jadwal?view=private";
         
         if (event.data) {
             try {
-                // Coba parse data dalam bentuk JSON
+                // Cek apakah data merupakan valid JSON string
                 const data = event.data.json();
                 title = data.title || title;
                 body = data.body || body;
                 url = data.url || url;
             } catch(e) {
-                // FALLBACK: Jika enkripsi JSON gagal, baca sebagai teks biasa agar notif TETAP MUNCUL
-                body = event.data.text() || body;
+                // Jika data dikirim dalam bentuk teks mentah oleh browser fallback kesini
+                const txt = event.data.text();
+                if (txt) {
+                    try {
+                        const dataParsed = JSON.parse(txt);
+                        title = dataParsed.title || title;
+                        body = dataParsed.body || body;
+                        url = dataParsed.url || url;
+                    } catch(err) {
+                        body = txt;
+                    }
+                }
             }
         }
         
@@ -202,8 +212,9 @@ def service_worker():
             body: body,
             icon: 'https://cdn-icons-png.flaticon.com/192/3075/3075908.png',
             badge: 'https://cdn-icons-png.flaticon.com/192/3075/3075908.png',
-            vibrate: [200, 100, 200, 100, 200],
-            requireInteraction: true,
+            vibrate: [200, 100, 200],
+            requireInteraction: true, // Memaksa spanduk OS melayang di Windows/HP
+            silent: false,
             data: { url: url }
         };
         
@@ -212,11 +223,23 @@ def service_worker():
     
     self.addEventListener('notificationclick', function(event) {
         event.notification.close();
-        let targetUrl = '/';
+        let targetUrl = '/jadwal?view=private';
         if(event.notification.data && event.notification.data.url) {
             targetUrl = event.notification.data.url;
         }
-        event.waitUntil(clients.openWindow(targetUrl));
+        event.waitUntil(
+            clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+                for (let i = 0; i < clientList.length; i++) {
+                    let client = clientList[i];
+                    if (client.url.indexOf(targetUrl) !== -1 && 'focus' in client) {
+                        return client.focus();
+                    }
+                }
+                if (clients.openWindow) {
+                    return clients.openWindow(targetUrl);
+                }
+            })
+        );
     });
     """
     response = make_response(js)
@@ -227,9 +250,9 @@ def send_web_push(subscription_info, message_body):
     if not WEBPUSH_AVAILABLE:
         return
     try:
-        # Ditambahkan VAPID Claims resmi agar tidak diblokir oleh Google Chrome & Apple
         vapid_claims = {"sub": "mailto:admin@misdinar.com"}
         
+        # Pastikan message_body selalu diubah ke format JSON string yang bersih
         webpush(
             subscription_info=json.loads(subscription_info),
             data=json.dumps(message_body),
@@ -240,8 +263,30 @@ def send_web_push(subscription_info, message_body):
         )
         print("Sinyal push notification berhasil ditembakkan ke browser!")
     except Exception as ex:
-        # Ini akan memunculkan error asli di terminal CMD Flask Anda jika kiriman ditolak
         print("Web Push SERVER ERROR:", repr(ex))
+
+def create_notification(conn, target_str, pesan, link_url):
+    waktu_sekarang = datetime.now().strftime('%d %b %Y, %H:%M')
+    target_list = [t.strip() for t in target_str.split(',')]
+    
+    # Standarisasi payload objek agar terbaca oleh sw.js di semua OS
+    push_payload = {
+        "title": "PENGINGAT TUGAS MISDINAR", 
+        "body": pesan, 
+        "url": link_url
+    }
+    
+    if 'semua' in target_list:
+        users = conn.execute("SELECT username, push_sub FROM users").fetchall()
+        for u in users: 
+            conn.execute('INSERT INTO notifikasi (username, pesan, waktu, link) VALUES (?, ?, ?, ?)', (u['username'], pesan, waktu_sekarang, link_url))
+            if u['push_sub']: send_web_push(u['push_sub'], push_payload)
+    else:
+        users = conn.execute("SELECT username, role, push_sub FROM users").fetchall()
+        for u in users:
+            if u['username'] in target_list or u['role'] in target_list:
+                conn.execute('INSERT INTO notifikasi (username, pesan, waktu, link) VALUES (?, ?, ?, ?)', (u['username'], pesan, waktu_sekarang, link_url))
+                if u['push_sub']: send_web_push(u['push_sub'], push_payload)
 
 @app.route('/subscribe-push', methods=['POST'])
 def subscribe_push():
@@ -258,23 +303,6 @@ def subscribe_push():
 @app.route('/vapid-public-key')
 def vapid_public_key():
     return VAPID_PUBLIC_KEY
-
-def create_notification(conn, target_str, pesan, link_url):
-    waktu_sekarang = datetime.now().strftime('%d %b %Y, %H:%M')
-    target_list = [t.strip() for t in target_str.split(',')]
-    push_payload = {"title": "Notifikasi MISDINAR", "body": pesan, "url": link_url}
-    
-    if 'semua' in target_list:
-        users = conn.execute("SELECT username, push_sub FROM users").fetchall()
-        for u in users: 
-            conn.execute('INSERT INTO notifikasi (username, pesan, waktu, link) VALUES (?, ?, ?, ?)', (u['username'], pesan, waktu_sekarang, link_url))
-            if u['push_sub']: send_web_push(u['push_sub'], push_payload)
-    else:
-        users = conn.execute("SELECT username, role, push_sub FROM users").fetchall()
-        for u in users:
-            if u['username'] in target_list or u['role'] in target_list:
-                conn.execute('INSERT INTO notifikasi (username, pesan, waktu, link) VALUES (?, ?, ?, ?)', (u['username'], pesan, waktu_sekarang, link_url))
-                if u['push_sub']: send_web_push(u['push_sub'], push_payload)
 
 def login_required(f):
     @wraps(f)
