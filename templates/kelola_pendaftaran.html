@@ -256,7 +256,6 @@
                     <label class="fs-label" style="color:#222; font-size:12px; margin-bottom:8px;">Target Penerima Formulir</label>
                     <div style="display:flex; flex-direction:column; gap:6px;">
                         <label class="s-checkbox-label"><input type="checkbox" class="s-checkbox form-target-cb" value="semua"> Semua (Publik)</label>
-                        <label class="s-checkbox-label"><input type="checkbox" class="s-checkbox form-target-cb" value="super admin"> Super Admin</label>
                         <label class="s-checkbox-label"><input type="checkbox" class="s-checkbox form-target-cb" value="bph"> BPH</label>
                         <label class="s-checkbox-label"><input type="checkbox" class="s-checkbox form-target-cb" value="penjadwalan"> Penjadwalan</label>
                         <label class="s-checkbox-label"><input type="checkbox" class="s-checkbox form-target-cb" value="pelatihan"> Pelatihan</label>
@@ -350,7 +349,7 @@
                     </div>
                     <div style="margin-top:8px;">
                         <label class="s-checkbox-label">
-                            <input type="checkbox" class="s-checkbox" id="fs-limit-ip" onchange="schema.limitOnePerIP=this.checked; updateFormSettings();"> Allow Only One Entry Per IP
+                            <input type="checkbox" class="s-checkbox" id="fs-limit-user" onchange="schema.limitOnePerUser=this.checked; schema.limitOnePerIP=this.checked; updateFormSettings();"> Batasi Hanya Satu Tanggapan Per Akun (User)
                         </label>
                     </div>
                     <div style="margin-top:8px;">
@@ -626,7 +625,7 @@
             document.getElementById('fs-conf-url').value = schema.confUrl || '';
             
             document.getElementById('fs-limit-entries').value = schema.limitEntries || '';
-            document.getElementById('fs-limit-ip').checked = !!schema.limitOnePerIP;
+            document.getElementById('fs-limit-user').checked = !!(schema.limitOnePerUser || schema.limitOnePerIP);
             document.getElementById('fs-limit-schedule').checked = !!schema.scheduleActivity;
             
             toggleSchedule();
@@ -1220,28 +1219,6 @@
         };
         const displayType = typeMap[q.type] || q.type;
 
-        let targetHtml = '';
-        if (q.type !== 'section') {
-            if(!q.target) q.target = ['semua'];
-            const roles = [
-                {val: 'semua', label: 'Semua (Publik)'},
-                {val: 'super admin', label: 'Super Admin'},
-                {val: 'bph', label: 'BPH'},
-                {val: 'penjadwalan', label: 'Penjadwalan'},
-                {val: 'pelatihan', label: 'Pelatihan'},
-                {val: 'user', label: 'Anggota (User)'}
-            ];
-            roles.forEach(r => {
-                let isChecked = q.target.includes(r.val) ? 'checked' : '';
-                targetHtml += `
-                <div style="margin-bottom:6px;">
-                    <label class="s-checkbox-label">
-                        <input type="checkbox" class="s-checkbox" value="${r.val}" ${isChecked} onchange="updateTarget(${activeIndex}, this.value, this.checked)"> ${r.label}
-                    </label>
-                </div>`;
-            });
-        }
-
         let sizeOrLayoutLabel = 'Field Size';
         let sizeOrLayoutHtml = `
             <select class="s-select" onchange="schema.questions[${activeIndex}].size = this.value; renderPreview();">
@@ -1506,10 +1483,6 @@
                     <span class="fs-box-title" style="color:#4fa734;">Options</span>
                     ${optionsHtml}
                 </div>
-                <div class="fs-box" style="flex:1; margin-bottom:0; background:#eef5fc; border-color:#cddbea;">
-                    <span class="fs-box-title" style="color:#5a8ab4;">Show Field to</span>
-                    ${targetHtml}
-                </div>
             </div>`;
         }
 
@@ -1667,6 +1640,17 @@
                 }
             });
         }
+
+        // LOGIKA BARU: Jika 'semua' dicentang, hapus centang opsi lain (dan sebaliknya)
+        document.querySelectorAll('.form-target-cb').forEach(cb => {
+            cb.addEventListener('change', function() {
+                if (this.value === 'semua' && this.checked) {
+                    document.querySelectorAll('.form-target-cb:not([value="semua"])').forEach(other => other.checked = false);
+                } else if (this.value !== 'semua' && this.checked) {
+                    document.querySelector('.form-target-cb[value="semua"]').checked = false;
+                }
+            });
+        });
     });
 </script>
 
@@ -1693,7 +1677,7 @@
     <table style="width: 100%; border-collapse: collapse; min-width: 800px; font-size: 14px;">
         <thead>
             <tr style="background: var(--background); color: var(--text-dark); text-align: left;">
-                <th style="padding: 12px; border-bottom: 2px solid var(--border-color); width: 25%;">Responden (ID)</th>
+                <th style="padding: 12px; border-bottom: 2px solid var(--border-color); width: 25%;">Submitter Name</th>
                 <th style="padding: 12px; border-bottom: 2px solid var(--border-color); width: 25%;">Waktu Submit</th>
                 <th style="padding: 12px; border-bottom: 2px solid var(--border-color); width: 25%;">Status</th>
                 <th style="padding: 12px; border-bottom: 2px solid var(--border-color); text-align: center; width: 25%;">Aksi</th>
@@ -1701,7 +1685,7 @@
         </thead>
         <tbody>
             {% for p in pendaftar %}
-            {% set nama_user = p.data_parsed.get('Nama Lengkap', p.data_parsed.get('Nama', p.data_parsed.get('Username', 'User Anonim'))) %}
+            {% set nama_user = p.submitter_name %}
             <tr style="border-bottom: 1px solid var(--border-color);">
                 <td style="padding: 12px; vertical-align: middle; color: var(--text-dark); font-weight: 600;">
                     <i class="fas fa-user-circle" style="color: #cbd5e1; margin-right: 6px; font-size: 18px; vertical-align: middle;"></i> 

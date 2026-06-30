@@ -359,6 +359,9 @@ def login():
                 session['role'] = user['role']
                 session['foto_profil'] = user['foto_profil']
                 conn.close()
+                
+                next_url = request.args.get('next')
+                if next_url: return redirect(next_url)
                 return redirect(url_for('index'))
         conn.close()
         return render_template('login.html', error='Username atau password salah')
@@ -980,16 +983,36 @@ def hapus_anggota():
 @login_required
 def formulir_saya():
     user_role = session.get('role')
+    user_id = session.get('user_id')
+    nama_user = session.get('nama_user', '')
     conn = get_db_connection()
-    # Hanya tampilkan form yang aktif dan bukan form pendaftaran utama (is_default=0)
-    forms_raw = conn.execute("SELECT * FROM formulir WHERE is_active=1 AND is_default=0 ORDER BY id DESC").fetchall()
+    
+    forms_raw = conn.execute("SELECT * FROM formulir WHERE is_default=0 ORDER BY id DESC").fetchall()
     
     available_forms = []
     for f in forms_raw:
         f_dict = dict(f)
         targets = [t.strip() for t in f_dict.get('target', 'semua').split(',')]
-        # Filter form yang targetnya sesuai dengan role user atau 'semua'
+        
         if 'semua' in targets or user_role in targets:
+            responses = conn.execute("SELECT data_respon FROM pendaftaran WHERE form_id=?", (f_dict['id'],)).fetchall()
+            is_completed = False
+            for r in responses:
+                try:
+                    data = json.loads(r['data_respon'])
+                    if data.get('_submitter_id') == user_id:
+                        is_completed = True
+                        break
+                    for k, v in data.items():
+                        if isinstance(v, str) and (nama_user.lower() == v.lower() or user_id.lower() == v.lower()):
+                            is_completed = True
+                            break
+                except:
+                    pass
+                if is_completed:
+                    break
+                    
+            f_dict['is_completed'] = is_completed
             available_forms.append(f_dict)
             
     conn.close()
@@ -1007,19 +1030,54 @@ def isi_formulir(form_id):
     form_dict = dict(form_db)
     form_schema = json.loads(form_dict['schema_data'])
     
-    # PENGAMANAN TARGET FORMULIR
-    if form_dict['is_default'] == 0:
-        if 'user_id' not in session:
-            conn.close()
-            flash("Silakan login untuk mengakses formulir ini.", "error")
-            return redirect(url_for('login'))
-        
-        targets = [t.strip() for t in form_dict.get('target', 'semua').split(',')]
-        if 'semua' not in targets and session.get('role') not in targets:
-            conn.close()
-            return "Akses Ditolak: Formulir ini tidak ditujukan untuk jabatan Anda.", 403
+    # 1. FORM LIMITER WAKTU & MAX ENTRIES (Menutup/Membuka form otomatis)
+    current_entries = conn.execute("SELECT COUNT(*) FROM pendaftaran WHERE form_id=?", (form_id,)).fetchone()[0]
+    max_entries_reached = False
+    
+    limit_entries = form_schema.get('limitEntries')
+    if limit_entries and str(limit_entries).strip() != '':
+        try:
+            max_entries = int(limit_entries)
+            if current_entries >= max_entries:
+                max_entries_reached = True
+                form_dict['is_active'] = 0
+                if form_db['is_active'] == 1:
+                    conn.execute("UPDATE formulir SET is_active=0 WHERE id=?", (form_id,))
+                    conn.commit()
+        except: pass
 
-    # CEK PESAN FORMULIR DITUTUP
+    # CEK JADWAL OTOMATIS
+    if form_schema.get('scheduleActivity'):
+        now = datetime.now()
+        is_started = True
+        is_ended = False
+        
+        start_date, start_time = form_schema.get('schedStartDate'), form_schema.get('schedStartTime')
+        if start_date and start_time:
+            try:
+                dt_start = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
+                if now < dt_start: is_started = False
+            except: pass
+        
+        end_date, end_time = form_schema.get('schedEndDate'), form_schema.get('schedEndTime')
+        if end_date and end_time:
+            try:
+                dt_end = datetime.strptime(f"{end_date} {end_time}", "%Y-%m-%d %H:%M")
+                if now > dt_end: is_ended = True
+            except: pass
+            
+        if not is_started or is_ended:
+            form_dict['is_active'] = 0
+            if is_ended and form_db['is_active'] == 1:
+                conn.execute("UPDATE formulir SET is_active=0 WHERE id=?", (form_id,))
+                conn.commit()
+        else:
+            if form_db['is_active'] == 0 and not max_entries_reached:
+                form_dict['is_active'] = 1
+                conn.execute("UPDATE formulir SET is_active=1 WHERE id=?", (form_id,))
+                conn.commit()
+
+    # 2. CEK FORM DITUTUP
     if form_dict['is_active'] == 0:
         conn.close()
         if form_schema.get('closedType') == 'redirect' and form_schema.get('closedUrl'):
@@ -1027,79 +1085,77 @@ def isi_formulir(form_id):
         closed_msg = form_schema.get('closedMsg', 'Formulir ini telah ditutup dan tidak menerima tanggapan lagi.')
         return render_template('pendaftaran.html', closed=True, schema=form_schema, closed_msg=closed_msg)
 
-    # HITUNG BATAS KUANTITAS (LIMITS)
+    # 3. PENGAMANAN LOGIN & TARGET
+    if form_dict['is_default'] == 0:
+        if 'user_id' not in session:
+            conn.close()
+            flash("Silakan login terlebih dahulu untuk mengisi formulir ini.", "error")
+            return redirect(url_for('login', next=request.url))
+        
+        targets = [t.strip() for t in form_dict.get('target', 'semua').split(',')]
+        if 'semua' not in targets and session.get('role') not in targets:
+            conn.close()
+            return "Akses Ditolak: Formulir ini tidak ditujukan untuk jabatan Anda.", 403
+
+    # 4. CEK BATAS: HANYA 1 TANGGAPAN PER USER
+    if form_schema.get('limitOnePerUser'):
+        if 'user_id' in session:
+            user_id = session['user_id']
+            exist = conn.execute("SELECT id FROM pendaftaran WHERE form_id=? AND data_respon LIKE ?", (form_id, f'%_submitter_id": "{user_id}"%')).fetchone()
+            if exist:
+                conn.close()
+                return render_template('pendaftaran.html', already_filled=True, schema=form_schema)
+
+    # HITUNG BATAS KUANTITAS
     all_responses = conn.execute("SELECT data_respon FROM pendaftaran WHERE form_id=?", (form_id,)).fetchall()
     usage_counts = {}
     for r in all_responses:
         try:
             resp_data = json.loads(r['data_respon'])
             for k, v in resp_data.items():
-                if isinstance(v, str):
+                if isinstance(v, str) and not k.startswith('_'):
                     for item in v.split(','):
                         clean_item = item.strip()
                         usage_counts[clean_item] = usage_counts.get(clean_item, 0) + 1
-        except:
-            pass
+        except: pass
             
-    # Injeksi data sisa kuantitas ke schema agar diproses oleh pendaftaran.html
     for q in form_schema.get('questions', []):
-        if q.get('maxQuantities') and q.get('options') and q.get('optionLimits'):
+        if q.get('maxQuantities') and q.get('options'):
             q['processedOptions'] = []
             for i, opt in enumerate(q['options']):
-                limit = 0
-                try: 
-                    limit = int(q['optionLimits'][i])
-                except: 
-                    pass
-                used = usage_counts.get(opt.strip(), 0)
-                sisa = max(0, limit - used)
-                q['processedOptions'].append({
-                    'text': opt,
-                    'remaining': sisa,
-                    'disabled': sisa == 0
-                })
+                limit_str = q.get('optionLimits', [])[i] if i < len(q.get('optionLimits', [])) else ''
+                
+                if not limit_str or str(limit_str).strip() == '':
+                    q['processedOptions'].append({'text': opt, 'remaining': '', 'disabled': False, 'unlimited': True})
+                else:
+                    try:
+                        limit = int(limit_str)
+                        used = usage_counts.get(opt.strip(), 0)
+                        sisa = max(0, limit - used)
+                        q['processedOptions'].append({'text': opt, 'remaining': sisa, 'disabled': sisa == 0, 'unlimited': False})
+                    except:
+                        q['processedOptions'].append({'text': opt, 'remaining': '', 'disabled': False, 'unlimited': True})
     
     if request.method == 'POST':
         respon_data = {}
         nama_pendaftar, no_hp_pendaftar = "User Baru", ""
         
         for q in form_schema.get('questions', []):
-            if q['type'] in ['image', 'video', 'section', 'page']:
-                continue
-                
+            if q['type'] in ['image', 'video', 'section', 'page']: continue
             q_id = str(q['id'])
             val = ""
             
-            if q['type'] == 'checkbox':
-                val = ", ".join(request.form.getlist(f'q_{q_id}'))
+            if q['type'] == 'checkbox': val = ", ".join(request.form.getlist(f'q_{q_id}'))
             elif q['type'] == 'name':
-                title = request.form.get(f'q_{q_id}_title', '').strip()
-                first = request.form.get(f'q_{q_id}_first', '').strip()
-                last = request.form.get(f'q_{q_id}_last', '').strip()
-                suffix = request.form.get(f'q_{q_id}_suffix', '').strip()
-                
-                parts = []
-                if title: parts.append(title)
-                if first: parts.append(first)
-                if last: parts.append(last)
-                if suffix: parts.append(suffix)
+                parts = [request.form.get(f'q_{q_id}_{p}', '').strip() for p in ['title', 'first', 'last', 'suffix'] if request.form.get(f'q_{q_id}_{p}')]
                 val = " ".join(parts).strip()
             elif q['type'] == 'address':
-                street = request.form.get(f'q_{q_id}_street', '').strip()
-                line2 = request.form.get(f'q_{q_id}_line2', '').strip()
-                city = request.form.get(f'q_{q_id}_city', '').strip()
-                state = request.form.get(f'q_{q_id}_state', '').strip()
-                zip_code = request.form.get(f'q_{q_id}_zip', '').strip()
-                country = request.form.get(f'q_{q_id}_country', '').strip()
-                
                 parts = []
-                if street: parts.append(street)
-                if line2: parts.append(line2)
-                if city or state or zip_code:
-                    city_state_zip = ", ".join(filter(None, [city, state, zip_code]))
-                    parts.append(city_state_zip)
-                if country: parts.append(country)
-                
+                if request.form.get(f'q_{q_id}_street'): parts.append(request.form.get(f'q_{q_id}_street').strip())
+                if request.form.get(f'q_{q_id}_line2'): parts.append(request.form.get(f'q_{q_id}_line2').strip())
+                csz = ", ".join(filter(None, [request.form.get(f'q_{q_id}_city'), request.form.get(f'q_{q_id}_state'), request.form.get(f'q_{q_id}_zip')]))
+                if csz: parts.append(csz)
+                if request.form.get(f'q_{q_id}_country'): parts.append(request.form.get(f'q_{q_id}_country').strip())
                 val = "\n".join(parts).strip()
             elif q['type'] == 'file':
                 file = request.files.get(f'q_{q_id}')
@@ -1110,25 +1166,21 @@ def isi_formulir(form_id):
             elif q['type'] in ['grid_radio', 'grid_checkbox']:
                 grid_responses = {}
                 for r_idx, row in enumerate(q.get('rows', [])):
-                    if q['type'] == 'grid_radio':
-                        grid_responses[row] = request.form.get(f'q_{q_id}_r{r_idx}', '')
-                    else:
-                        grid_responses[row] = ", ".join(request.form.getlist(f'q_{q_id}_r{r_idx}'))
+                    if q['type'] == 'grid_radio': grid_responses[row] = request.form.get(f'q_{q_id}_r{r_idx}', '')
+                    else: grid_responses[row] = ", ".join(request.form.getlist(f'q_{q_id}_r{r_idx}'))
                 val = json.dumps(grid_responses)
-            else:
-                val = request.form.get(f'q_{q_id}', '')
+            else: val = request.form.get(f'q_{q_id}', '')
                 
             respon_data[q['question']] = val
-            
             lbl_lower = q['question'].lower()
-            if 'nama' in lbl_lower and nama_pendaftar == "User Baru" and val:
-                nama_pendaftar = val
-            elif ('nomor' in lbl_lower or 'hp' in lbl_lower or 'wa' in lbl_lower or 'telepon' in lbl_lower) and no_hp_pendaftar == "" and val:
-                no_hp_pendaftar = val
+            if 'nama' in lbl_lower and nama_pendaftar == "User Baru" and val: nama_pendaftar = val
+            elif ('nomor' in lbl_lower or 'hp' in lbl_lower or 'wa' in lbl_lower or 'telepon' in lbl_lower) and no_hp_pendaftar == "" and val: no_hp_pendaftar = val
 
-        new_username = None
-        random_password = None
-        
+        if 'user_id' in session:
+            respon_data['_submitter_id'] = session['user_id']
+            respon_data['_submitter_name'] = session.get('nama_user')
+            
+        new_username, random_password = None, None
         if form_dict['is_default'] == 1:
             base_username = "".join(e for e in nama_pendaftar.split()[0].lower() if e.isalnum())
             if not base_username: base_username = "user"
@@ -1140,15 +1192,12 @@ def isi_formulir(form_id):
             random_password = ''.join(random.choices("abcdefghjkmnpqrstuvwxyz23456789", k=6))
             conn.execute('INSERT INTO users (username, password, nama, role, no_hp, nama_panggilan) VALUES (?, ?, ?, ?, ?, ?)', 
                          (username, generate_password_hash(random_password), nama_pendaftar, 'user', no_hp_pendaftar, nama_pendaftar.split()[0] if nama_pendaftar != "User Baru" else "User"))
-                         
             respon_data['[Sistem] Username Dibuat'] = username
             new_username = username
 
         conn.execute('INSERT INTO pendaftaran (tanggal, data_respon, status, form_id) VALUES (?, ?, ?, ?)', 
                      (datetime.now().strftime('%Y-%m-%d %H:%M'), json.dumps(respon_data), 'Menunggu', form_id))
-        conn.commit()
-        conn.close()
-        
+        conn.commit(); conn.close()
         return render_template('pendaftaran.html', success=True, schema=form_schema, new_username=new_username, new_password=random_password, is_default=form_dict['is_default'])
 
     conn.close()
@@ -1161,7 +1210,7 @@ def pendaftaran():
 @app.route('/kelola-pendaftaran', methods=['GET', 'POST'])
 @login_required
 def kelola_pendaftaran():
-    if session.get('role') not in ['super admin', 'bph']: return redirect(url_for('index'))
+    if session.get('role') not in ['super admin', 'bph', 'penjadwalan', 'pelatihan']: return redirect(url_for('index'))
     conn = get_db_connection()
     
     if request.method == 'POST':
@@ -1250,7 +1299,16 @@ def kelola_pendaftaran():
             try: 
                 raw_parsed = json.loads(p['data_respon'])
                 clean_parsed = {}
+                
+                submitter = raw_parsed.get('_submitter_name')
+                if not submitter:
+                    submitter = raw_parsed.get('Nama Lengkap', raw_parsed.get('Nama', 'User Anonim (Publik)'))
+                p_dict['submitter_name'] = submitter
+                
                 for key, val in raw_parsed.items():
+                    if key.startswith('_'): 
+                        continue
+                        
                     if val and isinstance(val, str) and val.startswith('{') and val.endswith('}'):
                         try:
                             grid_obj = json.loads(val)
@@ -1264,6 +1322,7 @@ def kelola_pendaftaran():
                 p_dict['data_parsed'] = clean_parsed
             except: 
                 p_dict['data_parsed'] = {}
+                p_dict['submitter_name'] = 'Error Parsing'
             pendaftar_list.append(p_dict)
         conn.close()
         return render_template('kelola_pendaftaran.html', view='respon', form_data=dict(form_data), pendaftar=pendaftar_list)
@@ -1538,7 +1597,7 @@ def penjadwalan():
             if not start_str or not end_str: return redirect(url_for('penjadwalan'))
             start_time, end_time = f"{start_str} 00:00:00", f"{end_str} 23:59:59"
             existing_rows = conn.execute('SELECT * FROM jadwal WHERE jadwal_datetime >= ? AND jadwal_datetime <= ? AND jenis="Matriks" ORDER BY id ASC', (start_time, end_time)).fetchall()
-            existing_wkt, existing_data, acara_data = {}, {}
+            existing_wkt, existing_data, acara_data = {}, {}, {}
             for r in existing_rows:
                 dt = datetime.strptime(r['jadwal_datetime'], '%Y-%m-%d %H:%M:%S')
                 d_str = dt.strftime('%Y-%m-%d')

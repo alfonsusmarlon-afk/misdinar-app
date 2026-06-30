@@ -146,7 +146,16 @@
 <body>
     <div class="form-container">
         
-        {% if closed %}
+        {% if already_filled %}
+            <div style="text-align: center; padding: 60px 20px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 500px; margin: 40px auto; border: 1px solid #e2e8f0;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 56px; color: #f59e0b; margin-bottom: 20px;"></i>
+                <h2 style="color: #334155; margin-bottom: 12px;">Sudah Diisi</h2>
+                <p style="color: #64748b; font-size: 15px; line-height: 1.6;">Anda sudah mengisi formulir ini sebelumnya. Pengaturan formulir hanya mengizinkan satu tanggapan per akun.</p>
+                <br>
+                <a href="{{ url_for('formulir_saya') }}" style="color: #007da5; font-weight: bold; text-decoration: none;">&larr; Kembali ke Formulir Saya</a>
+            </div>
+
+        {% elif closed %}
             <div style="text-align: center; padding: 60px 20px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 500px; margin: 40px auto; border: 1px solid #e2e8f0;">
                 <i class="fas fa-lock" style="font-size: 56px; color: #cbd5e1; margin-bottom: 20px;"></i>
                 <h2 style="color: #334155; margin-bottom: 12px;">Formulir Ditutup</h2>
@@ -516,7 +525,7 @@
                                             <label class="choice-label {% if pOpt.disabled %}disabled-option{% endif %}">
                                                 <input type="radio" class="q-opt" name="q_{{ q.id }}" value="{{ pOpt.text }}" {% if q.required and not pOpt.disabled %}required{% endif %} {% if q.predefinedValue == pOpt.text and not pOpt.disabled %}checked{% endif %} {% if pOpt.disabled %}disabled{% endif %}>
                                                 <span>{{ pOpt.text }} 
-                                                    {% if q.maxQuantities %}
+                                                    {% if q.maxQuantities and not pOpt.unlimited %}
                                                     <span style="font-size:11px; color:#999; font-style:italic; margin-left:4px;">(Sisa: {{ pOpt.remaining }})</span>
                                                     {% endif %}
                                                 </span>
@@ -566,7 +575,7 @@
                                         {% if q.processedOptions %}
                                             {% for pOpt in q.processedOptions %}
                                                 <option value="{{ pOpt.text }}" class="q-opt" {% if pOpt.disabled %}disabled style="color:#ccc;"{% endif %}>
-                                                    {{ pOpt.text }} {% if q.maxQuantities %}-- Sisa: {{ pOpt.remaining }}{% endif %}
+                                                    {{ pOpt.text }} {% if q.maxQuantities and not pOpt.unlimited %}-- Sisa: {{ pOpt.remaining }}{% endif %}
                                                 </option>
                                             {% endfor %}
                                         {% else %}
@@ -656,7 +665,6 @@
     </div>
 
     <script>
-        // Data dari backend untuk membantu logik validasi
         let schema = {{ schema | default('{}') | tojson | safe }};
 
         function changePage(pageNum) {
@@ -698,29 +706,84 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // Cegah Form Tersubmit Apabila Pilihan Di-hack oleh User / Invalid
         let mainForm = document.getElementById('mainForm');
         if(mainForm) {
             mainForm.addEventListener('submit', function(e) {
                 let valid = true;
+                let firstInvalid = null;
                 
-                // Pengecekan Opsi Radio/Checkbox Disabled
-                document.querySelectorAll('.q-opt:checked').forEach(el => {
+                // 1. CEK OPSI KUANTITAS HABIS (DICEGAH)
+                document.querySelectorAll('.q-opt:checked, option.q-opt:checked').forEach(el => {
                     if(el.disabled || (el.parentElement && el.parentElement.classList.contains('disabled-option'))) {
-                        valid = false;
-                    }
-                });
-
-                // Pengecekan Dropdown Disabled
-                document.querySelectorAll('option.q-opt:checked').forEach(el => {
-                    if(el.disabled) {
                         valid = false;
                     }
                 });
 
                 if(!valid) {
                     e.preventDefault();
-                    alert("Gagal Terkirim: Pilihan opsi yang Anda centang saat ini sudah kehabisan slot (kuota sudah 0). Silakan pilih opsi lain yang masih tersedia.");
+                    alert("Gagal Terkirim: Pilihan opsi yang Anda centang sudah kehabisan slot. Silakan pilih yang lain.");
+                    return;
+                }
+
+                // 2. CEK WAJIB ISI (REQUIRED)
+                document.querySelectorAll('.field-row').forEach(row => {
+                    let isRequired = row.querySelector('.req-mark');
+                    if (isRequired) {
+                        row.style.background = ''; 
+                        
+                        let checkboxes = row.querySelectorAll('input[type="checkbox"]');
+                        if (checkboxes.length > 0) {
+                            let checked = Array.from(checkboxes).some(cb => cb.checked);
+                            if (!checked) {
+                                valid = false; row.style.background = '#fee2e2';
+                                if(!firstInvalid) firstInvalid = row;
+                            }
+                        }
+                        
+                        let radios = row.querySelectorAll('input[type="radio"]');
+                        let gridTable = row.querySelector('.grid-table');
+                        if (radios.length > 0 && !gridTable) {
+                            let checked = Array.from(radios).some(rd => rd.checked);
+                            if (!checked) {
+                                valid = false; row.style.background = '#fee2e2';
+                                if(!firstInvalid) firstInvalid = row;
+                            }
+                        }
+
+                        if (gridTable) {
+                            let trs = gridTable.querySelectorAll('tbody tr');
+                            trs.forEach(tr => {
+                                let rowRadios = tr.querySelectorAll('input[type="radio"]');
+                                if (rowRadios.length > 0) {
+                                    let checked = Array.from(rowRadios).some(r => r.checked);
+                                    if (!checked) {
+                                        valid = false; tr.style.background = '#fee2e2';
+                                        if(!firstInvalid) firstInvalid = gridTable;
+                                    } else {
+                                        tr.style.background = '';
+                                    }
+                                }
+                            });
+                        }
+                        
+                        let inputs = row.querySelectorAll('input[type="text"], input[type="number"], input[type="file"], textarea, select');
+                        inputs.forEach(inp => {
+                            if (inp.required && !inp.value.trim()) {
+                                valid = false; inp.style.borderColor = 'red';
+                                if(!firstInvalid) firstInvalid = inp;
+                            } else if (inp.required) {
+                                inp.style.borderColor = '#999999';
+                            }
+                        });
+                    }
+                });
+
+                if(!valid) {
+                    e.preventDefault();
+                    alert("Mohon isi semua bidang yang wajib diisi (bertanda *).");
+                    if (firstInvalid) {
+                        firstInvalid.scrollIntoView({behavior: "smooth", block: "center"});
+                    }
                 }
             });
         }

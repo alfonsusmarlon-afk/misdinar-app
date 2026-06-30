@@ -170,7 +170,7 @@
                             <i class="fas fa-users-cog"></i> <span>Kelola Anggota</span>
                         </a>
                     </li>
-                    {% if session.get('role') in ['super admin', 'bph'] %}
+                    {% if session.get('role') in ['super admin', 'bph', 'penjadwalan', 'pelatihan'] %}
                     <li>
                         <a href="{{ url_for('kelola_pendaftaran') }}" class="{% if request.endpoint == 'kelola_pendaftaran' %}active{% endif %}">
                             <i class="fas fa-file-signature"></i> <span>Kelola Formulir</span>
@@ -362,5 +362,64 @@
             installBanner.style.display = 'none';
         });
     </script>
+
+{% if session.get('user_id') %}
+    <script>
+        // Kunci VAPID Publik yang terhubung dengan backend app.py
+        const PUBLIC_VAPID_KEY = "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuB-5bNd_5qUjG2lM2DcdK1Bcw";
+
+        // Konversi key untuk Push Manager
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        async function initPushSubscription() {
+            // Cek apakah HP mendukung Service Worker & Push Notification
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+            
+            try {
+                // Meminta izin (Bakal muncul pop-up "Allow Notifications")
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') return;
+
+                const registration = await navigator.serviceWorker.ready;
+                let subscription = await registration.pushManager.getSubscription();
+
+                // Jika belum berlangganan notifikasi di HP ini, buat langganan baru
+                if (!subscription) {
+                    subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+                    });
+
+                    // Kirim token notifikasi ke backend database
+                    await fetch("{{ url_for('subscribe_push') }}", {
+                        method: 'POST',
+                        body: JSON.stringify(subscription),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    console.log('HP berhasil didaftarkan untuk Push Notification!');
+                }
+            } catch (err) {
+                console.warn('Push error: ', err);
+            }
+        }
+
+        // Trik Bypass Apple: iPhone memblokir notif jika tidak dipicu langsung oleh sentuhan pengguna.
+        // Script ini akan memicu permintaan notifikasi saat pengguna menyentuh/klik layar pertama kali.
+        document.body.addEventListener('click', function _reqPush() {
+            initPushSubscription();
+            // Hapus listener agar tidak dieksekusi berkali-kali
+            document.body.removeEventListener('click', _reqPush);
+        }, { once: true });
+    </script>
+    {% endif %}
 </body>
 </html>
