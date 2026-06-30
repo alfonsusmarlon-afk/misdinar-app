@@ -59,15 +59,7 @@
     </style>
 
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js').then(function(registration) {
-            console.log('ServiceWorker PWA siap berjalan di scope: ', registration.scope);
-          }, function(err) {
-            console.log('ServiceWorker PWA gagal didaftarkan: ', err);
-          });
-        });
-      }
+      // Catatan: pendaftaran service worker digabung jadi satu (dulu didaftarkan 2x di file ini).
     </script>
 </head>
 <body>
@@ -392,19 +384,6 @@
 
     {% if session.get('user_id') %}
     <script>
-        const PUBLIC_VAPID_KEY = "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuB-5bNd_5qUjG2lM2DcdK1Bcw";
-
-        function urlBase64ToUint8Array(base64String) {
-            const padding = '='.repeat((4 - base64String.length % 4) % 4);
-            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-            const rawData = window.atob(base64);
-            const outputArray = new Uint8Array(rawData.length);
-            for (let i = 0; i < rawData.length; ++i) {
-                outputArray[i] = rawData.charCodeAt(i);
-            }
-            return outputArray;
-        }
-
         async function initPushSubscription() {
             // Cek kompatibilitas browser
             if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
@@ -419,6 +398,31 @@
 
                 const registration = await navigator.serviceWorker.ready;
                 let subscription = await registration.pushManager.getSubscription();
+
+                // Ambil VAPID public key langsung dari server agar selalu sinkron
+                const PUBLIC_VAPID_KEY = await fetch("{{ url_for('vapid_public_key') }}").then(r => r.text());
+
+                function urlBase64ToUint8Array(base64String) {
+                    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+                    const rawData = window.atob(base64);
+                    const outputArray = new Uint8Array(rawData.length);
+                    for (let i = 0; i < rawData.length; ++i) {
+                        outputArray[i] = rawData.charCodeAt(i);
+                    }
+                    return outputArray;
+                }
+
+                // Jika subscription lama ada tapi key-nya beda dari key server saat ini
+                // (misalnya VAPID key baru saja diganti), subscription lama harus dibuang dulu.
+                if (subscription) {
+                    const currentKey = btoa(String.fromCharCode(...new Uint8Array(subscription.options.applicationServerKey)));
+                    const serverKey = btoa(String.fromCharCode(...urlBase64ToUint8Array(PUBLIC_VAPID_KEY)));
+                    if (currentKey !== serverKey) {
+                        await subscription.unsubscribe();
+                        subscription = null;
+                    }
+                }
 
                 // Jika belum punya token, buat token baru
                 if (!subscription) {
@@ -435,7 +439,7 @@
                     body: JSON.stringify(subscription),
                     headers: { 'Content-Type': 'application/json' }
                 });
-                console.log('Push Notification tersinkronisasi. HP siap menerima notif!');
+                console.log('Push Notification tersinkronisasi. Perangkat siap menerima notif!');
             } catch (err) {
                 console.error('Push error: ', err);
             }
@@ -447,7 +451,7 @@
             document.body.removeEventListener('click', _reqPush);
         }, { once: true });
         
-        // Jalankan sinkronisasi secara background jika HP sudah pernah klik "Allow" sebelumnya
+        // Jalankan sinkronisasi secara background jika user sudah pernah klik "Allow" sebelumnya
         if (Notification.permission === 'granted') {
             initPushSubscription();
         }

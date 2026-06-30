@@ -23,8 +23,12 @@ app.secret_key = 'misdinar-secure-key-2026-production'
 app.permanent_session_lifetime = timedelta(days=7)
 
 # KUNCI VAPID UNTUK NOTIFIKASI HP
-VAPID_PUBLIC_KEY = "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuB-5bNd_5qUjG2lM2DcdK1Bcw"
-VAPID_PRIVATE_KEY = "wL2-UGEPXXp1kZfI1K9Y_XN_A0vWkVm_Ea59Hj0i9iM"
+# PENTING: kunci ini HARUS unik untuk aplikasi ini, jangan dipakai bersama project lain.
+# Kunci lama yang sebelumnya ada di sini adalah contoh demo yang beredar luas di banyak
+# tutorial Web Push di internet, sehingga private key-nya bukan benar-benar rahasia.
+# Sebaiknya disimpan sebagai environment variable di server produksi, bukan hardcode.
+VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "BCYTS0Pb7vTMSjK0ZYuco8ckOr7qs5OM48BMxQhRDBnjd2pgp0kr0iB7jY-Rv6ni327hRsCIR7snYqqol3_JTU0")
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "_RiB0dDlSUzb77dcK0fBLQ4dFCvmLjOK4Q6_Hm6I6oM")
 VAPID_CLAIMS = {"sub": "mailto:admin@misdinar.com"}
 
 DB_NAME = 'misdinar.db'
@@ -246,12 +250,13 @@ def service_worker():
     response.headers['Content-Type'] = 'application/javascript'
     return response
 
-def send_web_push(subscription_info, message_body):
+def send_web_push(subscription_info, message_body, username=None):
     if not WEBPUSH_AVAILABLE:
+        print("WEBPUSH SKIPPED: library pywebpush belum terpasang. Jalankan: pip install pywebpush")
         return
     try:
         vapid_claims = {"sub": "mailto:admin@misdinar.com"}
-        
+
         # Pastikan message_body selalu diubah ke format JSON string yang bersih
         webpush(
             subscription_info=json.loads(subscription_info),
@@ -262,6 +267,20 @@ def send_web_push(subscription_info, message_body):
             headers={"Topic": "misdinar-notif", "Urgency": "high"}
         )
         print("Sinyal push notification berhasil ditembakkan ke browser!")
+    except WebPushException as ex:
+        status_code = getattr(ex.response, 'status_code', None)
+        print("Web Push SERVER ERROR:", repr(ex), "| status_code:", status_code)
+        # 404/410 = subscription sudah tidak valid lagi (browser uninstall/clear data/token expired).
+        # Kalau tidak dibersihkan, server akan terus mencoba kirim ke token mati ini selamanya.
+        if status_code in (404, 410) and username:
+            try:
+                conn2 = get_db_connection()
+                conn2.execute("UPDATE users SET push_sub=NULL WHERE username=?", (username,))
+                conn2.commit()
+                conn2.close()
+                print(f"Subscription push milik '{username}' sudah kadaluarsa, dihapus dari DB.")
+            except Exception as cleanup_err:
+                print("Gagal membersihkan subscription kadaluarsa:", repr(cleanup_err))
     except Exception as ex:
         print("Web Push SERVER ERROR:", repr(ex))
 
@@ -280,13 +299,13 @@ def create_notification(conn, target_str, pesan, link_url):
         users = conn.execute("SELECT username, push_sub FROM users").fetchall()
         for u in users: 
             conn.execute('INSERT INTO notifikasi (username, pesan, waktu, link) VALUES (?, ?, ?, ?)', (u['username'], pesan, waktu_sekarang, link_url))
-            if u['push_sub']: send_web_push(u['push_sub'], push_payload)
+            if u['push_sub']: send_web_push(u['push_sub'], push_payload, u['username'])
     else:
         users = conn.execute("SELECT username, role, push_sub FROM users").fetchall()
         for u in users:
             if u['username'] in target_list or u['role'] in target_list:
                 conn.execute('INSERT INTO notifikasi (username, pesan, waktu, link) VALUES (?, ?, ?, ?)', (u['username'], pesan, waktu_sekarang, link_url))
-                if u['push_sub']: send_web_push(u['push_sub'], push_payload)
+                if u['push_sub']: send_web_push(u['push_sub'], push_payload, u['username'])
 
 @app.route('/subscribe-push', methods=['POST'])
 def subscribe_push():
